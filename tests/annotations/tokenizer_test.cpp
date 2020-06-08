@@ -11,6 +11,7 @@ namespace {
 using ::testing::AllOf;
 using ::testing::IsEmpty;
 
+using ::genpybind::annotations::LiteralValue;
 using Token = ::genpybind::annotations::Parser::Token;
 using Tokenizer = ::genpybind::annotations::Parser::Tokenizer;
 
@@ -26,6 +27,12 @@ auto TokenText(const FieldMatcher &matcher) {
   return ::testing::Field("text", &Token::text, matcher);
 }
 
+template <typename FieldMatcher>
+// NOLINTNEXTLINE(readability-identifier-naming)
+auto TokenValue(const FieldMatcher &matcher) {
+  return ::testing::Field("value", &Token::value, matcher);
+}
+
 TEST(AnnotationsTokenizer, AdvancesPositionWhenConsumingTokens) {
   Tokenizer tokenizer("uiae(xyz)");
   EXPECT_EQ("(xyz)", tokenizer.remaining());
@@ -33,34 +40,37 @@ TEST(AnnotationsTokenizer, AdvancesPositionWhenConsumingTokens) {
   EXPECT_EQ("xyz)", tokenizer.remaining());
 }
 
-TEST(AnnotationsTokenizer, YieldsConsecutiveTokens) {
+TEST(AnnotationsTokenizer, YieldsConsecutiveTokensWithLiteralValues) {
   Tokenizer tokenizer(
       R"(visible, keep_alive(1, 2), expose_as(_someId0_), hide_base("::Base"))");
-  const std::vector<std::tuple<llvm::StringRef, Token::Kind>> expected_tokens{
-      {"visible", Token::Kind::Identifier},
-      {",", Token::Kind::Comma},
-      {"keep_alive", Token::Kind::Identifier},
-      {"(", Token::Kind::OpeningParen},
-      {"1", Token::Kind::Literal},
-      {",", Token::Kind::Comma},
-      {"2", Token::Kind::Literal},
-      {")", Token::Kind::ClosingParen},
-      {",", Token::Kind::Comma},
-      {"expose_as", Token::Kind::Identifier},
-      {"(", Token::Kind::OpeningParen},
-      {"_someId0_", Token::Kind::Identifier},
-      {")", Token::Kind::ClosingParen},
-      {",", Token::Kind::Comma},
-      {"hide_base", Token::Kind::Identifier},
-      {"(", Token::Kind::OpeningParen},
-      {R"("::Base")", Token::Kind::Literal},
-      {")", Token::Kind::ClosingParen},
-      {"", Token::Kind::Eof},
-  };
+  const std::vector<std::tuple<llvm::StringRef, Token::Kind, LiteralValue>>
+      expected_tokens{
+          {"visible", Token::Kind::Identifier, {}},
+          {",", Token::Kind::Comma, {}},
+          {"keep_alive", Token::Kind::Identifier, {}},
+          {"(", Token::Kind::OpeningParen, {}},
+          {"1", Token::Kind::Literal, LiteralValue::createUnsigned(1)},
+          {",", Token::Kind::Comma, {}},
+          {"2", Token::Kind::Literal, LiteralValue::createUnsigned(2)},
+          {")", Token::Kind::ClosingParen, {}},
+          {",", Token::Kind::Comma, {}},
+          {"expose_as", Token::Kind::Identifier, {}},
+          {"(", Token::Kind::OpeningParen, {}},
+          {"_someId0_", Token::Kind::Identifier, {}},
+          {")", Token::Kind::ClosingParen, {}},
+          {",", Token::Kind::Comma, {}},
+          {"hide_base", Token::Kind::Identifier, {}},
+          {"(", Token::Kind::OpeningParen, {}},
+          {R"("::Base")", Token::Kind::Literal,
+           LiteralValue::createString("::Base")},
+          {")", Token::Kind::ClosingParen, {}},
+          {"", Token::Kind::Eof, {}},
+      };
 
   for (const auto &tup : expected_tokens) {
-    EXPECT_THAT(tokenizer.consumeToken(), AllOf(TokenText(std::get<0>(tup)),
-                                                TokenKind(std::get<1>(tup))));
+    EXPECT_THAT(tokenizer.consumeToken(),
+                AllOf(TokenText(std::get<0>(tup)), TokenKind(std::get<1>(tup)),
+                      TokenValue(std::get<2>(tup))));
   }
   EXPECT_THAT(tokenizer.remaining(), IsEmpty());
 }

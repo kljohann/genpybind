@@ -1,5 +1,7 @@
 #pragma once
 
+#include "genpybind/annotations/literal_value.h"
+
 #include <llvm/ADT/StringRef.h>
 
 namespace genpybind {
@@ -24,6 +26,7 @@ struct Parser::Token {
 
   Kind kind = Kind::Eof;
   llvm::StringRef text;
+  LiteralValue value;
 };
 
 class Parser::Tokenizer {

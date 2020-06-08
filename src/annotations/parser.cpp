@@ -72,6 +72,7 @@ void Parser::Tokenizer::tokenizeNumberLiteral(Token &result) {
 
   unsigned value;
   if (!result.text.getAsInteger(10, value)) {
+    result.value.setUnsigned(value);
     return;
   }
   result.kind = Token::Kind::Invalid;
@@ -88,6 +89,7 @@ void Parser::Tokenizer::tokenizeStringLiteral(Token &result) {
     if (text[pos] == '"') {
       result.kind = Token::Kind::Literal;
       result.text = text.take_front(pos + 1);
+      result.value.setString(text.substr(1, pos - 1));
       text = text.drop_front(pos + 1);
       return;
     }
