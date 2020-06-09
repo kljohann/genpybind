@@ -34,5 +34,11 @@ target_include_directories(genpybind
   SYSTEM PUBLIC ${LLVM_INCLUDE_DIRS} ${CLANG_INCLUDE_DIRS}
 )
 
+add_executable(genpybind-tool
+  src/tool.cpp
+)
+
+target_link_libraries(genpybind-tool PRIVATE genpybind)
+
 add_custom_target(test)
 add_subdirectory(tests)
