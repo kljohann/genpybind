@@ -1,16 +1,68 @@
 #pragma once
 
-#include "genpybind/annotations/literal_value.h"
+#include "genpybind/annotations/annotation.h"
 
+#include <clang/Basic/Diagnostic.h>
+#include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringRef.h>
+#include <llvm/Support/Error.h>
+
+#include <utility>
+#include <vector>
 
 namespace genpybind {
 namespace annotations {
 
 class Parser {
 public:
+  class Error;
   struct Token;
   class Tokenizer;
+
+  using Annotations = std::vector<Annotation>;
+
+  static llvm::Error parseAnnotations(llvm::StringRef text,
+                                      Annotations &annotations);
+  static llvm::Expected<Annotations> parseAnnotations(llvm::StringRef text);
+
+private:
+  Parser(Tokenizer *tokenizer);
+  llvm::Error parseAnnotations(Annotations &annotations);
+  llvm::Expected<AnnotationKind> parseAnnotationKind();
+  llvm::Expected<Annotation::Arguments> parseAnnotationArguments();
+  LiteralValue parseAnnotationValue();
+  bool skipComma();
+
+  Tokenizer *tokenizer;
+};
+
+class Parser::Error : public llvm::ErrorInfo<Parser::Error> {
+public:
+  enum class Kind {
+    InvalidToken,
+    MissingClosingParen,
+    InvalidAnnotation,
+  };
+
+  Error(Kind kind, llvm::StringRef token) : kind(kind), token(token) {}
+
+  Kind getKind() const { return kind; }
+  llvm::StringRef getToken() const { return token; }
+
+  clang::DiagnosticBuilder report(clang::SourceLocation loc,
+                                  clang::DiagnosticsEngine &diagnostics) const;
+
+  void log(llvm::raw_ostream &OS) const override { OS << "parser error"; }
+
+  static char ID;
+
+private:
+  Kind kind;
+  llvm::StringRef token;
+
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
 };
 
 struct Parser::Token {
