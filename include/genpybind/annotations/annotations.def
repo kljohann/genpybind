@@ -1,0 +1,53 @@
+#ifndef ANNOTATION_KIND
+#define ANNOTATION_KIND(Enum, Spelling)
+#endif
+
+// NamedDecl
+ANNOTATION_KIND(ExposeAs, expose_as)
+ANNOTATION_KIND(Hidden, hidden)
+ANNOTATION_KIND(Visible, visible)
+
+// EnumDecl
+ANNOTATION_KIND(Arithmetic, arithmetic)
+ANNOTATION_KIND(ExportValues, export_values)
+
+// CXXMethodDecl only
+ANNOTATION_KIND(AccessorFor, accessor_for)
+ANNOTATION_KIND(GetterFor, getter_for)
+ANNOTATION_KIND(SetterFor, setter_for)
+ANNOTATION_KIND(Stringstream, stringstream)
+
+// RecordDecl
+ANNOTATION_KIND(DynamicAttr, dynamic_attr)
+ANNOTATION_KIND(HideBase, hide_base)
+ANNOTATION_KIND(HolderType, holder_type)
+ANNOTATION_KIND(InlineBase, inline_base)
+
+// CXXConstructorDecl
+ANNOTATION_KIND(ImplicitConversion, implicit_conversion)
+
+// FunctionDecl
+ANNOTATION_KIND(KeepAlive, keep_alive)
+ANNOTATION_KIND(Noconvert, noconvert)
+ANNOTATION_KIND(Required, required)
+ANNOTATION_KIND(ReturnValuePolicy, return_value_policy)
+
+// VarDecl
+ANNOTATION_KIND(Manual, manual)
+ANNOTATION_KIND(Postamble, postamble)
+
+// NamespaceDecl
+ANNOTATION_KIND(Module, module)
+ANNOTATION_KIND(Tag, tag)
+
+// TypedefNameDecl
+ANNOTATION_KIND(ExposeHere, expose_here)
+
+// FieldDecl or VarDecl
+ANNOTATION_KIND(Readonly, readonly)
+ANNOTATION_KIND(Writable, writable)
+
+#undef ANNOTATION_KIND
+// Local Variables:
+// mode: c++
+// End:
