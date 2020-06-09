@@ -65,16 +65,17 @@ TEST(AnnotationsTokenizer, YieldsConsecutiveTokens) {
   EXPECT_THAT(tokenizer.remaining(), IsEmpty());
 }
 
-TEST(AnnotationsTokenizer, CanPeekAtCurrentTokenWithoutConsuming) {
+TEST(AnnotationsTokenizer, CanPeekAtCurrentTokenKindWithoutConsuming) {
   Tokenizer tokenizer("uiae(xyz)");
-  const auto peek = [&tokenizer] {
-    const Token &token = tokenizer.peekToken();
-    EXPECT_THAT(token,
-                AllOf(TokenKind(Token::Kind::Identifier), TokenText("uiae")));
-    EXPECT_EQ("(xyz)", tokenizer.remaining());
-  };
-  peek();
-  peek(); // peeking does not change state
+  EXPECT_EQ(Token::Kind::Identifier, tokenizer.tokenKind());
+  EXPECT_EQ("(xyz)", tokenizer.remaining());
+  EXPECT_THAT(tokenizer.consumeToken(),
+              AllOf(TokenKind(Token::Kind::Identifier), TokenText("uiae")));
+
+  EXPECT_EQ(Token::Kind::OpeningParen, tokenizer.tokenKind());
+  EXPECT_EQ("xyz)", tokenizer.remaining());
+  EXPECT_THAT(tokenizer.consumeToken(),
+              AllOf(TokenKind(Token::Kind::OpeningParen), TokenText("(")));
 }
 
 TEST(AnnotationsTokenizer, GivenEmptyStringReturnsEof) {

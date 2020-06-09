@@ -34,9 +34,7 @@ public:
   Tokenizer(llvm::StringRef text) : text(text) { next_token = tokenize(); }
 
   llvm::StringRef remaining() const { return text; }
-
-  const Token &peekToken() const { return next_token; }
-
+  Token::Kind tokenKind() const { return next_token.kind; }
   Token consumeToken() {
     Token token = next_token;
     next_token = tokenize();
@@ -50,5 +48,5 @@ private:
   void tokenizeIdentifier(Token &result);
 };
 
-}  // namespace annotations
+} // namespace annotations
 } // namespace genpybind
