@@ -5,18 +5,11 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-// HACK: This is missing from libLLVM.so on Fedora.
-inline llvm::detail::ErrorHolder llvm::detail::TakeError(llvm::Error Err) {
-  std::vector<std::shared_ptr<llvm::ErrorInfoBase>> Infos;
-  llvm::handleAllErrors(std::move(Err),
-                        [&Infos](std::unique_ptr<ErrorInfoBase> Info) {
-                          Infos.emplace_back(std::move(Info));
-                        });
-  return {std::move(Infos)};
-}
+#include "expected.h"
 
 namespace {
 
+using ::genpybind::TheValue;
 using ::testing::AllOf;
 using ::testing::ElementsAre;
 using ::testing::IsEmpty;
@@ -48,7 +41,7 @@ auto AnnotationWhere(AnnotationKind kind, const ArgumentsMatcher &matcher) {
 }
 
 TEST(AnnotationsParser, GivenEmptyStringReturnsEmptySequence) {
-  EXPECT_THAT_EXPECTED(Parser::parseAnnotations(""), llvm::HasValue(IsEmpty()));
+  EXPECT_THAT_EXPECTED(Parser::parseAnnotations(""), TheValue(IsEmpty()));
 }
 
 TEST(AnnotationsParser, RejectsIsolatedComma) {
@@ -73,7 +66,7 @@ TEST(AnnotationsParser, RejectsAnnotationsWithInvalidName) {
 TEST(AnnotationsParser, RecognizesAllAnnotationKinds) {
 #define ANNOTATION_KIND(Enum, Spelling)                                        \
   EXPECT_THAT_EXPECTED(Parser::parseAnnotations(#Spelling "()"),               \
-                       llvm::HasValue(ElementsAre(AnnotationWhere(             \
+                       TheValue(ElementsAre(AnnotationWhere(                   \
                            AnnotationKind::Enum, IsEmpty()))));
 #include "genpybind/annotations/annotations.def"
 }
@@ -121,17 +114,17 @@ TEST(AnnotationsParser, RejectsInvalidAnnotations) {
 
 TEST(AnnotationsParser, AcceptsTrailingComma) {
   EXPECT_THAT_EXPECTED(Parser::parseAnnotations("visible,"),
-                       llvm::HasValue(SizeIs(1)));
+                       TheValue(SizeIs(1)));
   EXPECT_THAT_EXPECTED(Parser::parseAnnotations("visible, expose_as(__int__),"),
-                       llvm::HasValue(SizeIs(2)));
+                       TheValue(SizeIs(2)));
 }
 
 TEST(AnnotationsParser, AcceptsTrailingCommaInArguments) {
   EXPECT_THAT_EXPECTED(Parser::parseAnnotations("expose_as(__int__,)"),
-                       llvm::HasValue(ElementsAre(AnnotationWhere(
+                       TheValue(ElementsAre(AnnotationWhere(
                            AnnotationKind::ExposeAs, SizeIs(1)))));
   EXPECT_THAT_EXPECTED(Parser::parseAnnotations("keep_alive(this, child,)"),
-                       llvm::HasValue(ElementsAre(AnnotationWhere(
+                       TheValue(ElementsAre(AnnotationWhere(
                            AnnotationKind::KeepAlive, SizeIs(2)))));
 }
 
@@ -139,7 +132,7 @@ TEST(AnnotationsParser, IgnoresHorizontalWhitespace) {
   EXPECT_THAT_EXPECTED(
       Parser::parseAnnotations(
           "  \f visible \t, \v keep_alive (\" ui \t ae \"\t, nrtd )  "),
-      llvm::HasValue(ElementsAre(
+      TheValue(ElementsAre(
           AnnotationWhere(AnnotationKind::Visible, IsEmpty()),
           AnnotationWhere(AnnotationKind::KeepAlive,
                           ElementsAre(LiteralValue::createString(" ui \t ae "),
@@ -148,14 +141,14 @@ TEST(AnnotationsParser, IgnoresHorizontalWhitespace) {
 
 TEST(AnnotationsParser, AcceptsAnnotationWithoutArguments) {
   EXPECT_THAT_EXPECTED(Parser::parseAnnotations("visible"),
-                       llvm::HasValue(ElementsAre(AnnotationWhere(
+                       TheValue(ElementsAre(AnnotationWhere(
                            AnnotationKind::Visible, IsEmpty()))));
 }
 
 TEST(AnnotationsParser, AcceptsAnnotationWithIdentifierAsArgument) {
   EXPECT_THAT_EXPECTED(
       Parser::parseAnnotations(R"(expose_as(visible))"),
-      llvm::HasValue(ElementsAre(AnnotationWhere(
+      TheValue(ElementsAre(AnnotationWhere(
           AnnotationKind::ExposeAs,
           ElementsAre(LiteralValue::createString("visible"))))));
 }
@@ -163,14 +156,14 @@ TEST(AnnotationsParser, AcceptsAnnotationWithIdentifierAsArgument) {
 TEST(AnnotationsParser, AcceptsAnnotationWithStringArgument) {
   EXPECT_THAT_EXPECTED(
       Parser::parseAnnotations(R"(expose_as("__int__"))"),
-      llvm::HasValue(ElementsAre(AnnotationWhere(
+      TheValue(ElementsAre(AnnotationWhere(
           AnnotationKind::ExposeAs,
           ElementsAre(LiteralValue::createString("__int__"))))));
 }
 
 TEST(AnnotationsParser, AcceptsAnnotationWithUnsignedArguments) {
   EXPECT_THAT_EXPECTED(Parser::parseAnnotations("keep_alive(1, 2)"),
-                       llvm::HasValue(ElementsAre(AnnotationWhere(
+                       TheValue(ElementsAre(AnnotationWhere(
                            AnnotationKind::KeepAlive,
                            ElementsAre(LiteralValue::createUnsigned(1),
                                        LiteralValue::createUnsigned(2))))));
@@ -179,7 +172,7 @@ TEST(AnnotationsParser, AcceptsAnnotationWithUnsignedArguments) {
 TEST(AnnotationsParser, AcceptsAnnotationWithBooleanArgument) {
   EXPECT_THAT_EXPECTED(
       Parser::parseAnnotations("visible(false), hidden(true)"),
-      llvm::HasValue(ElementsAre(
+      TheValue(ElementsAre(
           AnnotationWhere(AnnotationKind::Visible,
                           ElementsAre(LiteralValue::createBoolean(false))),
           AnnotationWhere(AnnotationKind::Hidden,
@@ -188,7 +181,7 @@ TEST(AnnotationsParser, AcceptsAnnotationWithBooleanArgument) {
 
 TEST(AnnotationsParser, AcceptsAnnotationWithDefaultArgument) {
   EXPECT_THAT_EXPECTED(Parser::parseAnnotations("visible(default)"),
-                       llvm::HasValue(ElementsAre(AnnotationWhere(
+                       TheValue(ElementsAre(AnnotationWhere(
                            AnnotationKind::Visible,
                            ElementsAre(LiteralValue::createDefault())))));
 }
@@ -197,7 +190,7 @@ TEST(AnnotationsParser, AcceptsMultipleAnnotations) {
   EXPECT_THAT_EXPECTED(
       Parser::parseAnnotations(
           R"(visible, keep_alive(1, 2), expose_as(_someId0_), hide_base("::Base"))"),
-      llvm::HasValue(ElementsAre(
+      TheValue(ElementsAre(
           AnnotationWhere(AnnotationKind::Visible, IsEmpty()),
           AnnotationWhere(AnnotationKind::KeepAlive,
                           ElementsAre(LiteralValue::createUnsigned(1),
