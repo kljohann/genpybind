@@ -117,4 +117,23 @@ TEST(LiteralValue, CanChangeType) {
   EXPECT_TRUE(value.isDefault());
 }
 
+TEST(LiteralValue, CanBePrinted) {
+  std::string result;
+  llvm::raw_string_ostream stream(result);
+
+  LiteralValue().print(stream);
+  stream << ' ';
+  LiteralValue::createDefault().print(stream);
+  stream << ' ';
+  LiteralValue::createBoolean(true).print(stream);
+  stream << ' ';
+  LiteralValue::createBoolean(false).print(stream);
+  stream << ' ';
+  LiteralValue::createUnsigned(1234).print(stream);
+  stream << ' ';
+  LiteralValue::createString(R"( "uiae" nrtd)").print(stream);
+  stream.flush();
+  EXPECT_EQ(R"(nothing default true false 1234 " \"uiae\" nrtd")", result);
+}
+
 } // namespace

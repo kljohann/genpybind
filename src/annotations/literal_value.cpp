@@ -1,5 +1,7 @@
 #include "genpybind/annotations/literal_value.h"
 
+#include <llvm/Support/raw_os_ostream.h>
+
 #include <cassert>
 #include <utility>
 
@@ -132,6 +134,28 @@ bool LiteralValue::getBoolean() const {
   return boolean;
 }
 
+void LiteralValue::print(llvm::raw_ostream &os) const {
+  switch (kind) {
+  case Kind::String:
+    os << '"';
+    os.write_escaped(getString());
+    os << '"';
+    break;
+  case Kind::Unsigned:
+    os << getUnsigned();
+    break;
+  case Kind::Boolean:
+    os << (getBoolean() ? "true" : "false");
+    break;
+  case Kind::Nothing:
+    os << "nothing";
+    break;
+  case Kind::Default:
+    os << "default";
+    break;
+  }
+}
+
 bool LiteralValue::operator==(const LiteralValue &other) const {
   if (kind != other.kind)
     return false;
@@ -147,6 +171,11 @@ bool LiteralValue::operator==(const LiteralValue &other) const {
     return true;
   }
   llvm_unreachable("Unknown literal value kind.");
+}
+
+void PrintTo(const LiteralValue &value, std::ostream *os) {
+  llvm::raw_os_ostream ostream(*os);
+  value.print(ostream);
 }
 
 } // namespace annotations

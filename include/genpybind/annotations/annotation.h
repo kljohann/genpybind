@@ -4,7 +4,9 @@
 
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringRef.h>
+#include <llvm/Support/raw_ostream.h>
 
+#include <iosfwd>
 #include <utility>
 
 namespace genpybind {
@@ -20,7 +22,7 @@ public:
   AnnotationKind(Kind kind) : kind(kind) {}
 
   Kind value() const { return kind; }
-  llvm::StringRef toString() const;
+  void print(llvm::raw_ostream &os) const;
 
   friend bool operator==(const AnnotationKind &left,
                          const AnnotationKind &right) {
@@ -35,6 +37,8 @@ private:
   Kind kind;
 };
 
+llvm::StringRef toString(AnnotationKind kind);
+
 class Annotation {
 public:
   using Arguments = llvm::SmallVector<LiteralValue, 1>;
@@ -46,10 +50,15 @@ public:
   AnnotationKind getKind() const { return kind; }
   const Arguments &getArguments() const { return arguments; }
 
+  void print(llvm::raw_ostream &os) const;
+
 private:
   AnnotationKind kind;
   Arguments arguments;
 };
+
+void PrintTo(const AnnotationKind &kind, std::ostream *os);
+void PrintTo(const Annotation &annotation, std::ostream *os);
 
 } // namespace annotations
 } // namespace genpybind

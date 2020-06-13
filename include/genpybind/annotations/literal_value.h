@@ -1,7 +1,9 @@
 #pragma once
 
 #include <llvm/ADT/StringRef.h>
+#include <llvm/Support/raw_ostream.h>
 
+#include <iosfwd>
 #include <string>
 
 namespace genpybind {
@@ -57,9 +59,13 @@ public:
   unsigned getUnsigned() const;
   bool getBoolean() const;
 
+  void print(llvm::raw_ostream &os) const;
+
   bool operator==(const LiteralValue &other) const;
   bool operator!=(const LiteralValue &other) const { return !(*this == other); }
 };
+
+void PrintTo(const LiteralValue &value, std::ostream *os);
 
 } // namespace annotations
 } // namespace genpybind
