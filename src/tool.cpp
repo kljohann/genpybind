@@ -72,6 +72,10 @@ int main(int argc, const char **argv) {
 
   llvm::cl::extrahelp common_help(CommonOptionsParser::HelpMessage);
 
+  llvm::cl::opt<bool> expect_failure("xfail", llvm::cl::cat(genpybind_category),
+                                    llvm::cl::desc("Reverse the exit status."),
+                                    llvm::cl::init(false), llvm::cl::Hidden);
+
   CommonOptionsParser options_parser(argc, argv, genpybind_category);
 
   ClangTool tool(options_parser.getCompilations(),
@@ -99,5 +103,6 @@ int main(int argc, const char **argv) {
 
   auto factory = newFrontendActionFactory<GenpybindAction>();
 
-  return tool.run(factory.get());
+  const int exit_code = tool.run(factory.get());
+  return expect_failure ? (exit_code == 0) : exit_code;
 }

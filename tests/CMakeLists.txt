@@ -12,3 +12,22 @@ add_custom_target(genpybind-tests-run
   VERBATIM USES_TERMINAL
 )
 add_dependencies(test genpybind-tests-run)
+
+find_program(LIT_COMMAND NAMES lit.py)
+find_program(FILECHECK_COMMAND NAMES FileCheck)
+if(FILECHECK_COMMAND STREQUAL "FILECHECK_COMMAND-NOTFOUND")
+  message(WARNING "FileCheck not found, skipping (some) tests")
+elseif(LIT_COMMAND STREQUAL "LIT_COMMAND-NOTFOUND")
+  message(WARNING "lit.py not found, skipping (some) tests")
+else()
+  add_custom_target(lit-tests-run
+    COMMAND
+    ${LIT_COMMAND} -v
+    --param genpybind-tool=$<TARGET_FILE:genpybind-tool>
+    --param FileCheck=${FILECHECK_COMMAND}
+    ${CMAKE_CURRENT_SOURCE_DIR}/lit
+    COMMENT "Running lit tests"
+    VERBATIM USES_TERMINAL
+  )
+  add_dependencies(test lit-tests-run)
+endif()
