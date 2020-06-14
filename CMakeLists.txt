@@ -20,6 +20,7 @@ add_library(genpybind SHARED
   src/annotations/annotation.cpp
   src/annotations/literal_value.cpp
   src/annotations/parser.cpp
+  src/decl_context_collector.cpp
   src/diagnostics.cpp
 )
 

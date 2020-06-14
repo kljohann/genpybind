@@ -1,3 +1,5 @@
+#include "genpybind/decl_context_collector.h"
+
 #include <clang/AST/ASTConsumer.h>
 #include <clang/AST/Decl.h>
 #include <clang/Basic/Version.inc>
@@ -13,21 +15,25 @@
 
 #include <memory>
 
+using namespace genpybind;
+
 namespace {
 
 class GenpybindASTConsumer : public clang::ASTConsumer {
-public:
-  GenpybindASTConsumer(clang::ASTContext * /*context*/) {}
+  DeclContextCollector visitor;
 
-  void HandleTranslationUnit(clang::ASTContext & /*context*/) override {}
+public:
+  void HandleTranslationUnit(clang::ASTContext &context) override {
+    visitor.TraverseDecl(context.getTranslationUnitDecl());
+  }
 };
 
 class GenpybindAction : public clang::ASTFrontendAction {
 public:
   virtual std::unique_ptr<clang::ASTConsumer>
-  CreateASTConsumer(clang::CompilerInstance &compiler,
+  CreateASTConsumer(clang::CompilerInstance & /*compiler*/,
                     llvm::StringRef /*in_file*/) {
-    return std::make_unique<GenpybindASTConsumer>(&compiler.getASTContext());
+    return std::make_unique<GenpybindASTConsumer>();
   }
 };
 
