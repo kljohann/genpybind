@@ -1,6 +1,7 @@
 #pragma once
 
 #include "genpybind/annotated_decl.h"
+#include "genpybind/diagnostics.h"
 
 #include <clang/AST/Decl.h>
 #include <clang/AST/RecursiveASTVisitor.h>
@@ -46,10 +47,13 @@ public:
     return true;
   }
 
+  void warnIfAliasHasQualifiers(const clang::TypedefNameDecl *decl);
+
   bool VisitTypedefNameDecl(const clang::TypedefNameDecl *decl) {
     // Only typedefs with explicit annotations are considered.
     if (!hasAnnotations(decl))
       return true;
+    warnIfAliasHasQualifiers(decl);
     aliases.push_back(decl);
     return true;
   }
