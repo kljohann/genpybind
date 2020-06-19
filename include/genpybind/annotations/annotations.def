@@ -3,49 +3,47 @@
 #endif
 
 // NamedDecl
-ANNOTATION_KIND(ExposeAs, expose_as)
-ANNOTATION_KIND(Hidden, hidden)
-ANNOTATION_KIND(Visible, visible)
+ANNOTATION_KIND(ExposeAs, expose_as) // (String|Default)
+ANNOTATION_KIND(Hidden, hidden)      // ()
+ANNOTATION_KIND(Visible, visible)    // (Boolean|Default)?
 
 // EnumDecl
-ANNOTATION_KIND(Arithmetic, arithmetic)
-ANNOTATION_KIND(ExportValues, export_values)
+ANNOTATION_KIND(Arithmetic, arithmetic)      // (Boolean)?
+ANNOTATION_KIND(ExportValues, export_values) // (Boolean|Default)?
 
 // CXXMethodDecl only
-ANNOTATION_KIND(AccessorFor, accessor_for)
-ANNOTATION_KIND(GetterFor, getter_for)
-ANNOTATION_KIND(SetterFor, setter_for)
-ANNOTATION_KIND(Stringstream, stringstream)
+ANNOTATION_KIND(GetterFor, getter_for) // (String)
+ANNOTATION_KIND(SetterFor, setter_for) // (String)
 
 // RecordDecl
-ANNOTATION_KIND(DynamicAttr, dynamic_attr)
-ANNOTATION_KIND(HideBase, hide_base)
-ANNOTATION_KIND(HolderType, holder_type)
-ANNOTATION_KIND(InlineBase, inline_base)
+ANNOTATION_KIND(DynamicAttr, dynamic_attr) // (Boolean)?
+ANNOTATION_KIND(HideBase, hide_base)       // (String)+
+ANNOTATION_KIND(HolderType, holder_type)   // (String)
+ANNOTATION_KIND(InlineBase, inline_base)   // (String)+
 
 // CXXConstructorDecl
-ANNOTATION_KIND(ImplicitConversion, implicit_conversion)
+ANNOTATION_KIND(ImplicitConversion, implicit_conversion) // (Boolean)?
 
 // FunctionDecl
-ANNOTATION_KIND(KeepAlive, keep_alive)
-ANNOTATION_KIND(Noconvert, noconvert)
-ANNOTATION_KIND(Required, required)
-ANNOTATION_KIND(ReturnValuePolicy, return_value_policy)
+ANNOTATION_KIND(KeepAlive, keep_alive)                  // (String)+
+ANNOTATION_KIND(Noconvert, noconvert)                   // (String)+
+ANNOTATION_KIND(Required, required)                     // (String)+
+ANNOTATION_KIND(ReturnValuePolicy, return_value_policy) // (String)
 
 // VarDecl
-ANNOTATION_KIND(Manual, manual)
-ANNOTATION_KIND(Postamble, postamble)
+ANNOTATION_KIND(Manual, manual)       // ()
+ANNOTATION_KIND(Postamble, postamble) // ()
 
 // NamespaceDecl
-ANNOTATION_KIND(Module, module)
-ANNOTATION_KIND(Tag, tag)
+ANNOTATION_KIND(Module, module) // (String)?
+ANNOTATION_KIND(Tag, tag)       // (String)
 
 // TypedefNameDecl
-ANNOTATION_KIND(ExposeHere, expose_here)
+ANNOTATION_KIND(ExposeHere, expose_here) // ()
 
 // FieldDecl or VarDecl
-ANNOTATION_KIND(Readonly, readonly)
-ANNOTATION_KIND(Writable, writable)
+ANNOTATION_KIND(Readonly, readonly) // (Boolean)?
+ANNOTATION_KIND(Writable, writable) // (Boolean)?
 
 #undef ANNOTATION_KIND
 // Local Variables:
