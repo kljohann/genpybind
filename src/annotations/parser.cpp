@@ -7,8 +7,7 @@
 #include <cassert>
 #include <llvm/Support/Error.h>
 
-namespace genpybind {
-namespace annotations {
+using namespace genpybind::annotations;
 
 auto Parser::Tokenizer::tokenize() -> Token {
   Token result;
@@ -237,11 +236,8 @@ static unsigned getCustomDiagID(clang::DiagnosticsEngine &diagnostics,
 
 char Parser::Error::ID;
 
-clang::DiagnosticBuilder
-Parser::Error::report(clang::SourceLocation loc,
-                      clang::DiagnosticsEngine &diagnostics) const {
+auto Parser::Error::report(clang::SourceLocation loc,
+                           clang::DiagnosticsEngine &diagnostics) const
+    -> clang::DiagnosticBuilder {
   return diagnostics.Report(loc, getCustomDiagID(diagnostics, kind)) << token;
 }
-
-} // namespace annotations
-} // namespace genpybind

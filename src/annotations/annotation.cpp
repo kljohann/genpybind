@@ -2,10 +2,9 @@
 
 #include <llvm/Support/raw_os_ostream.h>
 
-namespace genpybind {
-namespace annotations {
+using namespace genpybind::annotations;
 
-llvm::StringRef toString(AnnotationKind kind) {
+llvm::StringRef genpybind::annotations::toString(AnnotationKind kind) {
   switch (kind.value()) {
 #define ANNOTATION_KIND(Enum, Spelling)                                        \
   case AnnotationKind::Kind::Enum:                                             \
@@ -32,15 +31,14 @@ void Annotation::print(llvm::raw_ostream &os) const {
   os << ')';
 }
 
-void PrintTo(const AnnotationKind &kind, std::ostream *os) {
+void genpybind::annotations::PrintTo(const AnnotationKind &kind,
+                                     std::ostream *os) {
   llvm::raw_os_ostream ostream(*os);
   kind.print(ostream);
 }
 
-void PrintTo(const Annotation &annotation, std::ostream *os) {
+void genpybind::annotations::PrintTo(const Annotation &annotation,
+                                     std::ostream *os) {
   llvm::raw_os_ostream ostream(*os);
   annotation.print(ostream);
 }
-
-} // namespace annotations
-} // namespace genpybind

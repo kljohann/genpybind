@@ -5,8 +5,7 @@
 #include <cassert>
 #include <utility>
 
-namespace genpybind {
-namespace annotations {
+using namespace genpybind::annotations;
 
 LiteralValue::~LiteralValue() {
   if (isString())
@@ -173,10 +172,8 @@ bool LiteralValue::operator==(const LiteralValue &other) const {
   llvm_unreachable("Unknown literal value kind.");
 }
 
-void PrintTo(const LiteralValue &value, std::ostream *os) {
+void genpybind::annotations::PrintTo(const LiteralValue &value,
+                                     std::ostream *os) {
   llvm::raw_os_ostream ostream(*os);
   value.print(ostream);
 }
-
-} // namespace annotations
-} // namespace genpybind
