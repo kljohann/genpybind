@@ -2,6 +2,7 @@
 
 #include <clang/AST/Decl.h>
 #include <llvm/ADT/DenseMap.h>
+#include <llvm/ADT/GraphTraits.h>
 #include <llvm/ADT/SmallVector.h>
 
 #include <memory>
@@ -61,6 +62,8 @@ public:
   DeclContextNode *getNode(const clang::Decl *decl) const;
   DeclContextNode *getOrInsertNode(const clang::Decl *decl);
 
+  unsigned size() const { return nodes.size(); }
+
   using iterator = NodeStorage::iterator;
   using const_iterator = NodeStorage::const_iterator;
 
@@ -97,3 +100,84 @@ public:
 };
 
 } // namespace genpybind
+
+namespace llvm {
+
+template <> struct GraphTraits<::genpybind::DeclContextNode *> {
+  using Node = ::genpybind::DeclContextNode;
+  using NodeRef = Node *;
+  using ChildIteratorType = Node::iterator;
+
+  static NodeRef getEntryNode(::genpybind::DeclContextNode *graph) {
+    return graph;
+  }
+  static ChildIteratorType child_begin(NodeRef node) { return node->begin(); }
+  static ChildIteratorType child_end(NodeRef node) { return node->end(); }
+};
+
+template <> struct GraphTraits<const ::genpybind::DeclContextNode *> {
+  using Node = const ::genpybind::DeclContextNode;
+  using NodeRef = Node *;
+  using ChildIteratorType = Node::const_iterator;
+
+  static NodeRef getEntryNode(::genpybind::DeclContextNode *graph) {
+    return graph;
+  }
+  static ChildIteratorType child_begin(NodeRef node) { return node->begin(); }
+  static ChildIteratorType child_end(NodeRef node) { return node->end(); }
+};
+
+template <>
+struct GraphTraits<::genpybind::DeclContextGraph *>
+    : public GraphTraits<::genpybind::DeclContextNode *> {
+  static NodeRef getEntryNode(::genpybind::DeclContextGraph *graph) {
+    return graph->getRoot();
+  }
+  static NodeRef
+  valueFromPair(::genpybind::DeclContextGraph::iterator::value_type &pair) {
+    return pair.second.get();
+  }
+  using nodes_iterator =
+      mapped_iterator<::genpybind::DeclContextGraph::iterator,
+                      decltype(&valueFromPair)>;
+  static nodes_iterator nodes_begin(::genpybind::DeclContextGraph *graph) {
+    return nodes_iterator(graph->begin(), &valueFromPair);
+  }
+
+  static nodes_iterator nodes_end(::genpybind::DeclContextGraph *graph) {
+    return nodes_iterator(graph->end(), &valueFromPair);
+  }
+
+  static unsigned size(::genpybind::DeclContextGraph *graph) {
+    return graph->size();
+  }
+};
+
+template <>
+struct GraphTraits<const ::genpybind::DeclContextGraph *>
+    : public GraphTraits<const ::genpybind::DeclContextNode *> {
+  static NodeRef getEntryNode(const ::genpybind::DeclContextGraph *graph) {
+    return graph->getRoot();
+  }
+  static NodeRef valueFromPair(
+      ::genpybind::DeclContextGraph::const_iterator::value_type &pair) {
+    return pair.second.get();
+  }
+  using nodes_iterator =
+      mapped_iterator<::genpybind::DeclContextGraph::const_iterator,
+                      decltype(&valueFromPair)>;
+  static nodes_iterator
+  nodes_begin(const ::genpybind::DeclContextGraph *graph) {
+    return nodes_iterator(graph->begin(), &valueFromPair);
+  }
+
+  static nodes_iterator nodes_end(const ::genpybind::DeclContextGraph *graph) {
+    return nodes_iterator(graph->end(), &valueFromPair);
+  }
+
+  static unsigned size(const ::genpybind::DeclContextGraph *graph) {
+    return graph->size();
+  }
+};
+
+} // namespace llvm
