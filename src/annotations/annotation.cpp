@@ -31,6 +31,13 @@ void Annotation::print(llvm::raw_ostream &os) const {
   os << ')';
 }
 
+std::string genpybind::annotations::toString(const Annotation &annotation) {
+  std::string result;
+  llvm::raw_string_ostream stream(result);
+  annotation.print(stream);
+  return stream.str();
+}
+
 void genpybind::annotations::PrintTo(const AnnotationKind &kind,
                                      std::ostream *os) {
   llvm::raw_os_ostream ostream(*os);

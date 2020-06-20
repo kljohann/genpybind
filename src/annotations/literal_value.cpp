@@ -172,6 +172,13 @@ bool LiteralValue::operator==(const LiteralValue &other) const {
   llvm_unreachable("Unknown literal value kind.");
 }
 
+std::string genpybind::annotations::toString(const LiteralValue &value) {
+  std::string result;
+  llvm::raw_string_ostream stream(result);
+  value.print(stream);
+  return stream.str();
+}
+
 void genpybind::annotations::PrintTo(const LiteralValue &value,
                                      std::ostream *os) {
   llvm::raw_os_ostream ostream(*os);

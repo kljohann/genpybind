@@ -65,6 +65,7 @@ public:
   bool operator!=(const LiteralValue &other) const { return !(*this == other); }
 };
 
+std::string toString(const LiteralValue &value);
 void PrintTo(const LiteralValue &value, std::ostream *os);
 
 } // namespace annotations

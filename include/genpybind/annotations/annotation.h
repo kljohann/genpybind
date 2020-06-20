@@ -7,6 +7,7 @@
 #include <llvm/Support/raw_ostream.h>
 
 #include <iosfwd>
+#include <string>
 #include <utility>
 
 namespace genpybind {
@@ -37,8 +38,6 @@ private:
   Kind kind;
 };
 
-llvm::StringRef toString(AnnotationKind kind);
-
 class Annotation {
 public:
   using Arguments = llvm::SmallVector<LiteralValue, 1>;
@@ -57,6 +56,8 @@ private:
   Arguments arguments;
 };
 
+llvm::StringRef toString(AnnotationKind kind);
+std::string toString(const Annotation &annotation);
 void PrintTo(const AnnotationKind &kind, std::ostream *os);
 void PrintTo(const Annotation &annotation, std::ostream *os);
 
