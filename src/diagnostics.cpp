@@ -8,6 +8,20 @@ static unsigned getCustomDiagID(clang::DiagnosticsEngine &engine,
                                 Diagnostics::Kind kind) {
   using Kind = Diagnostics::Kind;
   switch (kind) {
+  case Kind::AnnotationInvalidForDeclKindError:
+    return engine.getCustomDiagID(clang::DiagnosticsEngine::Error,
+                                  "Invalid annotation for %0: %1");
+  case Kind::AnnotationInvalidSpellingError:
+    return engine.getCustomDiagID(clang::DiagnosticsEngine::Error,
+                                  "Invalid spelling in '%0' annotation: '%1'");
+  case Kind::AnnotationWrongArgumentTypeError:
+    return engine.getCustomDiagID(
+        clang::DiagnosticsEngine::Error,
+        "Wrong type of argument for '%0' annotation: %1");
+  case Kind::AnnotationWrongNumberOfArgumentsError:
+    return engine.getCustomDiagID(
+        clang::DiagnosticsEngine::Error,
+        "Wrong number of arguments for '%0' annotation");
   case Kind::IgnoringQualifiersOnAliasWarning:
     return engine.getCustomDiagID(clang::DiagnosticsEngine::Warning,
                                   "Ignoring qualifiers on alias");

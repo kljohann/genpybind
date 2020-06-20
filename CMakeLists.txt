@@ -17,6 +17,7 @@ list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 include(AddLLVM)
 
 add_library(genpybind SHARED
+  src/annotated_decl.cpp
   src/annotations/annotation.cpp
   src/annotations/literal_value.cpp
   src/annotations/parser.cpp

@@ -1,12 +1,12 @@
 #pragma once
 
+#include "genpybind/annotated_decl.h"
+
 #include <clang/AST/Decl.h>
 #include <clang/AST/RecursiveASTVisitor.h>
 #include <llvm/ADT/DenseSet.h>
 
 namespace genpybind {
-
-bool hasAnnotations(const clang::Decl *decl);
 
 /// Recursive AST visitor that collects all declaration contexts that could
 /// possibly contain completely defined `TagDecl`s with external linkage.

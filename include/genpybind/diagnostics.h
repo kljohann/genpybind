@@ -11,6 +11,10 @@ class Diagnostics {
 
 public:
   enum class Kind {
+    AnnotationInvalidForDeclKindError,
+    AnnotationInvalidSpellingError,
+    AnnotationWrongArgumentTypeError,
+    AnnotationWrongNumberOfArgumentsError,
     IgnoringQualifiersOnAliasWarning,
   };
 

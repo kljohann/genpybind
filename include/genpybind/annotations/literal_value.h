@@ -15,22 +15,26 @@ namespace annotations {
 /// a string, an unsigned integer, a boolean, or the special values
 /// `default` and `nothing` (i.e. contains no value).
 class LiteralValue {
+  public:
   enum class Kind {
     Nothing,
     String,
     Unsigned,
     Boolean,
     Default,
-  } kind;
+  };
+
+private:
+  Kind kind;
   union {
-    std::string *string;
+    std::string *string = nullptr;
     unsigned integer;
     bool boolean;
   };
 
 public:
   ~LiteralValue();
-  LiteralValue() : kind(Kind::Nothing), string(nullptr) {}
+  LiteralValue() : kind(Kind::Nothing) {}
   static LiteralValue createString(llvm::StringRef value);
   static LiteralValue createUnsigned(unsigned value);
   static LiteralValue createBoolean(bool value);
@@ -41,6 +45,8 @@ public:
   LiteralValue(LiteralValue &&other) noexcept;
   LiteralValue &operator=(LiteralValue &&other) noexcept;
 
+  template <Kind other>
+  bool is() const { return kind == other; }
   bool isNothing() const { return kind == Kind::Nothing; }
   bool isString() const { return kind == Kind::String; }
   bool isUnsigned() const { return kind == Kind::Unsigned; }
