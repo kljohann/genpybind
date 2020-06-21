@@ -4,7 +4,8 @@
 
 #include <clang/AST/Decl.h>
 #include <clang/AST/RecursiveASTVisitor.h>
-#include <llvm/ADT/DenseSet.h>
+
+#include <vector>
 
 namespace genpybind {
 
@@ -17,8 +18,8 @@ namespace genpybind {
 class DeclContextCollector
     : public clang::RecursiveASTVisitor<DeclContextCollector> {
 public:
-  llvm::DenseSet<const clang::DeclContext *> decl_contexts;
-  llvm::DenseSet<const clang::TypedefNameDecl *> aliases;
+  std::vector<const clang::DeclContext *> decl_contexts;
+  std::vector<const clang::TypedefNameDecl *> aliases;
 
   bool shouldWalkTypesOfTypeLocs() const { return false; }
   bool shouldVisitTemplateInstantiations() const { return true; }
@@ -33,29 +34,29 @@ public:
     // Only typedefs with explicit annotations are considered.
     if (!hasAnnotations(decl))
       return true;
-    aliases.insert(decl);
+    aliases.push_back(decl);
     return true;
   }
 
   bool VisitNamespaceDecl(const clang::NamespaceDecl *decl) {
-    decl_contexts.insert(decl);
+    decl_contexts.push_back(decl);
     return true;
   }
 
   bool VisitTagDecl(const clang::TagDecl *decl) {
     if (!decl->isCompleteDefinition())
       return true;
-    decl_contexts.insert(decl);
+    decl_contexts.push_back(decl);
     return true;
   }
 
   bool VisitExportDecl(const clang::ExportDecl *decl) {
-    decl_contexts.insert(decl);
+    decl_contexts.push_back(decl);
     return true;
   }
 
   bool VisitLinkageSpecDecl(const clang::LinkageSpecDecl *decl) {
-    decl_contexts.insert(decl);
+    decl_contexts.push_back(decl);
     return true;
   }
 };
