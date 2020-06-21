@@ -91,6 +91,15 @@ static void reportWrongNumberOfArgumentsError(const clang::Decl *decl,
       << toString(kind);
 }
 
+std::unique_ptr<AnnotatedDecl>
+AnnotatedDecl::create(const clang::NamedDecl *decl) {
+  assert(decl != nullptr);
+  if (const auto *td = llvm::dyn_cast<clang::TypedefNameDecl>(decl))
+    return std::make_unique<AnnotatedTypedefNameDecl>(td);
+  return std::make_unique<AnnotatedNamedDecl>(
+      llvm::cast<clang::NamedDecl>(decl));
+}
+
 void AnnotatedDecl::processAnnotations() {
   const Parser::Annotations annotations = parseAnnotations(decl);
   for (const Annotation &annotation : annotations) {

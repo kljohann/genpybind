@@ -18,6 +18,8 @@ public:
   AnnotatedDecl(const clang::Decl *decl) : decl(decl) {}
   virtual ~AnnotatedDecl() = default;
 
+  static std::unique_ptr<AnnotatedDecl> create(const clang::NamedDecl *decl);
+
   virtual llvm::StringRef getFriendlyDeclKindName() const = 0;
   /// Process the given annotation and emit potential errors
   /// via the declarations associated diagnostics engine.

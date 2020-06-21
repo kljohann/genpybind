@@ -1,4 +1,3 @@
-#include "genpybind/annotated_decl.h"
 #include "genpybind/decl_context_collector.h"
 #include "genpybind/decl_context_graph.h"
 
@@ -31,12 +30,10 @@ public:
     visitor.TraverseDecl(context.getTranslationUnitDecl());
 
     for (const clang::TypedefNameDecl *alias_decl : visitor.aliases) {
-      AnnotatedTypedefNameDecl(alias_decl).processAnnotations();
     }
 
     for (const clang::DeclContext *decl_context : visitor.decl_contexts) {
       const auto *decl = llvm::dyn_cast<clang::Decl>(decl_context);
-      AnnotatedNamedDecl(decl).processAnnotations();
       const auto *parent =
           llvm::dyn_cast<clang::Decl>(decl->getLexicalDeclContext());
       graph.getOrInsertNode(parent)->addChild(graph.getOrInsertNode(decl));

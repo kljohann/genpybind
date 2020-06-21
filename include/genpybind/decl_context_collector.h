@@ -4,6 +4,7 @@
 
 #include <clang/AST/Decl.h>
 #include <clang/AST/RecursiveASTVisitor.h>
+#include <llvm/ADT/DenseMap.h>
 
 #include <vector>
 
@@ -14,12 +15,18 @@ namespace genpybind {
 /// Also collects annotated `TypedefNameDecl`s, since those could be annotated
 /// with `expose_here` annotations that are relevant for the proper nesting of
 /// the declaration contexts.
-
+///
+/// As errors on annotations should be reported in the correct source order and
+/// the annotations for aliases and declaration contexts need to be available
+/// when building the declaration context graph, annotations for all
+/// declarations are already extracted on this first pass through the AST.
 class DeclContextCollector
     : public clang::RecursiveASTVisitor<DeclContextCollector> {
 public:
   std::vector<const clang::DeclContext *> decl_contexts;
   std::vector<const clang::TypedefNameDecl *> aliases;
+  llvm::DenseMap<const clang::NamedDecl *, std::unique_ptr<AnnotatedDecl>>
+      annotations;
 
   bool shouldWalkTypesOfTypeLocs() const { return false; }
   bool shouldVisitTemplateInstantiations() const { return true; }
@@ -27,6 +34,15 @@ public:
 
   bool TraverseStmt(clang::Stmt *) {
     // No need to visit statements and expressions.
+    return true;
+  }
+
+  bool VisitNamedDecl(const clang::NamedDecl *decl) {
+    if (!hasAnnotations(decl))
+      return true;
+    auto result = annotations.try_emplace(decl, AnnotatedDecl::create(decl));
+    if (result.second)
+      result.first->getSecond()->processAnnotations();
     return true;
   }
 
