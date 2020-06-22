@@ -5,7 +5,6 @@
 
 #include <clang/AST/Decl.h>
 #include <clang/AST/RecursiveASTVisitor.h>
-#include <llvm/ADT/DenseMap.h>
 
 #include <vector>
 
@@ -23,11 +22,14 @@ namespace genpybind {
 /// declarations are already extracted on this first pass through the AST.
 class DeclContextCollector
     : public clang::RecursiveASTVisitor<DeclContextCollector> {
+  AnnotationStorage& annotations;
+
 public:
   std::vector<const clang::DeclContext *> decl_contexts;
   std::vector<const clang::TypedefNameDecl *> aliases;
-  llvm::DenseMap<const clang::NamedDecl *, std::unique_ptr<AnnotatedDecl>>
-      annotations;
+
+  DeclContextCollector(AnnotationStorage& annotations)
+      : annotations(annotations) {}
 
   bool shouldWalkTypesOfTypeLocs() const { return false; }
   bool shouldVisitTemplateInstantiations() const { return true; }
@@ -39,11 +41,7 @@ public:
   }
 
   bool VisitNamedDecl(const clang::NamedDecl *decl) {
-    if (!hasAnnotations(decl))
-      return true;
-    auto result = annotations.try_emplace(decl, AnnotatedDecl::create(decl));
-    if (result.second)
-      result.first->getSecond()->processAnnotations();
+    annotations.getOrInsert(decl);
     return true;
   }
 

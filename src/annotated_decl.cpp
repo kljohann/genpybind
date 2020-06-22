@@ -178,3 +178,26 @@ bool AnnotatedTypedefNameDecl::processAnnotation(const Annotation &annotation) {
     reportWrongNumberOfArgumentsError(getDecl(), annotation.getKind());
   return true;
 }
+
+AnnotatedDecl *AnnotationStorage::getOrInsert(const clang::NamedDecl *decl) {
+  assert(decl != nullptr);
+  if (!hasAnnotations(decl))
+    return nullptr;
+  auto result = annotations.try_emplace(decl, AnnotatedDecl::create(decl));
+  AnnotatedDecl *annotated_decl = result.first->getSecond().get();
+  assert(annotated_decl != nullptr);
+  if (result.second)
+    annotated_decl->processAnnotations();
+  return annotated_decl;
+}
+
+/// Return the entry for the specified declaration.
+/// If there is no entry, `nullptr` is returned.
+const AnnotatedDecl *
+AnnotationStorage::get(const clang::NamedDecl *decl) const {
+  assert(decl != nullptr);
+  auto it = annotations.find(decl);
+  if (it != annotations.end())
+    return it->second.get();
+  return nullptr;
+}

@@ -1,5 +1,4 @@
 #include "genpybind/decl_context_collector.h"
-#include "genpybind/decl_context_graph.h"
 
 #include <clang/AST/ASTConsumer.h>
 #include <clang/AST/Decl.h>
@@ -21,23 +20,12 @@ using namespace genpybind;
 namespace {
 
 class GenpybindASTConsumer : public clang::ASTConsumer {
-  DeclContextCollector visitor;
+  AnnotationStorage annotations;
 
 public:
   void HandleTranslationUnit(clang::ASTContext &context) override {
-    /// Builds a graph of declaration contexts from the AST.
-    DeclContextGraph graph(context.getTranslationUnitDecl());
+    DeclContextCollector visitor(annotations);
     visitor.TraverseDecl(context.getTranslationUnitDecl());
-
-    for (const clang::TypedefNameDecl *alias_decl : visitor.aliases) {
-    }
-
-    for (const clang::DeclContext *decl_context : visitor.decl_contexts) {
-      const auto *decl = llvm::dyn_cast<clang::Decl>(decl_context);
-      const auto *parent =
-          llvm::dyn_cast<clang::Decl>(decl->getLexicalDeclContext());
-      graph.getOrInsertNode(parent)->addChild(graph.getOrInsertNode(decl));
-    }
   }
 };
 

@@ -3,6 +3,7 @@
 #include "genpybind/annotations/annotation.h"
 
 #include <clang/AST/Decl.h>
+#include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/Optional.h>
 
 #include <string>
@@ -65,6 +66,20 @@ public:
   static bool classof(const AnnotatedDecl *decl) {
     return clang::TypedefNameDecl::classofKind(decl->getKind());
   }
+};
+
+class AnnotationStorage {
+  llvm::DenseMap<const clang::NamedDecl *, std::unique_ptr<AnnotatedDecl>>
+      annotations;
+
+public:
+  /// Add an entry for the specified declaration.
+  /// If the declaration does not have annotations, `nullptr` is returned.
+  AnnotatedDecl *getOrInsert(const clang::NamedDecl *decl);
+
+  /// Return the entry for the specified declaration.
+  /// If there is no entry, `nullptr` is returned.
+  const AnnotatedDecl *get(const clang::NamedDecl *decl) const;
 };
 
 } // namespace genpybind
