@@ -11,11 +11,14 @@ class Diagnostics {
 
 public:
   enum class Kind {
+    AlreadyExposedElsewhereError,
     AnnotationInvalidForDeclKindError,
     AnnotationInvalidSpellingError,
     AnnotationWrongArgumentTypeError,
     AnnotationWrongNumberOfArgumentsError,
     IgnoringQualifiersOnAliasWarning,
+    PreviouslyExposedHereNote,
+    UnsupportedExposeHereTargetError,
   };
 
   Diagnostics(clang::DiagnosticsEngine &engine) : engine(engine) {}

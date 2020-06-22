@@ -1,5 +1,3 @@
-#include "genpybind/decl_context_collector.h"
-
 #include <clang/AST/ASTConsumer.h>
 #include <clang/AST/Decl.h>
 #include <clang/Basic/Version.inc>
@@ -15,6 +13,8 @@
 
 #include <memory>
 
+#include "genpybind/decl_context_graph_builder.h"
+
 using namespace genpybind;
 
 namespace {
@@ -24,8 +24,9 @@ class GenpybindASTConsumer : public clang::ASTConsumer {
 
 public:
   void HandleTranslationUnit(clang::ASTContext &context) override {
-    DeclContextCollector visitor(annotations);
-    visitor.TraverseDecl(context.getTranslationUnitDecl());
+    DeclContextGraphBuilder builder(annotations,
+                                    context.getTranslationUnitDecl());
+    builder.buildGraph();
   }
 };
 

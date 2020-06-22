@@ -8,6 +8,9 @@ static unsigned getCustomDiagID(clang::DiagnosticsEngine &engine,
                                 Diagnostics::Kind kind) {
   using Kind = Diagnostics::Kind;
   switch (kind) {
+  case Kind::AlreadyExposedElsewhereError:
+    return engine.getCustomDiagID(clang::DiagnosticsEngine::Error,
+                                  "'%0' has already been exposed elsewhere");
   case Kind::AnnotationInvalidForDeclKindError:
     return engine.getCustomDiagID(clang::DiagnosticsEngine::Error,
                                   "Invalid annotation for %0: %1");
@@ -25,6 +28,13 @@ static unsigned getCustomDiagID(clang::DiagnosticsEngine &engine,
   case Kind::IgnoringQualifiersOnAliasWarning:
     return engine.getCustomDiagID(clang::DiagnosticsEngine::Warning,
                                   "Ignoring qualifiers on alias");
+  case Kind::PreviouslyExposedHereNote:
+    return engine.getCustomDiagID(clang::DiagnosticsEngine::Note,
+                                  "Previously exposed here");
+  case Kind::UnsupportedExposeHereTargetError:
+    return engine.getCustomDiagID(
+        clang::DiagnosticsEngine::Error,
+        "Unsupported target used with 'expose_here' annotation");
   }
   llvm_unreachable("Unknown diagnostic.");
 }

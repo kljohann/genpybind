@@ -23,6 +23,7 @@ add_library(genpybind SHARED
   src/annotations/parser.cpp
   src/decl_context_collector.cpp
   src/decl_context_graph.cpp
+  src/decl_context_graph_builder.cpp
   src/diagnostics.cpp
 )
 
