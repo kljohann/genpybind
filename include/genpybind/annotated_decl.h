@@ -60,6 +60,33 @@ public:
   }
 };
 
+class AnnotatedEnumDecl : public AnnotatedNamedDecl {
+public:
+  bool arithmetic = false;
+  llvm::Optional<bool> export_values;
+
+  llvm::StringRef getFriendlyDeclKindName() const override;
+  bool processAnnotation(const annotations::Annotation &annotation) override;
+
+  using AnnotatedNamedDecl::AnnotatedNamedDecl;
+  static bool classof(const AnnotatedDecl *decl) {
+    return clang::EnumDecl::classofKind(decl->getKind());
+  }
+};
+
+class AnnotatedRecordDecl : public AnnotatedNamedDecl {
+public:
+  bool dynamic_attr = false;
+
+  llvm::StringRef getFriendlyDeclKindName() const override;
+  bool processAnnotation(const annotations::Annotation &annotation) override;
+
+  using AnnotatedNamedDecl::AnnotatedNamedDecl;
+  static bool classof(const AnnotatedDecl *decl) {
+    return clang::RecordDecl::classofKind(decl->getKind());
+  }
+};
+
 class AnnotatedTypedefNameDecl : public AnnotatedNamedDecl {
 public:
   /// If the underlying type has default visibility, make it visible explicitly.

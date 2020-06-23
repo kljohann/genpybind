@@ -96,6 +96,10 @@ AnnotatedDecl::create(const clang::NamedDecl *decl) {
   assert(decl != nullptr);
   if (const auto *td = llvm::dyn_cast<clang::TypedefNameDecl>(decl))
     return std::make_unique<AnnotatedTypedefNameDecl>(td);
+  if (const auto *en = llvm::dyn_cast<clang::EnumDecl>(decl))
+    return std::make_unique<AnnotatedEnumDecl>(en);
+  if (const auto *rec = llvm::dyn_cast<clang::RecordDecl>(decl))
+    return std::make_unique<AnnotatedRecordDecl>(rec);
   return std::make_unique<AnnotatedNamedDecl>(
       llvm::cast<clang::NamedDecl>(decl));
 }
@@ -171,6 +175,92 @@ bool AnnotatedNamedDecl::processAnnotation(const Annotation &annotation) {
 llvm::StringRef AnnotatedNamedDecl::getSpelling() const {
   return spelling.empty() ? llvm::cast<clang::NamedDecl>(getDecl())->getName()
                           : llvm::StringRef(spelling);
+}
+
+llvm::StringRef AnnotatedEnumDecl::getFriendlyDeclKindName() const {
+  return "enumeration";
+}
+
+bool AnnotatedEnumDecl::processAnnotation(const Annotation &annotation) {
+  if (AnnotatedNamedDecl::processAnnotation(annotation))
+    return true;
+
+  ArgumentsConsumer arguments(annotation.getArguments());
+  switch (annotation.getKind().value()) {
+  case AnnotationKind::Arithmetic:
+    if (arguments.empty()) {
+      arithmetic = true;
+    } else if (auto value = arguments.take<LiteralValue::Kind::Boolean>()) {
+      arithmetic = value->getBoolean();
+    } else if ((value = arguments.take())) {
+      reportWrongArgumentTypeError(getDecl(), annotation.getKind(), *value);
+    }
+    break;
+  case AnnotationKind::ExportValues:
+    if (arguments.empty()) {
+      export_values = true;
+    } else if (arguments.take<LiteralValue::Kind::Default>()) {
+      export_values = llvm::None;
+    } else if (auto value = arguments.take<LiteralValue::Kind::Boolean>()) {
+      export_values = value->getBoolean();
+    } else if ((value = arguments.take())) {
+      reportWrongArgumentTypeError(getDecl(), annotation.getKind(), *value);
+    }
+    break;
+  default:
+    return false;
+  }
+  if (arguments)
+    reportWrongNumberOfArgumentsError(getDecl(), annotation.getKind());
+  return true;
+}
+
+llvm::StringRef AnnotatedRecordDecl::getFriendlyDeclKindName() const {
+  return "record";
+}
+
+bool AnnotatedRecordDecl::processAnnotation(const Annotation &annotation) {
+  if (AnnotatedNamedDecl::processAnnotation(annotation))
+    return true;
+
+  ArgumentsConsumer arguments(annotation.getArguments());
+  switch (annotation.getKind().value()) {
+  case AnnotationKind::DynamicAttr:
+    if (arguments.empty()) {
+      dynamic_attr = true;
+    } else if (auto value = arguments.take<LiteralValue::Kind::Boolean>()) {
+      dynamic_attr = value->getBoolean();
+    } else if ((value = arguments.take())) {
+      reportWrongArgumentTypeError(getDecl(), annotation.getKind(), *value);
+    }
+    break;
+  case AnnotationKind::HideBase:
+    // Annotation value isn't stored / made use of yet.
+    while (auto value = arguments.take<LiteralValue::Kind::String>())
+      continue;
+    if (auto value = arguments.take())
+      reportWrongArgumentTypeError(getDecl(), annotation.getKind(), *value);
+    break;
+  case AnnotationKind::HolderType:
+    // Annotation value isn't stored / made use of yet.
+    if (auto value = arguments.take<LiteralValue::Kind::String>()) {
+    } else if ((value = arguments.take())) {
+      reportWrongArgumentTypeError(getDecl(), annotation.getKind(), *value);
+    }
+    break;
+  case AnnotationKind::InlineBase:
+    // Annotation value isn't stored / made use of yet.
+    while (auto value = arguments.take<LiteralValue::Kind::String>())
+      continue;
+    if (auto value = arguments.take())
+      reportWrongArgumentTypeError(getDecl(), annotation.getKind(), *value);
+    break;
+  default:
+    return false;
+  }
+  if (arguments)
+    reportWrongNumberOfArgumentsError(getDecl(), annotation.getKind());
+  return true;
 }
 
 AnnotatedTypedefNameDecl::AnnotatedTypedefNameDecl(
