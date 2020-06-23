@@ -5,6 +5,12 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_EXTENSIONS NO)
 
+option(ENABLE_ASSERTIONS "Enable assertions" ON)
+string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
+if(ENABLE_ASSERTIONS AND NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+  add_definitions(-UNDEBUG)
+endif()
+
 add_compile_options(
   -Wall -Wextra -Wconversion -pedantic -pedantic-errors
 )
