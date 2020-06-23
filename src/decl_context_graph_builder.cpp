@@ -35,6 +35,27 @@ const clang::TagDecl *DeclContextGraphBuilder::addEdgeForExposeHereAlias(
   return target_decl;
 }
 
+bool DeclContextGraphBuilder::reportExposeHereCycles(
+    const ConstNodeSet &reachable_nodes) const {
+  bool has_cycles = false;
+  // TODO: Change to a sensible/stable iteration order.  Ideally this
+  // would correspond to file order.
+  for (const auto &pair : graph) {
+    const DeclContextNode *node = pair.getSecond().get();
+    if (reachable_nodes.count(node))
+      continue;
+    // While all unreachable nodes are attached to one of the cycles, reporting
+    // is only done on the type alias declarations.
+    auto it = moved_previously.find(node->getDecl());
+    if (it == moved_previously.end())
+      continue;
+    const clang::TypedefNameDecl *decl = it->getSecond();
+    Diagnostics::report(decl, Diagnostics::Kind::ExposeHereCycleError);
+    has_cycles = true;
+  }
+  return has_cycles;
+}
+
 bool DeclContextGraphBuilder::buildGraph() {
   clang::DiagnosticErrorTrap trap{
       translation_unit->getASTContext().getDiagnostics()};
@@ -128,5 +149,5 @@ bool DeclContextGraphBuilder::propagateVisibility() {
     annotated->visible = annotated->visible.getValueOr(default_visibility);
   }
 
-  return true;
+  return !reportExposeHereCycles(reachable);
 }

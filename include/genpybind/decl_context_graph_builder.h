@@ -1,6 +1,7 @@
 #pragma once
 
 #include <llvm/ADT/DenseMap.h>
+#include <llvm/ADT/SmallPtrSet.h>
 
 #include "genpybind/annotated_decl.h"
 #include "genpybind/decl_context_graph.h"
@@ -41,6 +42,8 @@ namespace genpybind {
 /// to expose them in the right order.  During this traversal, nodes not
 /// connected to the tree are discovered and reported.
 class DeclContextGraphBuilder {
+  using ConstNodeSet = llvm::SmallPtrSetImpl<const DeclContextNode *>;
+
   clang::TranslationUnitDecl *translation_unit;
   AnnotationStorage &annotations;
   DeclContextGraph graph;
@@ -49,6 +52,7 @@ class DeclContextGraphBuilder {
 
   const clang::TagDecl *
   addEdgeForExposeHereAlias(const clang::TypedefNameDecl *decl);
+  bool reportExposeHereCycles(const ConstNodeSet &reachable_nodes) const;
 
 public:
   DeclContextGraphBuilder(AnnotationStorage &annotations,
@@ -58,6 +62,8 @@ public:
   bool buildGraph();
 
   /// Computes the effective visibility for all reachable declaration contexts.
+  /// Any unreachable nodes are inspected for `expose_here` cycles, which are
+  /// consequently reported as errors.
   bool propagateVisibility();
 };
 

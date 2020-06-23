@@ -25,6 +25,9 @@ static unsigned getCustomDiagID(clang::DiagnosticsEngine &engine,
     return engine.getCustomDiagID(
         clang::DiagnosticsEngine::Error,
         "Wrong number of arguments for '%0' annotation");
+  case Kind::ExposeHereCycleError:
+    return engine.getCustomDiagID(clang::DiagnosticsEngine::Error,
+                                  "'expose_here' annotations form a cycle");
   case Kind::IgnoringQualifiersOnAliasWarning:
     return engine.getCustomDiagID(clang::DiagnosticsEngine::Warning,
                                   "Ignoring qualifiers on alias");
