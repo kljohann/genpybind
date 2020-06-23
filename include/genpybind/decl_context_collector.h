@@ -41,6 +41,10 @@ public:
   }
 
   bool VisitNamedDecl(const clang::NamedDecl *decl) {
+    // Collect all annotated declarations, such that annotation errors are
+    // reported in the correct order.
+    if (!hasAnnotations(decl))
+      return true;
     annotations.getOrInsert(decl);
     return true;
   }

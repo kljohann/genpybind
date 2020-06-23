@@ -6,7 +6,7 @@
 
 using namespace genpybind;
 
-bool DeclContextGraphBuilder::addEdgeForExposeHereAlias(
+const clang::TagDecl *DeclContextGraphBuilder::addEdgeForExposeHereAlias(
     const clang::TypedefNameDecl *decl) {
   const auto *parent_context = decl->getLexicalDeclContext();
   const auto *parent = llvm::dyn_cast<clang::Decl>(parent_context);
@@ -16,7 +16,7 @@ bool DeclContextGraphBuilder::addEdgeForExposeHereAlias(
   if (target_decl == nullptr) {
     Diagnostics::report(decl,
                         Diagnostics::Kind::UnsupportedExposeHereTargetError);
-    return false;
+    return nullptr;
   }
 
   target_decl = target_decl->getDefinition();
@@ -27,11 +27,11 @@ bool DeclContextGraphBuilder::addEdgeForExposeHereAlias(
     Diagnostics::report(inserted.first->getSecond(),
                         Diagnostics::Kind::PreviouslyExposedHereNote)
         << target_decl->getNameAsString();
-    return false;
+    return nullptr;
   }
 
   graph.getOrInsertNode(parent)->addChild(graph.getOrInsertNode(target_decl));
-  return true;
+  return target_decl;
 }
 
 bool DeclContextGraphBuilder::buildGraph() {
@@ -52,7 +52,10 @@ bool DeclContextGraphBuilder::buildGraph() {
            "only aliases with annotations are collected");
     if (annotated == nullptr || !annotated->expose_here)
       continue;
-    addEdgeForExposeHereAlias(alias_decl);
+    if (const clang::TagDecl *target_decl =
+            addEdgeForExposeHereAlias(alias_decl)) {
+      annotated->propagateAnnotations(*annotations.getOrInsert(target_decl));
+    }
   }
 
   // Bail out if establishing "expose_here" aliases failed, e.g. due to

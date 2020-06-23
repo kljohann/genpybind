@@ -163,8 +163,16 @@ llvm::StringRef AnnotatedTypedefNameDecl::getFriendlyDeclKindName() const {
 }
 
 bool AnnotatedTypedefNameDecl::processAnnotation(const Annotation &annotation) {
-  if (AnnotatedNamedDecl::processAnnotation(annotation))
+  if (AnnotatedNamedDecl::processAnnotation(annotation)) {
+    // Keep track of general `NamedDecl` annotations in order to forward
+    // them if this is an "expose_here" type alias.
+    // NOTE: At a later point in time, annotations specific to the declaration
+    // kind might be forwarded (e.g. `inline_base`).  They would then need to be
+    // checked for validity here, with any diagnostics being attached to the
+    // `TypedefNameDecl` (in order to emit diagnostics in the right order).
+    annotations_to_propagate.push_back(annotation);
     return true;
+  }
 
   ArgumentsConsumer arguments(annotation.getArguments());
   switch (annotation.getKind().value()) {
@@ -179,10 +187,21 @@ bool AnnotatedTypedefNameDecl::processAnnotation(const Annotation &annotation) {
   return true;
 }
 
+void AnnotatedTypedefNameDecl::propagateAnnotations(
+    AnnotatedDecl &other) const {
+  for (const Annotation &annotation : annotations_to_propagate) {
+    bool result = other.processAnnotation(annotation);
+    // So far, only annotations that are valid for all `NamedDecl`s are
+    // propagated.  If additional annotations are forwarded in the future,
+    // they need to be checked for validity when processing the
+    // `TypedefNameDecl`'s annotations (see note above).
+    assert(result && "invalid annotation has been propagated");
+    static_cast<void>(result);
+  }
+}
+
 AnnotatedDecl *AnnotationStorage::getOrInsert(const clang::NamedDecl *decl) {
   assert(decl != nullptr);
-  if (!hasAnnotations(decl))
-    return nullptr;
   auto result = annotations.try_emplace(decl, AnnotatedDecl::create(decl));
   AnnotatedDecl *annotated_decl = result.first->getSecond().get();
   assert(annotated_decl != nullptr);

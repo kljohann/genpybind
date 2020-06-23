@@ -7,6 +7,7 @@
 #include <llvm/ADT/Optional.h>
 
 #include <string>
+#include <vector>
 
 namespace genpybind {
 
@@ -58,6 +59,7 @@ class AnnotatedTypedefNameDecl : public AnnotatedNamedDecl {
 public:
   /// Expose the underlying type at the location of the type alias instead.
   bool expose_here = false;
+  std::vector<annotations::Annotation> annotations_to_propagate;
 
   llvm::StringRef getFriendlyDeclKindName() const override;
   bool processAnnotation(const annotations::Annotation &annotation) override;
@@ -66,6 +68,11 @@ public:
   static bool classof(const AnnotatedDecl *decl) {
     return clang::TypedefNameDecl::classofKind(decl->getKind());
   }
+
+  /// Applies all annotations of this declaration to another declaration.
+  /// This is used to propagate spelling and visibility in the case of
+  /// "expose_here" type aliases.
+  void propagateAnnotations(AnnotatedDecl &other) const;
 };
 
 class AnnotationStorage {
@@ -74,7 +81,6 @@ class AnnotationStorage {
 
 public:
   /// Add an entry for the specified declaration.
-  /// If the declaration does not have annotations, `nullptr` is returned.
   AnnotatedDecl *getOrInsert(const clang::NamedDecl *decl);
 
   /// Return the entry for the specified declaration.

@@ -47,7 +47,8 @@ class DeclContextGraphBuilder {
   llvm::DenseMap<const clang::Decl *, const clang::TypedefNameDecl *>
       moved_previously;
 
-  bool addEdgeForExposeHereAlias(const clang::TypedefNameDecl *decl);
+  const clang::TagDecl *
+  addEdgeForExposeHereAlias(const clang::TypedefNameDecl *decl);
 
 public:
   DeclContextGraphBuilder(AnnotationStorage &annotations,
