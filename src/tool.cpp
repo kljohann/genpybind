@@ -26,7 +26,7 @@ public:
   void HandleTranslationUnit(clang::ASTContext &context) override {
     DeclContextGraphBuilder builder(annotations,
                                     context.getTranslationUnitDecl());
-    builder.buildGraph();
+    builder.buildGraph() && builder.propagateVisibility();
   }
 };
 

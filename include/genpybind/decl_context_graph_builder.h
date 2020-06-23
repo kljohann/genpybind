@@ -56,6 +56,9 @@ public:
       : translation_unit(decl), annotations(annotations), graph(decl) {}
 
   bool buildGraph();
+
+  /// Computes the effective visibility for all reachable declaration contexts.
+  bool propagateVisibility();
 };
 
 } // namespace genpybind
