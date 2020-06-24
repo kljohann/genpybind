@@ -14,8 +14,16 @@
 #include <memory>
 
 #include "genpybind/decl_context_graph_builder.h"
+#include "genpybind/inspect_graph.h"
 
 using namespace genpybind;
+
+static llvm::cl::OptionCategory g_genpybind_category("Genpybind Options");
+
+static llvm::cl::opt<bool>
+    g_inspect_graph("inspect-graph", llvm::cl::cat(g_genpybind_category),
+                    llvm::cl::desc("Show the declaration context graph."),
+                    llvm::cl::init(false), llvm::cl::Hidden);
 
 namespace {
 
@@ -26,7 +34,14 @@ public:
   void HandleTranslationUnit(clang::ASTContext &context) override {
     DeclContextGraphBuilder builder(annotations,
                                     context.getTranslationUnitDecl());
-    builder.buildGraph() && builder.propagateVisibility();
+    if (!builder.buildGraph())
+      return;
+
+    if (!builder.propagateVisibility())
+      return;
+
+    if (g_inspect_graph)
+      viewGraph(&builder.getGraph(), annotations, "DeclContextGraph");
   }
 };
 
@@ -76,15 +91,14 @@ std::string findResourceDir() {
 int main(int argc, const char **argv) {
   using namespace ::clang::tooling;
 
-  llvm::cl::OptionCategory genpybind_category("Genpybind Options");
-
   llvm::cl::extrahelp common_help(CommonOptionsParser::HelpMessage);
 
-  llvm::cl::opt<bool> expect_failure("xfail", llvm::cl::cat(genpybind_category),
+  llvm::cl::opt<bool> expect_failure("xfail",
+                                    llvm::cl::cat(g_genpybind_category),
                                     llvm::cl::desc("Reverse the exit status."),
                                     llvm::cl::init(false), llvm::cl::Hidden);
 
-  CommonOptionsParser options_parser(argc, argv, genpybind_category);
+  CommonOptionsParser options_parser(argc, argv, g_genpybind_category);
 
   ClangTool tool(options_parser.getCompilations(),
                  options_parser.getSourcePathList());

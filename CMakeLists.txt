@@ -31,6 +31,7 @@ add_library(genpybind SHARED
   src/decl_context_graph.cpp
   src/decl_context_graph_builder.cpp
   src/diagnostics.cpp
+  src/inspect_graph.cpp
 )
 
 # Use same compiler flags as LLVM.

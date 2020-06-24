@@ -65,6 +65,8 @@ public:
   /// Any unreachable nodes are inspected for `expose_here` cycles, which are
   /// consequently reported as errors.
   bool propagateVisibility();
+
+  const DeclContextGraph& getGraph() const { return graph; }
 };
 
 } // namespace genpybind
