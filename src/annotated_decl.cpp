@@ -111,6 +111,16 @@ void AnnotatedDecl::processAnnotations() {
   }
 }
 
+AnnotatedNamedDecl::AnnotatedNamedDecl(const clang::NamedDecl *decl)
+    : AnnotatedDecl(decl) {
+  assert(decl != nullptr);
+  // Non-namespace named decls that have at least one annotation
+  // are visible by default.  This can be overruled by an explicit
+  // `visible(default)`, `visible(false)` or `hidden` annotation.
+  if (!llvm::isa<clang::NamespaceDecl>(decl) && hasAnnotations(decl))
+    visible = true;
+}
+
 llvm::StringRef AnnotatedNamedDecl::getFriendlyDeclKindName() const {
   return "named declaration";
 }

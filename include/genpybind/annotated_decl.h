@@ -46,10 +46,10 @@ public:
   /// based on the visibility of the parent declaration.
   llvm::Optional<bool> visible;
 
+  AnnotatedNamedDecl(const clang::NamedDecl *decl);
   llvm::StringRef getFriendlyDeclKindName() const override;
   bool processAnnotation(const annotations::Annotation &annotation) override;
 
-  using AnnotatedDecl::AnnotatedDecl;
   static bool classof(const AnnotatedDecl *decl) {
     return clang::NamedDecl::classofKind(decl->getKind());
   }
