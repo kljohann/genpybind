@@ -7,15 +7,23 @@
 
 using namespace genpybind;
 
-const clang::TagDecl *DeclContextGraphBuilder::addEdgeForExposeHereAlias(
-    const clang::TypedefNameDecl *decl) {
-  const auto *parent_context = decl->getLexicalDeclContext();
-  const auto *parent = llvm::dyn_cast<clang::Decl>(parent_context);
+using annotations::Annotation;
+using annotations::AnnotationKind;
+
+auto DeclContextGraphBuilder::aliasTarget(const clang::TypedefNameDecl *decl)
+    -> const clang::TagDecl * {
   const clang::TagDecl *target_decl = decl->getUnderlyingType()->getAsTagDecl();
   assert(target_decl != nullptr &&
          "type aliases can only be used with tag type targets");
+  return target_decl->getDefinition();
+}
 
-  target_decl = target_decl->getDefinition();
+bool DeclContextGraphBuilder::addEdgeForExposeHereAlias(
+    const clang::TypedefNameDecl *decl) {
+  const auto *parent_context = decl->getLexicalDeclContext();
+  const auto *parent = llvm::dyn_cast<clang::Decl>(parent_context);
+  const clang::TagDecl *target_decl = aliasTarget(decl);
+
   auto inserted = moved_previously.try_emplace(target_decl, decl);
   if (!inserted.second) {
     Diagnostics::report(decl, Diagnostics::Kind::AlreadyExposedElsewhereError)
@@ -23,11 +31,11 @@ const clang::TagDecl *DeclContextGraphBuilder::addEdgeForExposeHereAlias(
     Diagnostics::report(inserted.first->getSecond(),
                         Diagnostics::Kind::PreviouslyExposedHereNote)
         << target_decl->getNameAsString();
-    return nullptr;
+    return false;
   }
 
   graph.getOrInsertNode(parent)->addChild(graph.getOrInsertNode(target_decl));
-  return target_decl;
+  return true;
 }
 
 bool DeclContextGraphBuilder::reportExposeHereCycles(
@@ -67,12 +75,14 @@ bool DeclContextGraphBuilder::buildGraph() {
         annotations.get(alias_decl));
     assert(annotated != nullptr &&
            "only aliases with annotations are collected");
-    if (annotated == nullptr || !annotated->expose_here)
+    if (!annotated->encourage && !annotated->expose_here)
       continue;
-    if (const clang::TagDecl *target_decl =
-            addEdgeForExposeHereAlias(alias_decl)) {
-      annotated->propagateAnnotations(*annotations.getOrInsert(target_decl));
-    }
+    const clang::TagDecl *target_decl = aliasTarget(alias_decl);
+    AnnotatedDecl &annotated_target = *annotations.getOrInsert(target_decl);
+    if (annotated->encourage)
+      annotated_target.processAnnotation(Annotation(AnnotationKind::Visible));
+    if (annotated->expose_here && addEdgeForExposeHereAlias(alias_decl))
+      annotated->propagateAnnotations(annotated_target);
   }
 
   // Bail out if establishing "expose_here" aliases failed, e.g. due to

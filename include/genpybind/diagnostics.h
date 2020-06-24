@@ -16,6 +16,7 @@ public:
     AnnotationInvalidSpellingError,
     AnnotationWrongArgumentTypeError,
     AnnotationWrongNumberOfArgumentsError,
+    ConflictingAnnotationsError,
     ExposeHereCycleError,
     IgnoringQualifiersOnAliasWarning,
     PreviouslyExposedHereNote,

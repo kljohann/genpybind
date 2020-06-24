@@ -50,8 +50,9 @@ class DeclContextGraphBuilder {
   llvm::DenseMap<const clang::Decl *, const clang::TypedefNameDecl *>
       moved_previously;
 
-  const clang::TagDecl *
-  addEdgeForExposeHereAlias(const clang::TypedefNameDecl *decl);
+  const clang::TagDecl *aliasTarget(const clang::TypedefNameDecl *decl);
+
+  bool addEdgeForExposeHereAlias(const clang::TypedefNameDecl *decl);
   bool reportExposeHereCycles(const ConstNodeSet &reachable_nodes) const;
 
 public:

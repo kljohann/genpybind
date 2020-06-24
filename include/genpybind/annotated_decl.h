@@ -57,6 +57,8 @@ public:
 
 class AnnotatedTypedefNameDecl : public AnnotatedNamedDecl {
 public:
+  /// If the underlying type has default visibility, make it visible explicitly.
+  bool encourage = false;
   /// Expose the underlying type at the location of the type alias instead.
   bool expose_here = false;
   std::vector<annotations::Annotation> annotations_to_propagate;

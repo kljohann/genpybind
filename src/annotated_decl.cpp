@@ -196,6 +196,9 @@ bool AnnotatedTypedefNameDecl::processAnnotation(const Annotation &annotation) {
 
   ArgumentsConsumer arguments(annotation.getArguments());
   switch (annotation.getKind().value()) {
+  case AnnotationKind::Encourage:
+    encourage = true;
+    break;
   case AnnotationKind::ExposeHere:
     expose_here = true;
     break;
@@ -204,6 +207,13 @@ bool AnnotatedTypedefNameDecl::processAnnotation(const Annotation &annotation) {
   }
   if (arguments)
     reportWrongNumberOfArgumentsError(getDecl(), annotation.getKind());
+
+  if (encourage && expose_here)
+    Diagnostics::report(getDecl(),
+                        Diagnostics::Kind::ConflictingAnnotationsError)
+        << toString(AnnotationKind::Encourage)
+        << toString(AnnotationKind::ExposeHere);
+
   return true;
 }
 

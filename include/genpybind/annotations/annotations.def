@@ -40,6 +40,7 @@ ANNOTATION_KIND(Tag, tag)       // (String)
 
 // TypedefNameDecl
 ANNOTATION_KIND(ExposeHere, expose_here) // ()
+ANNOTATION_KIND(Encourage, encourage) // ()
 
 // FieldDecl or VarDecl
 ANNOTATION_KIND(Readonly, readonly) // (Boolean)?
