@@ -19,7 +19,7 @@ public:
     ExposeHereCycleError,
     IgnoringQualifiersOnAliasWarning,
     PreviouslyExposedHereNote,
-    UnsupportedExposeHereTargetError,
+    UnsupportedAliasTargetError,
   };
 
   Diagnostics(clang::DiagnosticsEngine &engine) : engine(engine) {}

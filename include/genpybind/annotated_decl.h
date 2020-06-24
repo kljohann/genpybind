@@ -61,10 +61,10 @@ public:
   bool expose_here = false;
   std::vector<annotations::Annotation> annotations_to_propagate;
 
+  AnnotatedTypedefNameDecl(const clang::TypedefNameDecl *decl);
   llvm::StringRef getFriendlyDeclKindName() const override;
   bool processAnnotation(const annotations::Annotation &annotation) override;
 
-  using AnnotatedNamedDecl::AnnotatedNamedDecl;
   static bool classof(const AnnotatedDecl *decl) {
     return clang::TypedefNameDecl::classofKind(decl->getKind());
   }

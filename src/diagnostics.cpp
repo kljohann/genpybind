@@ -34,10 +34,10 @@ static unsigned getCustomDiagID(clang::DiagnosticsEngine &engine,
   case Kind::PreviouslyExposedHereNote:
     return engine.getCustomDiagID(clang::DiagnosticsEngine::Note,
                                   "Previously exposed here");
-  case Kind::UnsupportedExposeHereTargetError:
+  case Kind::UnsupportedAliasTargetError:
     return engine.getCustomDiagID(
         clang::DiagnosticsEngine::Error,
-        "Unsupported target used with 'expose_here' annotation");
+        "Annotated alias has unsupported target kind");
   }
   llvm_unreachable("Unknown diagnostic.");
 }

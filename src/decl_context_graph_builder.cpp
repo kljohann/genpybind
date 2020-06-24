@@ -12,13 +12,8 @@ const clang::TagDecl *DeclContextGraphBuilder::addEdgeForExposeHereAlias(
   const auto *parent_context = decl->getLexicalDeclContext();
   const auto *parent = llvm::dyn_cast<clang::Decl>(parent_context);
   const clang::TagDecl *target_decl = decl->getUnderlyingType()->getAsTagDecl();
-
-  // Report error when 'expose_here' is used with non-tag type.
-  if (target_decl == nullptr) {
-    Diagnostics::report(decl,
-                        Diagnostics::Kind::UnsupportedExposeHereTargetError);
-    return nullptr;
-  }
+  assert(target_decl != nullptr &&
+         "type aliases can only be used with tag type targets");
 
   target_decl = target_decl->getDefinition();
   auto inserted = moved_previously.try_emplace(target_decl, decl);

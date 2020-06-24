@@ -168,6 +168,16 @@ bool AnnotatedNamedDecl::processAnnotation(const Annotation &annotation) {
   return true;
 }
 
+AnnotatedTypedefNameDecl::AnnotatedTypedefNameDecl(
+    const clang::TypedefNameDecl *decl)
+    : AnnotatedNamedDecl(decl) {
+  assert(decl != nullptr);
+  const clang::TagDecl *target_decl = decl->getUnderlyingType()->getAsTagDecl();
+
+  if (hasAnnotations(decl) && target_decl == nullptr)
+    Diagnostics::report(decl, Diagnostics::Kind::UnsupportedAliasTargetError);
+}
+
 llvm::StringRef AnnotatedTypedefNameDecl::getFriendlyDeclKindName() const {
   return "type alias";
 }
