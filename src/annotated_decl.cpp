@@ -168,6 +168,11 @@ bool AnnotatedNamedDecl::processAnnotation(const Annotation &annotation) {
   return true;
 }
 
+llvm::StringRef AnnotatedNamedDecl::getSpelling() const {
+  return spelling.empty() ? llvm::cast<clang::NamedDecl>(getDecl())->getName()
+                          : llvm::StringRef(spelling);
+}
+
 AnnotatedTypedefNameDecl::AnnotatedTypedefNameDecl(
     const clang::TypedefNameDecl *decl)
     : AnnotatedNamedDecl(decl) {
@@ -219,6 +224,11 @@ bool AnnotatedTypedefNameDecl::processAnnotation(const Annotation &annotation) {
 
 void AnnotatedTypedefNameDecl::propagateAnnotations(
     AnnotatedDecl &other) const {
+  // Always propagate the effective spelling of the type alias, which is the
+  // name of its identifier if no explicit `expose_as` annotation has been
+  // given.  If there is one, it will be processed twice, but this is benign.
+  other.processAnnotation(Annotation(
+      AnnotationKind::ExposeAs, {LiteralValue::createString(getSpelling())}));
   for (const Annotation &annotation : annotations_to_propagate) {
     bool result = other.processAnnotation(annotation);
     // So far, only annotations that are valid for all `NamedDecl`s are

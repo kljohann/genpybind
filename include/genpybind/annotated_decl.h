@@ -50,6 +50,11 @@ public:
   llvm::StringRef getFriendlyDeclKindName() const override;
   bool processAnnotation(const annotations::Annotation &annotation) override;
 
+  /// Return user-provided spelling, falling back to the name of the identifier
+  /// that names the declaration.
+  /// The returned value is only valid until the spelling is changed.
+  llvm::StringRef getSpelling() const;
+
   static bool classof(const AnnotatedDecl *decl) {
     return clang::NamedDecl::classofKind(decl->getKind());
   }
