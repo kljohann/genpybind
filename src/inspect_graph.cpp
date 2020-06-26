@@ -1,5 +1,6 @@
 #include "genpybind/inspect_graph.h"
 
+#include <clang/AST/QualTypeNames.h>
 #include <llvm/Support/GraphWriter.h>
 
 using namespace genpybind;
@@ -50,8 +51,15 @@ struct DOTGraphTraits<DeclContextGraphWithAnnotations>
     if (node == graph->getRoot())
       return "*";
 
+    if (const auto *decl = dyn_cast_or_null<clang::TypeDecl>(node->getDecl())) {
+      const clang::ASTContext &context = decl->getASTContext();
+      const clang::QualType qual_type = context.getTypeDeclType(decl);
+      return clang::TypeName::getFullyQualifiedName(
+          qual_type, context, context.getPrintingPolicy());
+    }
+
     if (const auto *decl = dyn_cast_or_null<clang::NamedDecl>(node->getDecl()))
-      return decl->getNameAsString();
+      return decl->getQualifiedNameAsString();
 
     if (isa<clang::TranslationUnitDecl>(node->getDecl()))
       return "TU";
