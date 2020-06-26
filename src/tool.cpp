@@ -7,6 +7,7 @@
 #include <clang/Tooling/ArgumentsAdjusters.h>
 #include <clang/Tooling/CommonOptionsParser.h>
 #include <clang/Tooling/Tooling.h>
+#include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/FileSystem.h>
@@ -20,14 +21,23 @@
 
 using namespace genpybind;
 
+namespace {
+
 static llvm::cl::OptionCategory g_genpybind_category("Genpybind Options");
 
-static llvm::cl::opt<bool>
-    g_inspect_graph("inspect-graph", llvm::cl::cat(g_genpybind_category),
-                    llvm::cl::desc("Show the declaration context graph."),
-                    llvm::cl::init(false), llvm::cl::Hidden);
+enum class InspectGraphStage {
+  Visibility,
+  Pruned,
+};
 
-namespace {
+static llvm::cl::list<InspectGraphStage> g_inspect_graph(
+    "inspect-graph", llvm::cl::cat(g_genpybind_category),
+    llvm::cl::desc("Show the declaration context graph."),
+    llvm::cl::values(clEnumValN(InspectGraphStage::Visibility, "visibility",
+                                "After visibility propagation"),
+                     clEnumValN(InspectGraphStage::Pruned, "pruned",
+                                "After pruning of hidden nodes")),
+    llvm::cl::ZeroOrMore, llvm::cl::Hidden);
 
 class GenpybindASTConsumer : public clang::ASTConsumer {
   AnnotationStorage annotations;
@@ -42,8 +52,13 @@ public:
     if (!builder.propagateVisibility())
       return;
 
-    if (g_inspect_graph)
+    if (llvm::is_contained(g_inspect_graph, InspectGraphStage::Visibility))
       viewGraph(&builder.getGraph(), annotations, "DeclContextGraph");
+
+    auto pruned_graph = builder.getPrunedGraph();
+
+    if (llvm::is_contained(g_inspect_graph, InspectGraphStage::Pruned))
+      viewGraph(&pruned_graph, annotations, "DeclContextGraph");
   }
 };
 

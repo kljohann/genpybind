@@ -156,3 +156,52 @@ bool DeclContextGraphBuilder::propagateVisibility() {
 
   return !reportExposeHereCycles(reachable);
 }
+
+DeclContextGraph DeclContextGraphBuilder::getPrunedGraph() const {
+  DeclContextGraph pruned(translation_unit);
+  for (auto it = llvm::df_begin(&graph), end_it = llvm::df_end(&graph);
+       it != end_it;
+       /* incremented below, due to use of `skipChildren` */) {
+    const clang::Decl *const decl = it->getDecl();
+    const clang::TagDecl *const tag_decl = llvm::dyn_cast<clang::TagDecl>(decl);
+
+    // As namespaces without a `module` tag do not contribute to the structure
+    // of the exposed module, they are always preserved, even if they are not
+    // marked visible.  Their visibility is only relevant as the default value
+    // for the contained declarations.
+    // Similarly, always descend into annotation-less unnamed decl contexts.
+    // NOTE: These declaration contexts might contain free functions, aliases or
+    // other declarations that have been marked visible, but which are not
+    // represented in the declaration context graph.
+    // TODO: Nodes which do not contain any visible declarations can be omitted.
+    if (tag_decl != nullptr) {
+      // Remove hidden nodes and their children by skipping the corresponding
+      // part of the tree.
+      auto *annotated =
+          llvm::dyn_cast_or_null<AnnotatedNamedDecl>(annotations.get(tag_decl));
+      assert(annotated != nullptr &&
+             "annotation should be in place after propagating visibility");
+      assert(annotated->visible.hasValue() &&
+             "decl should have non-default visibility after propagation");
+      if (!*annotated->visible) {
+        it.skipChildren(); // increments the iterator
+        continue;
+      }
+    }
+
+    // Skip the root node.
+    if (it.getPathLength() < 2) {
+      ++it;
+      continue;
+    }
+
+    auto *node = pruned.getOrInsertNode(decl);
+    const clang::Decl *parent_decl =
+        it.getPath(it.getPathLength() - 2)->getDecl();
+    auto *parent_node = pruned.getOrInsertNode(parent_decl);
+    parent_node->addChild(node);
+
+    ++it;
+  }
+  return pruned;
+}

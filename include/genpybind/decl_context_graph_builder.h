@@ -67,6 +67,10 @@ public:
   /// consequently reported as errors.
   bool propagateVisibility();
 
+  /// Return a pruned version of the graph, where hidden nodes are omitted.
+  /// Should only be called after propagateVisibility().
+  DeclContextGraph getPrunedGraph() const;
+
   const DeclContextGraph& getGraph() const { return graph; }
 };
 
