@@ -3,6 +3,7 @@
 #include <clang/Basic/Version.inc>
 #include <clang/Driver/Driver.h>
 #include <clang/Frontend/CompilerInstance.h>
+#include <clang/Frontend/MultiplexConsumer.h>
 #include <clang/Tooling/ArgumentsAdjusters.h>
 #include <clang/Tooling/CommonOptionsParser.h>
 #include <clang/Tooling/Tooling.h>
@@ -15,6 +16,7 @@
 
 #include "genpybind/decl_context_graph_builder.h"
 #include "genpybind/inspect_graph.h"
+#include "genpybind/instantiate_alias_targets.h"
 
 using namespace genpybind;
 
@@ -50,7 +52,10 @@ public:
   virtual std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance & /*compiler*/,
                     llvm::StringRef /*in_file*/) {
-    return std::make_unique<GenpybindASTConsumer>();
+    std::vector<std::unique_ptr<clang::ASTConsumer>> consumers;
+    consumers.push_back(std::make_unique<InstantiateAliasTargetsASTConsumer>());
+    consumers.push_back(std::make_unique<GenpybindASTConsumer>());
+    return std::make_unique<clang::MultiplexConsumer>(std::move(consumers));
   }
 };
 

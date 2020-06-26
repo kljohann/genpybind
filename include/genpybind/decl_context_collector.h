@@ -20,6 +20,12 @@ namespace genpybind {
 /// the annotations for aliases and declaration contexts need to be available
 /// when building the declaration context graph, annotations for all
 /// declarations are already extracted on this first pass through the AST.
+///
+/// Only non-dependent contexts are considered, as only complete types can be
+/// exposed in any case.  As a preparation, `InstantiateAliasTargetsASTConsumer`
+/// should have been run, s.t. there is a complete record declaration
+/// (`ClassTemplateSpecializationDecl`) for each referenced template
+/// instantiation.
 class DeclContextCollector
     : public clang::RecursiveASTVisitor<DeclContextCollector> {
   AnnotationStorage& annotations;
@@ -43,7 +49,7 @@ public:
   bool VisitNamedDecl(const clang::NamedDecl *decl) {
     // Collect all annotated declarations, such that annotation errors are
     // reported in the correct order.
-    if (!hasAnnotations(decl))
+    if (!hasAnnotations(decl) || decl->getDeclContext()->isDependentContext())
       return true;
     annotations.getOrInsert(decl);
     return true;
@@ -53,7 +59,7 @@ public:
 
   bool VisitTypedefNameDecl(const clang::TypedefNameDecl *decl) {
     // Only typedefs with explicit annotations are considered.
-    if (!hasAnnotations(decl))
+    if (!hasAnnotations(decl) || decl->getDeclContext()->isDependentContext())
       return true;
     warnIfAliasHasQualifiers(decl);
     aliases.push_back(decl);
@@ -66,7 +72,7 @@ public:
   }
 
   bool VisitTagDecl(const clang::TagDecl *decl) {
-    if (!decl->isCompleteDefinition())
+    if (!decl->isCompleteDefinition() || decl->isDependentType())
       return true;
     decl_contexts.push_back(decl);
     return true;
