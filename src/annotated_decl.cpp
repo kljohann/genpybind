@@ -229,6 +229,13 @@ void AnnotatedTypedefNameDecl::propagateAnnotations(
   // given.  If there is one, it will be processed twice, but this is benign.
   other.processAnnotation(Annotation(
       AnnotationKind::ExposeAs, {LiteralValue::createString(getSpelling())}));
+  // As the `visible` annotatation is implicit if there is at least one other
+  // annotation, its computed value also has to be propagated, as it's possible
+  // that there is no explicit annotation.
+  other.processAnnotation(
+      Annotation(AnnotationKind::Visible,
+                 {visible.hasValue() ? LiteralValue::createBoolean(*visible)
+                                     : LiteralValue::createDefault()}));
   for (const Annotation &annotation : annotations_to_propagate) {
     bool result = other.processAnnotation(annotation);
     // So far, only annotations that are valid for all `NamedDecl`s are
