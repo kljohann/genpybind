@@ -1,11 +1,27 @@
 #include "genpybind/inspect_graph.h"
 
+#include "clang/AST/TextNodeDumper.h"
 #include <clang/AST/QualTypeNames.h>
 #include <llvm/Support/GraphWriter.h>
 
 using namespace genpybind;
 
+static std::string getDeclName(const clang::Decl *decl) {
+  if (const auto *type_decl = llvm::dyn_cast<clang::TypeDecl>(decl)) {
+    const clang::ASTContext &context = type_decl->getASTContext();
+    const clang::QualType qual_type = context.getTypeDeclType(type_decl);
+    return clang::TypeName::getFullyQualifiedName(qual_type, context,
+                                                  context.getPrintingPolicy());
+  }
+
+  if (const auto *named_decl = llvm::dyn_cast<clang::NamedDecl>(decl))
+    return named_decl->getQualifiedNameAsString();
+
+  return "";
+}
+
 namespace {
+
 struct DeclContextGraphWithAnnotations {
   const DeclContextGraph *graph;
   const AnnotationStorage &annotations;
@@ -14,8 +30,66 @@ struct DeclContextGraphWithAnnotations {
                                   const AnnotationStorage &annotations)
       : graph(graph), annotations(annotations) {}
 
+  const DeclContextGraph *operator*() const { return graph; }
   const DeclContextGraph *operator->() const { return graph; }
 };
+
+class GraphPrinter : private clang::TextTreeStructure {
+  llvm::raw_ostream &os;
+  const DeclContextGraph *graph;
+  const AnnotationStorage &annotations;
+  using NodeRef = const DeclContextNode *;
+
+  std::string getNodeLabel(NodeRef node) {
+    const clang::Decl *decl = node->getDecl();
+    std::string result = decl->getDeclKindName();
+    if (llvm::isa<clang::NamedDecl>(decl)) {
+      result.append(" '");
+      result.append(getDeclName(decl));
+      result.push_back('\'');
+    }
+    return result;
+  }
+
+  void printNodeDescription(NodeRef node) {
+    const clang::Decl *decl = node->getDecl();
+    const auto *named_decl = llvm::dyn_cast<clang::NamedDecl>(decl);
+    if (named_decl == nullptr)
+      return;
+    const auto *annotated =
+        llvm::dyn_cast_or_null<AnnotatedNamedDecl>(annotations.get(named_decl));
+    if (annotated == nullptr)
+      return;
+
+    if (!annotated->visible.hasValue()) {
+      os << "visible(default)";
+    } else {
+      os << (annotated->visible.getValue() ? "visible" : "hidden");
+    }
+
+    if (!annotated->spelling.empty()) {
+      os << R"(, expose_as(")" << annotated->spelling << R"x("))x";
+    }
+  }
+
+  void printNode(NodeRef node) {
+    AddChild(getNodeLabel(node), [node, this] {
+      printNodeDescription(node);
+      for (NodeRef child : *node) {
+        printNode(child);
+      }
+    });
+  }
+
+public:
+  GraphPrinter(llvm::raw_ostream &os, const DeclContextGraph *graph,
+               const AnnotationStorage &annotations)
+      : TextTreeStructure(os, false), os(os), graph(graph),
+        annotations(annotations) {}
+
+  void print() { printNode(graph->getRoot()); }
+};
+
 } // namespace
 
 namespace llvm {
@@ -51,21 +125,18 @@ struct DOTGraphTraits<DeclContextGraphWithAnnotations>
     if (node == graph->getRoot())
       return "*";
 
-    if (const auto *decl = dyn_cast_or_null<clang::TypeDecl>(node->getDecl())) {
-      const clang::ASTContext &context = decl->getASTContext();
-      const clang::QualType qual_type = context.getTypeDeclType(decl);
-      return clang::TypeName::getFullyQualifiedName(
-          qual_type, context, context.getPrintingPolicy());
-    }
+    const clang::Decl *decl = node->getDecl();
 
-    if (const auto *decl = dyn_cast_or_null<clang::NamedDecl>(node->getDecl()))
-      return decl->getQualifiedNameAsString();
-
-    if (isa<clang::TranslationUnitDecl>(node->getDecl()))
+    if (isa<clang::TranslationUnitDecl>(decl))
       return "TU";
 
-    return std::string("<") + node->getDecl()->getDeclKindName() + ">";
+    std::string result = getDeclName(decl);
+    if (result.empty())
+      result = std::string("<") + decl->getDeclKindName() + ">";
+
+    return result;
   }
+
   static std::string
   getNodeDescription(const DeclContextNode *node,
                      const DeclContextGraphWithAnnotations &graph) {
@@ -110,4 +181,11 @@ void genpybind::viewGraph(const DeclContextGraph *graph,
                           const llvm::Twine &name, const llvm::Twine &title) {
   const DeclContextGraphWithAnnotations annotated_graph(graph, annotations);
   llvm::ViewGraph(annotated_graph, name, false, title);
+}
+
+void genpybind::printGraph(llvm::raw_ostream &os, const DeclContextGraph *graph,
+                           const AnnotationStorage &annotations,
+                           const llvm::Twine &title) {
+  os << title;
+  GraphPrinter(os, graph, annotations).print();
 }
