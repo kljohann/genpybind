@@ -20,6 +20,7 @@ public:
     ExposeHereCycleError,
     IgnoringQualifiersOnAliasWarning,
     PreviouslyExposedHereNote,
+    UnreachableDeclContextWarning,
     UnsupportedAliasTargetError,
   };
 

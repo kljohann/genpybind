@@ -59,6 +59,29 @@ bool DeclContextGraphBuilder::reportExposeHereCycles(
   return has_cycles;
 }
 
+void DeclContextGraphBuilder::reportUnreachableVisibleNodes(
+    const ConstNodeSet &reachable_nodes) const {
+  // TODO: Change to a sensible/stable iteration order.
+  for (const auto &pair : graph) {
+    const DeclContextNode *node = pair.getSecond().get();
+    if (reachable_nodes.count(node))
+      continue;
+
+    const clang::NamedDecl *const decl =
+        llvm::dyn_cast<clang::NamedDecl>(node->getDecl());
+
+    if (decl == nullptr)
+      continue;
+
+    auto *annotated =
+        llvm::dyn_cast_or_null<AnnotatedNamedDecl>(annotations.get(decl));
+    if (annotated == nullptr || !annotated->visible.getValueOr(false))
+      continue;
+
+    Diagnostics::report(decl, Diagnostics::Kind::UnreachableDeclContextWarning);
+  }
+}
+
 bool DeclContextGraphBuilder::buildGraph() {
   clang::DiagnosticErrorTrap trap{
       translation_unit->getASTContext().getDiagnostics()};
@@ -158,8 +181,14 @@ bool DeclContextGraphBuilder::propagateVisibility() {
 }
 
 DeclContextGraph DeclContextGraphBuilder::getPrunedGraph() const {
+  // Keep track of unreachable nodes in order to report if any visible
+  // declaration context is not part of the pruned graph (because a parent
+  // context is hidden).
+  llvm::df_iterator_default_set<const DeclContextNode *> reachable;
+
   DeclContextGraph pruned(translation_unit);
-  for (auto it = llvm::df_begin(&graph), end_it = llvm::df_end(&graph);
+  for (auto it = llvm::df_ext_begin(&graph, reachable),
+            end_it = llvm::df_ext_end(&graph, reachable);
        it != end_it;
        /* incremented below, due to use of `skipChildren` */) {
     const clang::Decl *const decl = it->getDecl();
@@ -203,5 +232,6 @@ DeclContextGraph DeclContextGraphBuilder::getPrunedGraph() const {
 
     ++it;
   }
+  reportUnreachableVisibleNodes(reachable);
   return pruned;
 }

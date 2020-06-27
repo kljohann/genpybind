@@ -54,6 +54,7 @@ class DeclContextGraphBuilder {
 
   bool addEdgeForExposeHereAlias(const clang::TypedefNameDecl *decl);
   bool reportExposeHereCycles(const ConstNodeSet &reachable_nodes) const;
+  void reportUnreachableVisibleNodes(const ConstNodeSet &reachable_nodes) const;
 
 public:
   DeclContextGraphBuilder(AnnotationStorage &annotations,
@@ -69,6 +70,8 @@ public:
 
   /// Return a pruned version of the graph, where hidden nodes are omitted.
   /// Should only be called after propagateVisibility().
+  /// Warnings are emitted, if any declaration context is not part of the
+  /// pruned tree, but is marked visible.
   DeclContextGraph getPrunedGraph() const;
 
   const DeclContextGraph& getGraph() const { return graph; }
