@@ -30,12 +30,17 @@ struct GENPYBIND(visible) Exposed {};
 
 namespace also_not_pruned {
 namespace visible GENPYBIND_VISIBLE {
+
+extern "C" {
+GENPYBIND(visible(default)) void visible_default_function();
+}
+
 namespace hidden_but_should_not_be_pruned GENPYBIND_HIDDEN {
 
 extern const int some_constant GENPYBIND(visible);
 
 extern "C" {
-GENPYBIND(visible) void some_function();
+GENPYBIND(visible) void lexically_nested_visible_function();
 }
 
 extern "C" {
@@ -48,17 +53,23 @@ using Alias GENPYBIND(visible) = not_pruned::visible::hidden::Exposed;
 } // namespace GENPYBIND_VISIBLE
 } // namespace also_not_pruned
 
+extern "C" {
+GENPYBIND(visible) void visible_function();
+}
+
 // CHECK:      Declaration context graph after pruning:
-// TODO: Check that complete `prune_me` branch is removed in the future
+// CHECK-NOT: prune_me
 // CHECK-NOT: Unused
 // CHECK-NOT: Unreachable
 // CHECK:      |-Namespace 'not_pruned': hidden
 // CHECK-NEXT: | `-Namespace 'not_pruned::visible': visible
 // CHECK-NEXT: |   `-Namespace 'not_pruned::visible::hidden': hidden
 // CHECK-NEXT: |     `-CXXRecord 'not_pruned::visible::hidden::Exposed': visible
-// CHECK-NEXT: `-Namespace 'also_not_pruned': hidden
-// CHECK-NEXT:   `-Namespace 'also_not_pruned::visible': visible
-// CHECK-NEXT:     `-Namespace 'also_not_pruned::visible::hidden_but_should_not_be_pruned': hidden
-// CHECK-NEXT:       |-LinkageSpec:
-// CHECK-NEXT:       `-LinkageSpec:
-// CHECK-NEXT:         `-LinkageSpec:
+// CHECK-NEXT: |-Namespace 'also_not_pruned': hidden
+// CHECK-NEXT: | `-Namespace 'also_not_pruned::visible': visible
+// CHECK-NEXT: |   |-LinkageSpec:
+// CHECK-NEXT: |   `-Namespace 'also_not_pruned::visible::hidden_but_should_not_be_pruned': hidden
+// CHECK-NEXT: |     |-LinkageSpec:
+// CHECK-NEXT: |     `-LinkageSpec:
+// CHECK-NEXT: |       `-LinkageSpec:
+// CHECK-NEXT: `-LinkageSpec:

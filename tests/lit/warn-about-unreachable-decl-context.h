@@ -3,8 +3,8 @@
 
 #include "genpybind.h"
 
+// CHECK: context.h:[[# @LINE + 1]]:8: warning: Declaration context contains 'visible' declarations but is not exposed
 struct A {
-  // CHECK: context.h:[[# @LINE + 1]]:29: warning: Nested declaration context is 'visible' but unreachable
   struct GENPYBIND(visible) B {};
 };
 

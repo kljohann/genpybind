@@ -16,6 +16,7 @@
 #include <memory>
 
 #include "genpybind/decl_context_graph_builder.h"
+#include "genpybind/decl_context_graph_processing.h"
 #include "genpybind/inspect_graph.h"
 #include "genpybind/instantiate_alias_targets.h"
 
@@ -70,7 +71,7 @@ public:
       printGraph(llvm::errs(), &builder.getGraph(), annotations,
                  "Declaration context graph after visibility propagation:");
 
-    auto pruned_graph = builder.getPrunedGraph();
+    auto pruned_graph = pruneGraph(builder.getGraph(), annotations);
 
     if (llvm::is_contained(g_inspect_graph, InspectGraphStage::Pruned))
       viewGraph(&pruned_graph, annotations, "DeclContextGraph");

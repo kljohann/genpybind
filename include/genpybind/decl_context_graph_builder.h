@@ -34,13 +34,6 @@ namespace genpybind {
 /// provided via annotation attributes attached to the corresponding
 /// declaration. In the case of moved declarations (via `expose_here`),
 /// only the new parent node is taken into consideration.
-///
-/// Based on the effective visibility the graph is pruned: Hidden branches
-/// are removed.
-///
-/// Finally, the graph is used to topologically sort the declarations in order
-/// to expose them in the right order.  During this traversal, nodes not
-/// connected to the tree are discovered and reported.
 class DeclContextGraphBuilder {
   using ConstNodeSet = llvm::SmallPtrSetImpl<const DeclContextNode *>;
 
@@ -54,7 +47,6 @@ class DeclContextGraphBuilder {
 
   bool addEdgeForExposeHereAlias(const clang::TypedefNameDecl *decl);
   bool reportExposeHereCycles(const ConstNodeSet &reachable_nodes) const;
-  void reportUnreachableVisibleNodes(const ConstNodeSet &reachable_nodes) const;
 
 public:
   DeclContextGraphBuilder(AnnotationStorage &annotations,
@@ -67,12 +59,6 @@ public:
   /// Any unreachable nodes are inspected for `expose_here` cycles, which are
   /// consequently reported as errors.
   bool propagateVisibility();
-
-  /// Return a pruned version of the graph, where hidden nodes are omitted.
-  /// Should only be called after propagateVisibility().
-  /// Warnings are emitted, if any declaration context is not part of the
-  /// pruned tree, but is marked visible.
-  DeclContextGraph getPrunedGraph() const;
 
   const DeclContextGraph& getGraph() const { return graph; }
 };

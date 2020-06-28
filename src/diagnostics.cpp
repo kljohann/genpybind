@@ -39,9 +39,9 @@ static unsigned getCustomDiagID(clang::DiagnosticsEngine &engine,
     return engine.getCustomDiagID(clang::DiagnosticsEngine::Note,
                                   "Previously exposed here");
   case Kind::UnreachableDeclContextWarning:
-    return engine.getCustomDiagID(
-        clang::DiagnosticsEngine::Warning,
-        "Nested declaration context is 'visible' but unreachable");
+    return engine.getCustomDiagID(clang::DiagnosticsEngine::Warning,
+                                  "Declaration context contains 'visible' "
+                                  "declarations but is not exposed");
   case Kind::UnsupportedAliasTargetError:
     return engine.getCustomDiagID(
         clang::DiagnosticsEngine::Error,

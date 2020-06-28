@@ -30,6 +30,7 @@ add_library(genpybind SHARED
   src/decl_context_collector.cpp
   src/decl_context_graph.cpp
   src/decl_context_graph_builder.cpp
+  src/decl_context_graph_processing.cpp
   src/diagnostics.cpp
   src/inspect_graph.cpp
   src/instantiate_alias_targets.cpp
