@@ -55,9 +55,6 @@ public:
   /// `AnnotationStorage` instance.
   bool buildGraph();
 
-  /// Computes the effective visibility for all reachable declaration contexts.
-  void propagateVisibility();
-
   const DeclContextGraph& getGraph() const { return graph; }
 };
 

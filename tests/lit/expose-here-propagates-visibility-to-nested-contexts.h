@@ -15,6 +15,6 @@ struct GENPYBIND(visible) ExplicitlyVisible {
 
 // CHECK:      Declaration context graph after visibility propagation:
 // CHECK-NEXT: `-CXXRecord 'ExplicitlyVisible': visible
-// CHECK-NEXT:   `-CXXRecord 'ExplicitlyVisible::ImplicitlyVisible': visible
+// CHECK-NEXT:   `-CXXRecord 'ExplicitlyVisible::ImplicitlyVisible':
 // CHECK-NEXT:     `-CXXRecord 'ShouldBeVisible': visible, expose_as("ShouldBeVisible")
-// CHECK-NEXT:       `-CXXRecord 'ShouldBeVisible::ShouldAlsoBeVisible': visible
+// CHECK-NEXT:       `-CXXRecord 'ShouldBeVisible::ShouldAlsoBeVisible':

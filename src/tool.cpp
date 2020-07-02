@@ -69,8 +69,6 @@ public:
                                builder.getRelocatedDecls()))
       return;
 
-    builder.propagateVisibility();
-
     if (llvm::is_contained(g_inspect_graph, InspectGraphStage::Visibility))
       viewGraph(&builder.getGraph(), annotations, "DeclContextGraph");
     if (llvm::is_contained(g_dump_graph, InspectGraphStage::Visibility))
