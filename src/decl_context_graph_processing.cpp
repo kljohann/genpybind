@@ -63,6 +63,39 @@ genpybind::deriveEffectiveVisibility(const DeclContextGraph &graph,
   return result;
 }
 
+ConstDeclContextSet
+genpybind::reachableDeclContexts(const EffectiveVisibilityMap &visibilities) {
+  ConstDeclContextSet result;
+  for (const auto &pair : visibilities) {
+    result.insert(pair.getFirst());
+  }
+  return result;
+}
+
+bool genpybind::reportExposeHereCycles(
+    const DeclContextGraph &graph,
+    const ConstDeclContextSet &reachable_contexts,
+    const DeclContextGraphBuilder::RelocatedDeclsMap &relocated_decls) {
+  bool has_cycles = false;
+  // TODO: Change to a sensible/stable iteration order.  Ideally this
+  // would correspond to file order.
+  for (const auto &pair : graph) {
+    const DeclContextNode *node = pair.getSecond().get();
+    const clang::Decl *decl = node->getDecl();
+    if (reachable_contexts.count(llvm::cast<clang::DeclContext>(decl)))
+      continue;
+    // While all unreachable nodes are attached to one of the cycles, reporting
+    // is only done on the type alias declarations.
+    auto it = relocated_decls.find(decl);
+    if (it == relocated_decls.end())
+      continue;
+    const clang::TypedefNameDecl *alias_decl = it->getSecond();
+    Diagnostics::report(alias_decl, Diagnostics::Kind::ExposeHereCycleError);
+    has_cycles = true;
+  }
+  return has_cycles;
+}
+
 namespace {
 class NodesToKeepWhenPruning {
   using NodeRef = const DeclContextNode *;

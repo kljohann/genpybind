@@ -24,7 +24,7 @@ bool DeclContextGraphBuilder::addEdgeForExposeHereAlias(
   const auto *parent = llvm::dyn_cast<clang::Decl>(parent_context);
   const clang::TagDecl *target_decl = aliasTarget(decl);
 
-  auto inserted = moved_previously.try_emplace(target_decl, decl);
+  auto inserted = relocated_decls.try_emplace(target_decl, decl);
   if (!inserted.second) {
     Diagnostics::report(decl, Diagnostics::Kind::AlreadyExposedElsewhereError)
         << target_decl->getNameAsString();
@@ -36,27 +36,6 @@ bool DeclContextGraphBuilder::addEdgeForExposeHereAlias(
 
   graph.getOrInsertNode(parent)->addChild(graph.getOrInsertNode(target_decl));
   return true;
-}
-
-bool DeclContextGraphBuilder::reportExposeHereCycles(
-    const ConstNodeSet &reachable_nodes) const {
-  bool has_cycles = false;
-  // TODO: Change to a sensible/stable iteration order.  Ideally this
-  // would correspond to file order.
-  for (const auto &pair : graph) {
-    const DeclContextNode *node = pair.getSecond().get();
-    if (reachable_nodes.count(node))
-      continue;
-    // While all unreachable nodes are attached to one of the cycles, reporting
-    // is only done on the type alias declarations.
-    auto it = moved_previously.find(node->getDecl());
-    if (it == moved_previously.end())
-      continue;
-    const clang::TypedefNameDecl *decl = it->getSecond();
-    Diagnostics::report(decl, Diagnostics::Kind::ExposeHereCycleError);
-    has_cycles = true;
-  }
-  return has_cycles;
 }
 
 bool DeclContextGraphBuilder::buildGraph() {
@@ -93,7 +72,7 @@ bool DeclContextGraphBuilder::buildGraph() {
   for (const clang::DeclContext *decl_context : visitor.decl_contexts) {
     const auto *decl = llvm::dyn_cast<clang::Decl>(decl_context);
     // Do not add original parent-child-edge to graph if decl has been moved.
-    if (moved_previously.count(decl))
+    if (relocated_decls.count(decl))
       continue;
     const auto *parent =
         llvm::dyn_cast<clang::Decl>(decl->getLexicalDeclContext());
@@ -103,7 +82,7 @@ bool DeclContextGraphBuilder::buildGraph() {
   return true;
 }
 
-bool DeclContextGraphBuilder::propagateVisibility() {
+void DeclContextGraphBuilder::propagateVisibility() {
   // As a node can only have one parent, `expose_here` cycles are necessarily
   // detached from the root node.  Track the reachable nodes during traversal
   // of the tree in order to find and report those.
@@ -153,6 +132,4 @@ bool DeclContextGraphBuilder::propagateVisibility() {
         llvm::cast<AnnotatedNamedDecl>(annotations.getOrInsert(decl));
     annotated->visible = annotated->visible.getValueOr(default_visibility);
   }
-
-  return !reportExposeHereCycles(reachable);
 }

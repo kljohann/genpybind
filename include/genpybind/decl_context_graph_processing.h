@@ -1,8 +1,10 @@
 #pragma once
 
 #include <llvm/ADT/DenseMap.h>
+#include <llvm/ADT/DenseSet.h>
 
 #include "genpybind/decl_context_graph.h"
+#include "genpybind/decl_context_graph_builder.h"
 
 namespace genpybind {
 
@@ -19,6 +21,21 @@ using EffectiveVisibilityMap = llvm::DenseMap<const clang::DeclContext *, bool>;
 EffectiveVisibilityMap
 deriveEffectiveVisibility(const DeclContextGraph &graph,
                           const AnnotationStorage &annotations);
+
+using ConstDeclContextSet = llvm::DenseSet<const clang::DeclContext *>;
+
+/// Returns the set of reachable declaration contexts, which is implicitly
+/// encoded in the domain of the effective visibility map.
+ConstDeclContextSet
+reachableDeclContexts(const EffectiveVisibilityMap &visibilities);
+
+/// Inspects `graph` for unreachable cycles, which are reported
+/// as invalid use of `expose_here` annotations.
+/// \return whether a cycle has been detected.
+bool reportExposeHereCycles(
+    const DeclContextGraph &graph,
+    const ConstDeclContextSet &reachable_contexts,
+    const DeclContextGraphBuilder::RelocatedDeclsMap &relocated_decls);
 
 /// Returns a pruned copy of `graph`, where hidden nodes are omitted
 /// based on the passed effective node `visibilities`.

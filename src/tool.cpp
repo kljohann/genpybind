@@ -63,10 +63,13 @@ public:
       return;
 
     const auto &graph = builder.getGraph();
-    const auto visibility = deriveEffectiveVisibility(graph, annotations);
+    const auto visibilities = deriveEffectiveVisibility(graph, annotations);
 
-    if (!builder.propagateVisibility())
+    if (reportExposeHereCycles(graph, reachableDeclContexts(visibilities),
+                               builder.getRelocatedDecls()))
       return;
+
+    builder.propagateVisibility();
 
     if (llvm::is_contained(g_inspect_graph, InspectGraphStage::Visibility))
       viewGraph(&builder.getGraph(), annotations, "DeclContextGraph");
@@ -74,7 +77,8 @@ public:
       printGraph(llvm::errs(), &builder.getGraph(), annotations,
                  "Declaration context graph after visibility propagation:");
 
-    auto pruned_graph = pruneGraph(builder.getGraph(), annotations, visibility);
+    auto pruned_graph =
+        pruneGraph(builder.getGraph(), annotations, visibilities);
 
     if (llvm::is_contained(g_inspect_graph, InspectGraphStage::Pruned))
       viewGraph(&pruned_graph, annotations, "DeclContextGraph");

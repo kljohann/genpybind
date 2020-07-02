@@ -1,7 +1,6 @@
 #pragma once
 
 #include <llvm/ADT/DenseMap.h>
-#include <llvm/ADT/SmallPtrSet.h>
 
 #include "genpybind/annotated_decl.h"
 #include "genpybind/decl_context_graph.h"
@@ -28,30 +27,36 @@ namespace genpybind {
 /// aliases before the declaration contexts themselves and later ignoring
 /// declaration contexts if a corresponding node is already found in the graph.
 class DeclContextGraphBuilder {
-  using ConstNodeSet = llvm::SmallPtrSetImpl<const DeclContextNode *>;
+ public:
+  using RelocatedDeclsMap =
+      llvm::DenseMap<const clang::Decl *, const clang::TypedefNameDecl *>;
 
+ private:
   clang::TranslationUnitDecl *translation_unit;
   AnnotationStorage &annotations;
   DeclContextGraph graph;
-  llvm::DenseMap<const clang::Decl *, const clang::TypedefNameDecl *>
-      moved_previously;
+  RelocatedDeclsMap relocated_decls;
 
   const clang::TagDecl *aliasTarget(const clang::TypedefNameDecl *decl);
 
   bool addEdgeForExposeHereAlias(const clang::TypedefNameDecl *decl);
-  bool reportExposeHereCycles(const ConstNodeSet &reachable_nodes) const;
 
 public:
   DeclContextGraphBuilder(AnnotationStorage &annotations,
                           clang::TranslationUnitDecl *decl)
       : translation_unit(decl), annotations(annotations), graph(decl) {}
 
+  /// Returns a map of moved decls to the `expose_here` alias that was
+  /// responsible for its relocation.
+  const RelocatedDeclsMap &getRelocatedDecls() const { return relocated_decls; }
+
+  /// Builds a graph of declaration contexts for the given translation unit.
+  /// Annotations for all declarations are collected in the provided
+  /// `AnnotationStorage` instance.
   bool buildGraph();
 
   /// Computes the effective visibility for all reachable declaration contexts.
-  /// Any unreachable nodes are inspected for `expose_here` cycles, which are
-  /// consequently reported as errors.
-  bool propagateVisibility();
+  void propagateVisibility();
 
   const DeclContextGraph& getGraph() const { return graph; }
 };
