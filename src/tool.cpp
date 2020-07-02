@@ -58,30 +58,29 @@ public:
   void HandleTranslationUnit(clang::ASTContext &context) override {
     DeclContextGraphBuilder builder(annotations,
                                     context.getTranslationUnitDecl());
-    if (!builder.buildGraph())
+    auto graph = builder.buildGraph();
+    if (!graph.hasValue())
       return;
 
-    const auto &graph = builder.getGraph();
-    const auto visibilities = deriveEffectiveVisibility(graph, annotations);
+    const auto visibilities = deriveEffectiveVisibility(*graph, annotations);
 
-    if (reportExposeHereCycles(graph, reachableDeclContexts(visibilities),
+    if (reportExposeHereCycles(*graph, reachableDeclContexts(visibilities),
                                builder.getRelocatedDecls()))
       return;
 
     if (llvm::is_contained(g_inspect_graph, InspectGraphStage::Visibility))
-      viewGraph(&builder.getGraph(), annotations, "DeclContextGraph");
+      viewGraph(&*graph, annotations, "DeclContextGraph");
     if (llvm::is_contained(g_dump_graph, InspectGraphStage::Visibility))
       printGraph(
-          llvm::errs(), &builder.getGraph(), visibilities,
+          llvm::errs(), &*graph, visibilities,
           "Declaration context graph (unpruned) with visibility of all nodes:");
 
-    auto pruned_graph =
-        pruneGraph(builder.getGraph(), annotations, visibilities);
+    graph = pruneGraph(*graph, annotations, visibilities);
 
     if (llvm::is_contained(g_inspect_graph, InspectGraphStage::Pruned))
-      viewGraph(&pruned_graph, annotations, "DeclContextGraph");
+      viewGraph(&*graph, annotations, "DeclContextGraph");
     if (llvm::is_contained(g_dump_graph, InspectGraphStage::Pruned))
-      printGraph(llvm::errs(), &pruned_graph, visibilities,
+      printGraph(llvm::errs(), &*graph, visibilities,
                  "Declaration context graph after pruning:");
   }
 };

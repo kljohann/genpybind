@@ -1,6 +1,7 @@
 #pragma once
 
 #include <llvm/ADT/DenseMap.h>
+#include <llvm/ADT/Optional.h>
 
 #include "genpybind/annotated_decl.h"
 #include "genpybind/decl_context_graph.h"
@@ -53,9 +54,7 @@ public:
   /// Builds a graph of declaration contexts for the given translation unit.
   /// Annotations for all declarations are collected in the provided
   /// `AnnotationStorage` instance.
-  bool buildGraph();
-
-  const DeclContextGraph& getGraph() const { return graph; }
+  llvm::Optional<DeclContextGraph> buildGraph();
 };
 
 } // namespace genpybind

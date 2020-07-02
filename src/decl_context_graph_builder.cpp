@@ -3,6 +3,8 @@
 #include <clang/Basic/Diagnostic.h>
 #include <llvm/ADT/DepthFirstIterator.h>
 
+#include <utility>
+
 #include "genpybind/decl_context_collector.h"
 
 using namespace genpybind;
@@ -38,7 +40,7 @@ bool DeclContextGraphBuilder::addEdgeForExposeHereAlias(
   return true;
 }
 
-bool DeclContextGraphBuilder::buildGraph() {
+llvm::Optional<DeclContextGraph> DeclContextGraphBuilder::buildGraph() {
   clang::DiagnosticErrorTrap trap{
       translation_unit->getASTContext().getDiagnostics()};
   DeclContextCollector visitor(annotations);
@@ -47,7 +49,7 @@ bool DeclContextGraphBuilder::buildGraph() {
   // Bail out if there were errors during the first traversal of the AST,
   // e.g. due to invalid annotations.
   if (trap.hasErrorOccurred())
-    return false;
+    return llvm::None;
 
   for (const clang::TypedefNameDecl *alias_decl : visitor.aliases) {
     const auto *annotated = llvm::dyn_cast_or_null<AnnotatedTypedefNameDecl>(
@@ -67,7 +69,7 @@ bool DeclContextGraphBuilder::buildGraph() {
   // Bail out if establishing "expose_here" aliases failed, e.g. due to
   // multiple such aliases for one declaration.
   if (trap.hasErrorOccurred())
-    return false;
+    return llvm::None;
 
   for (const clang::DeclContext *decl_context : visitor.decl_contexts) {
     const auto *decl = llvm::dyn_cast<clang::Decl>(decl_context);
@@ -79,5 +81,5 @@ bool DeclContextGraphBuilder::buildGraph() {
     graph.getOrInsertNode(parent)->addChild(graph.getOrInsertNode(decl));
   }
 
-  return true;
+  return std::move(graph);
 }
