@@ -31,11 +31,10 @@ enum class InspectGraphStage {
   Pruned,
 };
 
-
 static llvm::cl::ValuesClass getInspectGraphValues() {
   return llvm::cl::values(clEnumValN(InspectGraphStage::Visibility,
                                      "visibility",
-                                     "After visibility propagation"),
+                                     "With visibility of all nodes (unpruned)"),
                           clEnumValN(InspectGraphStage::Pruned, "pruned",
                                      "After pruning of hidden nodes"));
 }
@@ -72,8 +71,9 @@ public:
     if (llvm::is_contained(g_inspect_graph, InspectGraphStage::Visibility))
       viewGraph(&builder.getGraph(), annotations, "DeclContextGraph");
     if (llvm::is_contained(g_dump_graph, InspectGraphStage::Visibility))
-      printGraph(llvm::errs(), &builder.getGraph(), annotations,
-                 "Declaration context graph after visibility propagation:");
+      printGraph(
+          llvm::errs(), &builder.getGraph(), visibilities,
+          "Declaration context graph (unpruned) with visibility of all nodes:");
 
     auto pruned_graph =
         pruneGraph(builder.getGraph(), annotations, visibilities);
@@ -81,7 +81,7 @@ public:
     if (llvm::is_contained(g_inspect_graph, InspectGraphStage::Pruned))
       viewGraph(&pruned_graph, annotations, "DeclContextGraph");
     if (llvm::is_contained(g_dump_graph, InspectGraphStage::Pruned))
-      printGraph(llvm::errs(), &pruned_graph, annotations,
+      printGraph(llvm::errs(), &pruned_graph, visibilities,
                  "Declaration context graph after pruning:");
   }
 };

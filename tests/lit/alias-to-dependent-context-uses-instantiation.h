@@ -20,9 +20,9 @@ struct Outer {
 
 typedef Outer<Encouraged> TestOuter GENPYBIND(expose_here);
 
-// CHECK:      Declaration context graph after visibility propagation:
-// CHECK-NEXT: |-ClassTemplateSpecialization 'Something<Encouraged>': visible, expose_as("Test")
-// CHECK-NEXT: |-ClassTemplateSpecialization 'Outer<Encouraged>': visible, expose_as("TestOuter")
-// CHECK-NEXT: | |-ClassTemplateSpecialization 'Something<Outer<Encouraged>::Inner>': visible, expose_as("y_type")
+// CHECK:      Declaration context graph (unpruned) with visibility of all nodes:
+// CHECK-NEXT: |-ClassTemplateSpecialization 'Something<Encouraged>': visible
+// CHECK-NEXT: |-ClassTemplateSpecialization 'Outer<Encouraged>': visible
+// CHECK-NEXT: | |-ClassTemplateSpecialization 'Something<Outer<Encouraged>::Inner>': visible
 // CHECK-NEXT: | `-CXXRecord 'Outer<Encouraged>::Inner': visible
 // CHECK-NEXT: `-CXXRecord 'Encouraged': visible

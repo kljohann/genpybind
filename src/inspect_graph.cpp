@@ -37,7 +37,7 @@ struct DeclContextGraphWithAnnotations {
 class GraphPrinter : private clang::TextTreeStructure {
   llvm::raw_ostream &os;
   const DeclContextGraph *graph;
-  const AnnotationStorage &annotations;
+  const EffectiveVisibilityMap &visibilities;
   using NodeRef = const DeclContextNode *;
 
   std::string getNodeLabel(NodeRef node) {
@@ -53,28 +53,17 @@ class GraphPrinter : private clang::TextTreeStructure {
 
   void printNodeDescription(NodeRef node) {
     const clang::Decl *decl = node->getDecl();
-    const auto *named_decl = llvm::dyn_cast<clang::NamedDecl>(decl);
-    if (named_decl == nullptr)
-      return;
-    const auto *annotated =
-        llvm::dyn_cast_or_null<AnnotatedNamedDecl>(annotations.get(named_decl));
-    if (annotated == nullptr)
-      return;
-
-    if (!annotated->visible.hasValue()) {
-      os << "visible(default)";
-    } else {
-      os << (annotated->visible.getValue() ? "visible" : "hidden");
+    auto it = visibilities.find(llvm::cast<clang::DeclContext>(decl));
+    if (it == visibilities.end()) {
+      os << "unknown";
     }
-
-    if (!annotated->spelling.empty()) {
-      os << R"(, expose_as(")" << annotated->spelling << R"x("))x";
-    }
+    os << (it->getSecond() ? "visible" : "hidden");
   }
 
   void printNode(NodeRef node) {
     AddChild(getNodeLabel(node), [node, this] {
-      printNodeDescription(node);
+      if (node != graph->getRoot())
+        printNodeDescription(node);
       for (NodeRef child : *node) {
         printNode(child);
       }
@@ -83,9 +72,9 @@ class GraphPrinter : private clang::TextTreeStructure {
 
 public:
   GraphPrinter(llvm::raw_ostream &os, const DeclContextGraph *graph,
-               const AnnotationStorage &annotations)
+               const EffectiveVisibilityMap &visibilities)
       : TextTreeStructure(os, false), os(os), graph(graph),
-        annotations(annotations) {}
+        visibilities(visibilities) {}
 
   void print() { printNode(graph->getRoot()); }
 };
@@ -184,8 +173,8 @@ void genpybind::viewGraph(const DeclContextGraph *graph,
 }
 
 void genpybind::printGraph(llvm::raw_ostream &os, const DeclContextGraph *graph,
-                           const AnnotationStorage &annotations,
+                           const EffectiveVisibilityMap &visibilities,
                            const llvm::Twine &title) {
   os << title;
-  GraphPrinter(os, graph, annotations).print();
+  GraphPrinter(os, graph, visibilities).print();
 }

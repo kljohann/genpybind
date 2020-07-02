@@ -61,11 +61,11 @@ GENPYBIND(visible) void visible_function();
 // CHECK-NOT: prune_me
 // CHECK-NOT: Unused
 // CHECK-NOT: Unreachable
-// CHECK:      |-Namespace 'not_pruned':
+// CHECK:      |-Namespace 'not_pruned': hidden
 // CHECK-NEXT: | `-Namespace 'not_pruned::visible': visible
 // CHECK-NEXT: |   `-Namespace 'not_pruned::visible::hidden': hidden
 // CHECK-NEXT: |     `-CXXRecord 'not_pruned::visible::hidden::Exposed': visible
-// CHECK-NEXT: |-Namespace 'also_not_pruned':
+// CHECK-NEXT: |-Namespace 'also_not_pruned': hidden
 // CHECK-NEXT: | `-Namespace 'also_not_pruned::visible': visible
 // CHECK-NEXT: |   |-LinkageSpec:
 // CHECK-NEXT: |   `-Namespace 'also_not_pruned::visible::hidden_but_should_not_be_pruned': hidden

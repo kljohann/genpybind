@@ -1,6 +1,7 @@
 #pragma once
 
 #include "genpybind/decl_context_graph.h"
+#include "genpybind/decl_context_graph_processing.h"
 #include "genpybind/annotated_decl.h"
 
 #include <llvm/ADT/Twine.h>
@@ -13,7 +14,7 @@ void viewGraph(const DeclContextGraph *graph,
                const llvm::Twine &title = "");
 
 void printGraph(llvm::raw_ostream &os, const DeclContextGraph *graph,
-                const AnnotationStorage &annotations,
+                const EffectiveVisibilityMap &visibilities,
                 const llvm::Twine &title = "");
 
 } // namespace genpybind
