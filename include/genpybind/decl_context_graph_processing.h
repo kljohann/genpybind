@@ -10,6 +10,14 @@ namespace genpybind {
 
 class AnnotationStorage;
 
+using ParentNamedDeclMap =
+    llvm::DenseMap<const clang::DeclContext *, const clang::NamedDecl *>;
+
+/// Determines the closest `NamedDecl` ancestor for each reachable node of
+/// `graph`.  A `nullptr` value is associated with all nodes that have no
+/// `NamedDecl` ancestors (e.g. nodes directly below the `TranslationUnitDecl`).
+ParentNamedDeclMap findClosestNamedDeclAncestors(const DeclContextGraph &graph);
+
 using EffectiveVisibilityMap = llvm::DenseMap<const clang::DeclContext *, bool>;
 
 /// For each reachable node of `graph`, derives an "effective visibility".

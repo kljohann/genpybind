@@ -9,6 +9,29 @@
 
 using namespace genpybind;
 
+ParentNamedDeclMap
+genpybind::findClosestNamedDeclAncestors(const DeclContextGraph &graph) {
+  ParentNamedDeclMap result;
+
+  // Visit the nodes in a depth-first pre-order traversal; any other traversal
+  // would also do, but `DepthFirstIterator` allows convenient access to
+  // the traversed path and thus the node's ancestors.
+  for (auto it = llvm::df_begin(&graph), end_it = llvm::df_end(&graph);
+       it != end_it; ++it) {
+    const clang::NamedDecl *named_ancestor = nullptr;
+    assert(it.getPathLength() > 0 && "path should always contain decl itself");
+    for (unsigned index = it.getPathLength() - 1; index > 0; --index) {
+      const clang::Decl *ancestor = it.getPath(index - 1)->getDecl();
+      named_ancestor = llvm::dyn_cast<clang::NamedDecl>(ancestor);
+      if (named_ancestor != nullptr)
+        break;
+    }
+    result[llvm::cast<clang::DeclContext>(it->getDecl())] = named_ancestor;
+  }
+
+  return result;
+}
+
 EffectiveVisibilityMap
 genpybind::deriveEffectiveVisibility(const DeclContextGraph &graph,
                                      const AnnotationStorage &annotations) {
