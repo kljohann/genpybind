@@ -62,6 +62,9 @@ public:
     if (!builder.buildGraph())
       return;
 
+    const auto &graph = builder.getGraph();
+    const auto visibility = deriveEffectiveVisibility(graph, annotations);
+
     if (!builder.propagateVisibility())
       return;
 
@@ -71,7 +74,7 @@ public:
       printGraph(llvm::errs(), &builder.getGraph(), annotations,
                  "Declaration context graph after visibility propagation:");
 
-    auto pruned_graph = pruneGraph(builder.getGraph(), annotations);
+    auto pruned_graph = pruneGraph(builder.getGraph(), annotations, visibility);
 
     if (llvm::is_contained(g_inspect_graph, InspectGraphStage::Pruned))
       viewGraph(&pruned_graph, annotations, "DeclContextGraph");

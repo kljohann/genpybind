@@ -27,13 +27,6 @@ namespace genpybind {
 /// Relocation of nodes via these aliases is implemented by processing the
 /// aliases before the declaration contexts themselves and later ignoring
 /// declaration contexts if a corresponding node is already found in the graph.
-///
-/// For each declaration, an "effective visibility" is calculated based on the
-/// effective visibility of its parent node ("default visibility"), its own
-/// access specifier and an optional "explicit visibility" that has been
-/// provided via annotation attributes attached to the corresponding
-/// declaration. In the case of moved declarations (via `expose_here`),
-/// only the new parent node is taken into consideration.
 class DeclContextGraphBuilder {
   using ConstNodeSet = llvm::SmallPtrSetImpl<const DeclContextNode *>;
 

@@ -9,23 +9,74 @@
 
 using namespace genpybind;
 
+EffectiveVisibilityMap
+genpybind::deriveEffectiveVisibility(const DeclContextGraph &graph,
+                                     const AnnotationStorage &annotations) {
+  EffectiveVisibilityMap result;
+
+  // Visit the nodes in a depth-first pre-order traversal, s.t. if a node is
+  // visited, visibility is already assigned to the parent.
+  for (auto it = llvm::df_begin(&graph), end_it = llvm::df_end(&graph);
+       it != end_it; ++it) {
+    const clang::Decl *const decl = it->getDecl();
+    const auto *const decl_context = llvm::cast<clang::DeclContext>(decl);
+
+    // Export declarations (and nested declarations) are visible by default.
+    if (llvm::isa<clang::ExportDecl>(decl)) {
+      result[decl_context] = true;
+      continue;
+    }
+
+    // The visibility of the parent context is used as the default visibility.
+    // The root node (`TranslationUnitDecl`) is implicitly hidden.
+    bool is_visible = false;
+    if (it.getPathLength() >= 2) {
+      const clang::Decl *ancestor =
+          it.getPath(it.getPathLength() - 2)->getDecl();
+      auto it = result.find(llvm::cast<clang::DeclContext>(ancestor));
+      assert(it != result.end() &&
+             "visibility of parent should have already been updated");
+      is_visible = it->getSecond();
+    }
+
+    // Declarations with protected and private access specifiers are hidden.
+    switch (decl->getAccess()) {
+    case clang::AS_protected:
+    case clang::AS_private:
+      is_visible = false;
+      break;
+    case clang::AS_public:
+    case clang::AS_none:
+      // Do nothing.
+      break;
+    }
+
+    // Retrieve value from annotations, if specified explicitly.
+    if (const auto *named_decl = llvm::dyn_cast<clang::NamedDecl>(decl))
+      if (const auto *annotated = llvm::dyn_cast_or_null<AnnotatedNamedDecl>(
+              annotations.get(named_decl)))
+        is_visible = annotated->visible.getValueOr(is_visible);
+
+    result[decl_context] = is_visible;
+  }
+
+  return result;
+}
+
 namespace {
-// Namespaces and unnamed declaration contexts might contain free functions,
-// aliases or other declarations that have been marked visible, but which are
-// not represented in the declaration context graph.  As these declarations
-// will only be exposed if the corresponding parent context node is present,
-// these nodes have to be preserved.
 class NodesToKeepWhenPruning {
   using NodeRef = const DeclContextNode *;
   const DeclContextGraph *graph;
   const AnnotationStorage &annotations;
+  const EffectiveVisibilityMap &visibilities;
   llvm::DenseSet<NodeRef> should_be_preserved;
   using ConstNodeSet = llvm::SmallPtrSetImpl<const DeclContextNode *>;
 
 public:
   NodesToKeepWhenPruning(const DeclContextGraph *graph,
-                         const AnnotationStorage &annotations)
-      : graph(graph), annotations(annotations) {
+                         const AnnotationStorage &annotations,
+                         const EffectiveVisibilityMap &visibilities)
+      : graph(graph), annotations(annotations), visibilities(visibilities) {
     for (const DeclContextNode *node : llvm::post_order(graph)) {
       if (shouldPreserve(node))
         should_be_preserved.insert(node);
@@ -59,7 +110,7 @@ private:
   bool shouldPreserve(NodeRef node) const {
     const clang::Decl *decl = node->getDecl();
     if (llvm::isa<clang::TagDecl>(decl))
-      return getEffectiveVisibility(decl);
+      return getEffectiveVisibility(llvm::cast<clang::DeclContext>(decl));
 
     return isParentOfPreservedDeclarationContext(node) ||
            containsVisibleDeclarations(node);
@@ -74,8 +125,8 @@ private:
   }
 
   bool containsVisibleDeclarations(NodeRef node) const {
-    bool default_visibility = getEffectiveVisibility(node->getDecl());
     const auto *context = llvm::cast<clang::DeclContext>(node->getDecl());
+    const bool default_visibility = getEffectiveVisibility(context);
     for (clang::DeclContext::specific_decl_iterator<clang::NamedDecl>
              it(context->decls_begin()),
          end_it(context->decls_end());
@@ -96,29 +147,11 @@ private:
     return false;
   }
 
-  bool getEffectiveVisibility(const clang::Decl *decl) const {
-    // Anything inside an export decl is visible by default.
-    if (llvm::isa<clang::ExportDecl>(decl))
-      return true;
-
-    // Else refer to the declaration's effective visibility, which should have
-    // been put into place by visibility propagation.  For unnamed declaration
-    // contexts, the nearest named parent is used.  This is fine, since unnamed
-    // declaration contexts cannot be moved using `expose_here`.
-    while (decl != nullptr && !llvm::isa<clang::NamedDecl>(decl))
-      decl = llvm::cast_or_null<clang::Decl>(decl->getLexicalDeclContext());
-
-    const auto *named_decl = llvm::dyn_cast_or_null<clang::NamedDecl>(decl);
-    if (named_decl == nullptr)
-      return false;
-
-    const auto *annotated =
-        llvm::dyn_cast_or_null<AnnotatedNamedDecl>(annotations.get(named_decl));
-    assert(annotated != nullptr &&
-           "annotation should be in place after propagating visibility");
-    assert(annotated->visible.hasValue() &&
-           "decl should have non-default visibility after propagation");
-    return *annotated->visible;
+  bool getEffectiveVisibility(const clang::DeclContext *context) const {
+    const auto it = visibilities.find(context);
+    assert(it != visibilities.end() &&
+           "visibility should be known for all nodes");
+    return it->getSecond();
   }
 
   bool isVisibleGivenDefaultVisibility(const clang::NamedDecl *decl,
@@ -133,13 +166,15 @@ private:
 };
 } // namespace
 
-DeclContextGraph genpybind::pruneGraph(const DeclContextGraph &graph,
-                                       const AnnotationStorage &annotations) {
+DeclContextGraph
+genpybind::pruneGraph(const DeclContextGraph &graph,
+                      const AnnotationStorage &annotations,
+                      const EffectiveVisibilityMap &visibilities) {
   // Keep track of unreachable nodes in order to report if any visible
   // declaration context is not part of the pruned graph (because a parent
   // context is hidden).
   llvm::df_iterator_default_set<const DeclContextNode *> reachable;
-  NodesToKeepWhenPruning nodes_to_keep(&graph, annotations);
+  NodesToKeepWhenPruning nodes_to_keep(&graph, annotations, visibilities);
 
   DeclContextGraph pruned(
       llvm::cast<clang::TranslationUnitDecl>(graph.getRoot()->getDecl()));
