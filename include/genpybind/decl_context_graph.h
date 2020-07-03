@@ -53,11 +53,17 @@ private:
   llvm::SmallVector<Child, 10> children;
 
 public:
-  DeclContextNode(const clang::Decl *decl) : decl(decl) {}
+  DeclContextNode(const clang::Decl *decl) : decl(decl) {
+    assert(llvm::isa<clang::DeclContext>(decl) &&
+           "DeclContextGraph should only contain DeclContext nodes");
+  }
 
   void addChild(DeclContextNode *child) { children.push_back(child); }
 
   const clang::Decl *getDecl() const { return decl; }
+  const clang::DeclContext *getDeclContext() const {
+    return llvm::cast<clang::DeclContext>(decl);
+  }
 
   using iterator = llvm::SmallVectorImpl<Child>::iterator;
   using const_iterator = llvm::SmallVectorImpl<Child>::const_iterator;

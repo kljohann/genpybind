@@ -19,7 +19,7 @@ genpybind::deriveEffectiveVisibility(const DeclContextGraph &graph,
   for (auto it = llvm::df_begin(&graph), end_it = llvm::df_end(&graph);
        it != end_it; ++it) {
     const clang::Decl *const decl = it->getDecl();
-    const auto *const decl_context = llvm::cast<clang::DeclContext>(decl);
+    const clang::DeclContext *const decl_context = it->getDeclContext();
 
     // Export declarations (and nested declarations) are visible by default.
     if (llvm::isa<clang::ExportDecl>(decl)) {
@@ -31,9 +31,9 @@ genpybind::deriveEffectiveVisibility(const DeclContextGraph &graph,
     // The root node (`TranslationUnitDecl`) is implicitly hidden.
     bool is_visible = false;
     if (it.getPathLength() >= 2) {
-      const clang::Decl *ancestor =
-          it.getPath(it.getPathLength() - 2)->getDecl();
-      auto it = result.find(llvm::cast<clang::DeclContext>(ancestor));
+      const clang::DeclContext *ancestor =
+          it.getPath(it.getPathLength() - 2)->getDeclContext();
+      auto it = result.find(ancestor);
       assert(it != result.end() &&
              "visibility of parent should have already been updated");
       is_visible = it->getSecond();
@@ -82,7 +82,7 @@ bool genpybind::reportExposeHereCycles(
   for (const auto &pair : graph) {
     const DeclContextNode *node = pair.getSecond().get();
     const clang::Decl *decl = node->getDecl();
-    if (reachable_contexts.count(llvm::cast<clang::DeclContext>(decl)))
+    if (reachable_contexts.count(node->getDeclContext()))
       continue;
     // While all unreachable nodes are attached to one of the cycles, reporting
     // is only done on the type alias declarations.
@@ -143,7 +143,7 @@ private:
   bool shouldPreserve(NodeRef node) const {
     const clang::Decl *decl = node->getDecl();
     if (llvm::isa<clang::TagDecl>(decl))
-      return getEffectiveVisibility(llvm::cast<clang::DeclContext>(decl));
+      return getEffectiveVisibility(node->getDeclContext());
 
     return isParentOfPreservedDeclarationContext(node) ||
            containsVisibleDeclarations(node);
@@ -158,7 +158,7 @@ private:
   }
 
   bool containsVisibleDeclarations(NodeRef node) const {
-    const auto *context = llvm::cast<clang::DeclContext>(node->getDecl());
+    const clang::DeclContext *context = node->getDeclContext();
     const bool default_visibility = getEffectiveVisibility(context);
     for (clang::DeclContext::specific_decl_iterator<clang::NamedDecl>
              it(context->decls_begin()),

@@ -52,8 +52,7 @@ class GraphPrinter : private clang::TextTreeStructure {
   }
 
   void printNodeDescription(NodeRef node) {
-    const clang::Decl *decl = node->getDecl();
-    auto it = visibilities.find(llvm::cast<clang::DeclContext>(decl));
+    auto it = visibilities.find(node->getDeclContext());
     if (it == visibilities.end()) {
       os << "unknown";
     }
