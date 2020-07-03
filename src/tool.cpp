@@ -75,7 +75,13 @@ public:
           llvm::errs(), &*graph, visibilities,
           "Declaration context graph (unpruned) with visibility of all nodes:");
 
+    const auto contexts_with_visible_decls =
+        declContextsWithVisibleNamedDecls(&*graph, annotations, visibilities);
+
     graph = pruneGraph(*graph, annotations, visibilities);
+
+    reportUnreachableVisibleDeclContexts(*graph, contexts_with_visible_decls,
+                                         builder.getRelocatedDecls());
 
     if (llvm::is_contained(g_inspect_graph, InspectGraphStage::Pruned))
       viewGraph(&*graph, annotations, "DeclContextGraph");

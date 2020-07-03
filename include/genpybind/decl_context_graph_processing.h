@@ -57,10 +57,15 @@ declContextsWithVisibleNamedDecls(const DeclContextGraph *graph,
 /// declarations are not represented in the declaration context graph and
 /// can/will only be exposed if the corresponding parent context node is
 /// present.
-/// Warnings are emitted, if any declaration context is not part of the
-/// pruned tree, but is marked visible.
 DeclContextGraph pruneGraph(const DeclContextGraph &graph,
                             const AnnotationStorage &annotations,
                             const EffectiveVisibilityMap &visibilities);
+
+/// Emit warnings for any declaration context in `contexts_with_visible_decls`
+/// that is not contained in `graph`.
+void reportUnreachableVisibleDeclContexts(
+    const DeclContextGraph &graph,
+    const ConstDeclContextSet &contexts_with_visible_decls,
+    const DeclContextGraphBuilder::RelocatedDeclsMap &relocated_decls);
 
 } // namespace genpybind

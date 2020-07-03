@@ -193,27 +193,6 @@ public:
 
   bool contains(NodeRef node) const { return should_be_preserved.count(node); }
 
-  void
-  reportUnreachableVisibleNodes(const ConstNodeSet &reachable_nodes) const {
-    // TODO: Change to a sensible/stable iteration order.
-    for (const auto &pair : *graph) {
-      const DeclContextNode *node = pair.getSecond().get();
-      if (reachable_nodes.count(node))
-        continue;
-
-      const clang::NamedDecl *const decl =
-          llvm::dyn_cast<clang::NamedDecl>(node->getDecl());
-
-      if (decl == nullptr)
-        continue;
-
-      if (isParentOfPreservedDeclarationContext(node) ||
-          containsVisibleDeclarations(node))
-        Diagnostics::report(decl,
-                            Diagnostics::Kind::UnreachableDeclContextWarning);
-    }
-  }
-
 private:
   bool shouldPreserve(NodeRef node) const {
     const clang::Decl *decl = node->getDecl();
@@ -309,6 +288,24 @@ genpybind::pruneGraph(const DeclContextGraph &graph,
 
     ++it;
   }
-  nodes_to_keep.reportUnreachableVisibleNodes(reachable);
   return pruned;
+}
+
+void genpybind::reportUnreachableVisibleDeclContexts(
+    const DeclContextGraph &graph,
+    const ConstDeclContextSet &contexts_with_visible_decls,
+    const DeclContextGraphBuilder::RelocatedDeclsMap &relocated_decls) {
+  // TODO: Change to a sensible/stable iteration order.
+  for (const clang::DeclContext *context : contexts_with_visible_decls) {
+    const auto *decl = llvm::dyn_cast<clang::NamedDecl>(context);
+    if (decl == nullptr || graph.getNode(decl) != nullptr)
+      continue;
+
+    // Emit warning on the `expose_here` alias, if the declaration was moved.
+    auto it = relocated_decls.find(decl);
+    if (it != relocated_decls.end())
+      decl = it->getSecond();
+
+    Diagnostics::report(decl, Diagnostics::Kind::UnreachableDeclContextWarning);
+  }
 }
