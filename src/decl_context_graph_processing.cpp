@@ -96,6 +96,81 @@ bool genpybind::reportExposeHereCycles(
   return has_cycles;
 }
 
+ConstDeclContextSet genpybind::declContextsWithVisibleNamedDecls(
+    const DeclContextGraph *graph, const AnnotationStorage &annotations,
+    const EffectiveVisibilityMap &visibilities) {
+  ConstDeclContextSet result;
+
+  auto isHiddenTagDecl =
+      [&visibilities](const clang::DeclContext *context) -> bool {
+    if (!llvm::isa<clang::TagDecl>(context))
+      return false;
+    const auto visible = visibilities.find(context);
+    assert(visible != visibilities.end() &&
+           "visibility should be known for all nodes");
+    return !visible->getSecond();
+  };
+
+  auto isParentOfContextWithVisibleNamedDecls =
+      [&result, &isHiddenTagDecl](const DeclContextNode *node) -> bool {
+    for (const DeclContextNode *child : *node) {
+      const clang::DeclContext *context = child->getDeclContext();
+      // Hidden tag declarations conceal the entire corresponding sub-tree.
+      if (result.count(context) && !isHiddenTagDecl(context))
+        return true;
+    }
+    return false;
+  };
+
+  auto containsVisibleNamedDecls =
+      [&annotations, &visibilities](const clang::DeclContext *context) -> bool {
+    const auto visible = visibilities.find(context);
+    assert(visible != visibilities.end() &&
+           "visibility should be known for all nodes");
+    const bool default_visibility = visible->getSecond();
+
+    auto isVisibleGivenDefaultVisibility =
+        [&](const clang::NamedDecl *decl) -> bool {
+      const auto *annotated =
+          llvm::dyn_cast_or_null<AnnotatedNamedDecl>(annotations.get(decl));
+      // An unannotated declaration in a "visible" context should be preserved.
+      if (annotated == nullptr || !annotated->visible.hasValue())
+        return default_visibility;
+      return *annotated->visible;
+    };
+
+    for (clang::DeclContext::specific_decl_iterator<clang::NamedDecl>
+             it(context->decls_begin()),
+         end_it(context->decls_end());
+         it != end_it; ++it) {
+      // Skip namespaces, as those only serve to provide a default visibility.
+      if (llvm::isa<clang::NamespaceDecl>(*it))
+        continue;
+      // Do not visit implicit declarations, as these cannot have been annotated
+      // explicitly by the user.  This avoids false positives on the implicit
+      // `CXXRecordDecl` nested inside C++ records to represent the
+      // injected-class-name.
+      if (it->isImplicit())
+        continue;
+      if (isVisibleGivenDefaultVisibility(*it))
+        return true;
+    }
+    return false;
+  };
+
+  // Visit the nodes in a post-order traversal, s.t. if a node is visited,
+  // it's already known whether a contained declaration context contains
+  // visible named declarations.
+  for (const DeclContextNode *node : llvm::post_order(graph)) {
+    const clang::DeclContext *context = node->getDeclContext();
+    if (isParentOfContextWithVisibleNamedDecls(node) ||
+        containsVisibleNamedDecls(context))
+      result.insert(context);
+  }
+
+  return result;
+}
+
 namespace {
 class NodesToKeepWhenPruning {
   using NodeRef = const DeclContextNode *;

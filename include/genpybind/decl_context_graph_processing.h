@@ -37,6 +37,16 @@ bool reportExposeHereCycles(
     const ConstDeclContextSet &reachable_contexts,
     const DeclContextGraphBuilder::RelocatedDeclsMap &relocated_decls);
 
+/// Returns the set of reachable declaration contexts, which are ancestors to at
+/// least one visible, named declaration that is not a namespace.
+/// While the visibility of a namespace or unnamed declaraiton context only
+/// has an effect on the default visibility of its descendants, a hidden tag
+/// declaration effectively conceals the sub-tree of all contained declarations.
+ConstDeclContextSet
+declContextsWithVisibleNamedDecls(const DeclContextGraph *graph,
+                                  const AnnotationStorage &annotations,
+                                  const EffectiveVisibilityMap &visibilities);
+
 /// Returns a pruned copy of `graph`, where hidden nodes are omitted
 /// based on the passed effective node `visibilities`.
 /// Hidden records and their nested contexts are omitted unconditionally.
