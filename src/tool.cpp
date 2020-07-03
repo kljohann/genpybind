@@ -78,7 +78,7 @@ public:
     const auto contexts_with_visible_decls =
         declContextsWithVisibleNamedDecls(&*graph, annotations, visibilities);
 
-    graph = pruneGraph(*graph, annotations, visibilities);
+    graph = pruneGraph(*graph, contexts_with_visible_decls, visibilities);
 
     reportUnreachableVisibleDeclContexts(*graph, contexts_with_visible_decls,
                                          builder.getRelocatedDecls());
