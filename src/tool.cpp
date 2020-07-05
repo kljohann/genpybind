@@ -51,6 +51,26 @@ static llvm::cl::list<InspectGraphStage>
                  getInspectGraphValues(), llvm::cl::ZeroOrMore,
                  llvm::cl::Hidden);
 
+static const char *graphTitle(InspectGraphStage stage) {
+  switch (stage) {
+  case InspectGraphStage::Visibility:
+    return "Declaration context graph (unpruned) with visibility of all nodes:";
+  case InspectGraphStage::Pruned:
+    return "Declaration context graph after pruning:";
+  }
+  llvm_unreachable("Unknown inspection point.");
+}
+
+static void inspectGraph(const DeclContextGraph &graph,
+                         const AnnotationStorage &annotations,
+                         const EffectiveVisibilityMap &visibilities,
+                         InspectGraphStage stage) {
+  if (llvm::is_contained(g_inspect_graph, stage))
+    viewGraph(&graph, annotations, "DeclContextGraph");
+  if (llvm::is_contained(g_dump_graph, stage))
+    printGraph(llvm::errs(), &graph, visibilities, graphTitle(stage));
+}
+
 class GenpybindASTConsumer : public clang::ASTConsumer {
   AnnotationStorage annotations;
 
@@ -68,12 +88,8 @@ public:
                                builder.getRelocatedDecls()))
       return;
 
-    if (llvm::is_contained(g_inspect_graph, InspectGraphStage::Visibility))
-      viewGraph(&*graph, annotations, "DeclContextGraph");
-    if (llvm::is_contained(g_dump_graph, InspectGraphStage::Visibility))
-      printGraph(
-          llvm::errs(), &*graph, visibilities,
-          "Declaration context graph (unpruned) with visibility of all nodes:");
+    inspectGraph(*graph, annotations, visibilities,
+                 InspectGraphStage::Visibility);
 
     const auto contexts_with_visible_decls =
         declContextsWithVisibleNamedDecls(&*graph, annotations, visibilities);
@@ -83,11 +99,7 @@ public:
     reportUnreachableVisibleDeclContexts(*graph, contexts_with_visible_decls,
                                          builder.getRelocatedDecls());
 
-    if (llvm::is_contained(g_inspect_graph, InspectGraphStage::Pruned))
-      viewGraph(&*graph, annotations, "DeclContextGraph");
-    if (llvm::is_contained(g_dump_graph, InspectGraphStage::Pruned))
-      printGraph(llvm::errs(), &*graph, visibilities,
-                 "Declaration context graph after pruning:");
+    inspectGraph(*graph, annotations, visibilities, InspectGraphStage::Pruned);
   }
 };
 
