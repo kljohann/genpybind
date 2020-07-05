@@ -9,11 +9,11 @@ template <typename T> struct Type {
 
 // TODO: These errors should be reported in the right order.
 
-// CHECK-DAG: context.h:[[# @LINE + 3]]:8: warning: Declaration context contains 'visible' declarations but is not exposed
+// CHECK-DAG: context.h:[[# @LINE + 3]]:8: warning: Declaration context 'A' contains 'visible' declarations but is not exposed
 // CHECK-DAG: struct A {
 // CHECK-DAG: ~~~~~~~^~~
 struct A {
-  // CHECK-DAG: context.h:[[# @LINE + 3]]:9: warning: Declaration context contains 'visible' declarations but is not exposed
+  // CHECK-DAG: context.h:[[# @LINE + 3]]:9: warning: Declaration context 'A::Instantiation' contains 'visible' declarations but is not exposed
   // CHECK-DAG: using Instantiation GENPYBIND(expose_here) = Type<int>;
   // CHECK-DAG: ~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   using Instantiation GENPYBIND(expose_here) = Type<int>;

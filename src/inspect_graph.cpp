@@ -1,24 +1,11 @@
 #include "genpybind/inspect_graph.h"
 
 #include "clang/AST/TextNodeDumper.h"
-#include <clang/AST/QualTypeNames.h>
 #include <llvm/Support/GraphWriter.h>
 
+#include "genpybind/diagnostics.h"
+
 using namespace genpybind;
-
-static std::string getDeclName(const clang::Decl *decl) {
-  if (const auto *type_decl = llvm::dyn_cast<clang::TypeDecl>(decl)) {
-    const clang::ASTContext &context = type_decl->getASTContext();
-    const clang::QualType qual_type = context.getTypeDeclType(type_decl);
-    return clang::TypeName::getFullyQualifiedName(qual_type, context,
-                                                  context.getPrintingPolicy());
-  }
-
-  if (const auto *named_decl = llvm::dyn_cast<clang::NamedDecl>(decl))
-    return named_decl->getQualifiedNameAsString();
-
-  return "";
-}
 
 namespace {
 
@@ -45,7 +32,7 @@ class GraphPrinter : private clang::TextTreeStructure {
     std::string result = decl->getDeclKindName();
     if (llvm::isa<clang::NamedDecl>(decl)) {
       result.append(" '");
-      result.append(getDeclName(decl));
+      result.append(getNameForDisplay(decl));
       result.push_back('\'');
     }
     return result;
@@ -118,7 +105,7 @@ struct DOTGraphTraits<DeclContextGraphWithAnnotations>
     if (isa<clang::TranslationUnitDecl>(decl))
       return "TU";
 
-    std::string result = getDeclName(decl);
+    std::string result = getNameForDisplay(decl);
     if (result.empty())
       result = std::string("<") + decl->getDeclKindName() + ">";
 

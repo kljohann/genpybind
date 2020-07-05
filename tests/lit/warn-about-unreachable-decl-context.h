@@ -3,7 +3,7 @@
 
 #include "genpybind.h"
 
-// CHECK: context.h:[[# @LINE + 3]]:8: warning: Declaration context contains 'visible' declarations but is not exposed
+// CHECK: context.h:[[# @LINE + 3]]:8: warning: Declaration context 'A' contains 'visible' declarations but is not exposed
 // CHECK-NEXT: struct A {
 // CHECK-NEXT: ~~~~~~~^~~
 struct A {

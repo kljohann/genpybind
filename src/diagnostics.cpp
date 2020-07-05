@@ -1,8 +1,23 @@
 #include "genpybind/diagnostics.h"
 
 #include <clang/AST/ASTContext.h>
+#include <clang/AST/QualTypeNames.h>
 
 using namespace genpybind;
+
+std::string genpybind::getNameForDisplay(const clang::Decl *decl) {
+  if (const auto *type_decl = llvm::dyn_cast<clang::TypeDecl>(decl)) {
+    const clang::ASTContext &context = type_decl->getASTContext();
+    const clang::QualType qual_type = context.getTypeDeclType(type_decl);
+    return clang::TypeName::getFullyQualifiedName(qual_type, context,
+                                                  context.getPrintingPolicy());
+  }
+
+  if (const auto *named_decl = llvm::dyn_cast<clang::NamedDecl>(decl))
+    return named_decl->getQualifiedNameAsString();
+
+  return "";
+}
 
 static unsigned getCustomDiagID(clang::DiagnosticsEngine &engine,
                                 Diagnostics::Kind kind) {
@@ -40,7 +55,7 @@ static unsigned getCustomDiagID(clang::DiagnosticsEngine &engine,
                                   "Previously exposed here");
   case Kind::UnreachableDeclContextWarning:
     return engine.getCustomDiagID(clang::DiagnosticsEngine::Warning,
-                                  "Declaration context contains 'visible' "
+                                  "Declaration context '%0' contains 'visible' "
                                   "declarations but is not exposed");
   case Kind::UnsupportedAliasTargetError:
     return engine.getCustomDiagID(

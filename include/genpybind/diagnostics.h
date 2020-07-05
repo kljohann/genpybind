@@ -4,7 +4,11 @@
 #include <clang/Basic/Diagnostic.h>
 #include <clang/Basic/SourceLocation.h>
 
+#include <string>
+
 namespace genpybind {
+
+std::string getNameForDisplay(const clang::Decl *decl);
 
 class Diagnostics {
   clang::DiagnosticsEngine &engine;

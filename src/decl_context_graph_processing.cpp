@@ -228,6 +228,7 @@ void genpybind::reportUnreachableVisibleDeclContexts(
     if (it != relocated_decls.end())
       decl = it->getSecond();
 
-    Diagnostics::report(decl, Diagnostics::Kind::UnreachableDeclContextWarning);
+    Diagnostics::report(decl, Diagnostics::Kind::UnreachableDeclContextWarning)
+        << getNameForDisplay(decl);
   }
 }
