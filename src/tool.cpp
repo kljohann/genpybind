@@ -2,12 +2,14 @@
 #include "genpybind/decl_context_graph.h"
 #include "genpybind/decl_context_graph_builder.h"
 #include "genpybind/decl_context_graph_processing.h"
+#include "genpybind/expose.h"
 #include "genpybind/inspect_graph.h"
 #include "genpybind/instantiate_annotated_templates.h"
 #include "genpybind/string_utils.h"
 
 #include <clang/AST/ASTConsumer.h>
 #include <clang/AST/ASTContext.h>
+#include <clang/AST/Decl.h>
 #include <clang/Basic/FileManager.h>
 #include <clang/Basic/SourceManager.h>
 #include <clang/Basic/Version.inc> // IWYU pragma: keep
@@ -145,6 +147,15 @@ public:
 
     inspectGraph(*graph, annotations, visibilities, module_name,
                  InspectGraphStage::Pruned);
+
+    TranslationUnitExposer exposer(*graph, annotations);
+
+    llvm::outs() << "#include \"" << main_file << "\"\n"
+                 << "#include <pybind11/pybind11.h>\n\n";
+
+    exposer.emitModule(llvm::outs(), module_name);
+
+    llvm::outs().flush();
   }
 };
 
