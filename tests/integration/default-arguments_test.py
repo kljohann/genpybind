@@ -49,18 +49,16 @@ def test_function_can_be_called_without_arguments(index):
     assert function() == EXPECTED[index]
 
 
-@pytest.mark.xfail(
-    reason="default arguments for templates are missing", raises=TypeError
-)
-def test_template_function_can_be_called_without_arguments():
-    assert m.template_function() == 123
+def test_template_functions_can_be_called_without_arguments():
+    for index in range(1, 6):
+        name = f"template_function_{index:02}"
+        function = getattr(m, name)
+        assert function() == 123
+    assert not hasattr(m, f"template_function_{index + 1:02}")
 
 
-@pytest.mark.xfail(
-    reason="default arguments for templates are missing", raises=TypeError
-)
 def test_member_function_of_template_can_be_called_without_arguments():
-    assert m.Template_Example_.member_function() == 123
+    assert m.Template_Example_().member_function() == 123
 
 
 def test_not_all_parameters_need_to_have_default_values():

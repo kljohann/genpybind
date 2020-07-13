@@ -82,10 +82,21 @@ int function_22(int value = Integral<Holder::count()>::value) GENPYBIND(visible)
 int function_23(int value = Enumeration<Enum::A>::value) GENPYBIND(visible);
 // int function_24(int value = Reference<global_a>::value) GENPYBIND(visible);
 int function_25(int value = Pointer<&global_a>::value) GENPYBIND(visible);
-} // namespace nested
 
-template <typename T> T template_function(T value = 123) GENPYBIND(visible);
-extern template int template_function(int);
+template <typename T> T template_function_01(T value = 123) GENPYBIND(visible);
+extern template int template_function_01(int);
+template <typename T> T template_function_02(T value = N) GENPYBIND(visible);
+extern template int template_function_02(int);
+template <typename T>
+T template_function_03(T value = count()) GENPYBIND(visible);
+extern template int template_function_03(int);
+template <typename T>
+T template_function_04(T value = Holder::N) GENPYBIND(visible);
+extern template int template_function_04(int);
+template <typename T>
+T template_function_05(T value = Holder::N) GENPYBIND(visible);
+extern template int template_function_05(int);
+} // namespace nested
 
 template <typename T> struct GENPYBIND(visible) Template {
   int member_function(int value = 123) const { return value; }

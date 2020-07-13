@@ -35,7 +35,14 @@ int nested::function_23(int value) { return value; }
 // int nested::function_24(int value) { return value; }
 int nested::function_25(int value) { return value; }
 
-template <typename T>
-T template_function(T value) { return value; }
+template <typename T> T nested::template_function_01(T value) { return value; }
+template <typename T> T nested::template_function_02(T value) { return value; }
+template <typename T> T nested::template_function_03(T value) { return value; }
+template <typename T> T nested::template_function_04(T value) { return value; }
+template <typename T> T nested::template_function_05(T value) { return value; }
 
-template int template_function(int);
+template int nested::template_function_01(int);
+template int nested::template_function_02(int);
+template int nested::template_function_03(int);
+template int nested::template_function_04(int);
+template int nested::template_function_05(int);

@@ -5,6 +5,7 @@
 #include "genpybind/expose.h"
 #include "genpybind/inspect_graph.h"
 #include "genpybind/instantiate_annotated_templates.h"
+#include "genpybind/instantiate_default_arguments.h"
 #include "genpybind/string_utils.h"
 
 #include <clang/AST/ASTConsumer.h>
@@ -173,6 +174,8 @@ public:
     std::vector<std::unique_ptr<clang::ASTConsumer>> consumers;
     consumers.push_back(
         std::make_unique<InstantiateAnnotatedTemplatesASTConsumer>());
+    consumers.push_back(
+        std::make_unique<InstantiateDefaultArgumentsASTConsumer>());
     consumers.push_back(std::make_unique<GenpybindASTConsumer>());
     return std::make_unique<clang::MultiplexConsumer>(std::move(consumers));
   }
