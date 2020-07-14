@@ -15,6 +15,7 @@ void viewGraph(const DeclContextGraph *graph,
 
 void printGraph(llvm::raw_ostream &os, const DeclContextGraph *graph,
                 const EffectiveVisibilityMap &visibilities,
+                const AnnotationStorage &annotations,
                 const llvm::Twine &title = "");
 
 } // namespace genpybind

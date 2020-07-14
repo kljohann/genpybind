@@ -21,8 +21,8 @@ struct Outer {
 typedef Outer<Encouraged> TestOuter GENPYBIND(expose_here);
 
 // CHECK:      Declaration context graph (unpruned) with visibility of all nodes:
-// CHECK-NEXT: |-ClassTemplateSpecialization 'Something<Encouraged>': visible
-// CHECK-NEXT: |-ClassTemplateSpecialization 'Outer<Encouraged>': visible
-// CHECK-NEXT: | |-ClassTemplateSpecialization 'Something<Outer<Encouraged>::Inner>': visible
+// CHECK-NEXT: |-ClassTemplateSpecialization 'Something<Encouraged>' as 'Test': visible
+// CHECK-NEXT: |-ClassTemplateSpecialization 'Outer<Encouraged>' as 'TestOuter': visible
+// CHECK-NEXT: | |-ClassTemplateSpecialization 'Something<Outer<Encouraged>::Inner>' as 'y_type': visible
 // CHECK-NEXT: | `-CXXRecord 'Outer<Encouraged>::Inner': visible
 // CHECK-NEXT: `-CXXRecord 'Encouraged': visible

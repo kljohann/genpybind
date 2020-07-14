@@ -25,15 +25,25 @@ class GraphPrinter : private clang::TextTreeStructure {
   llvm::raw_ostream &os;
   const DeclContextGraph *graph;
   const EffectiveVisibilityMap &visibilities;
+  const AnnotationStorage &annotations;
   using NodeRef = const DeclContextNode *;
 
   std::string getNodeLabel(NodeRef node) {
     const clang::Decl *decl = node->getDecl();
     std::string result = decl->getDeclKindName();
-    if (llvm::isa<clang::NamedDecl>(decl)) {
+    if (const auto *named_decl = llvm::dyn_cast<clang::NamedDecl>(decl)) {
       result.append(" '");
       result.append(getNameForDisplay(decl));
       result.push_back('\'');
+
+      if (const auto *annotated = llvm::dyn_cast_or_null<AnnotatedNamedDecl>(
+              annotations.get(named_decl))) {
+        if (!annotated->spelling.empty()) {
+          result.append(" as '");
+          result.append(annotated->spelling);
+          result.push_back('\'');
+        }
+      }
     }
     return result;
   }
@@ -58,9 +68,10 @@ class GraphPrinter : private clang::TextTreeStructure {
 
 public:
   GraphPrinter(llvm::raw_ostream &os, const DeclContextGraph *graph,
-               const EffectiveVisibilityMap &visibilities)
+               const EffectiveVisibilityMap &visibilities,
+               const AnnotationStorage &annotations)
       : TextTreeStructure(os, false), os(os), graph(graph),
-        visibilities(visibilities) {}
+        visibilities(visibilities), annotations(annotations) {}
 
   void print() { printNode(graph->getRoot()); }
 };
@@ -160,7 +171,8 @@ void genpybind::viewGraph(const DeclContextGraph *graph,
 
 void genpybind::printGraph(llvm::raw_ostream &os, const DeclContextGraph *graph,
                            const EffectiveVisibilityMap &visibilities,
+                           const AnnotationStorage &annotations,
                            const llvm::Twine &title) {
   os << title;
-  GraphPrinter(os, graph, visibilities).print();
+  GraphPrinter(os, graph, visibilities, annotations).print();
 }

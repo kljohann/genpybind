@@ -17,7 +17,7 @@ typedef TypeParameter<X> TestX GENPYBIND(expose_here);
 typedef TypeParameter<Y> TestY GENPYBIND(expose_here);
 
 // CHECK:      Declaration context graph after pruning:
-// CHECK-NEXT: |-ClassTemplateSpecialization 'NonTypeParameter<123>': visible
-// CHECK-NEXT: |-ClassTemplateSpecialization 'NonTypeParameter<42>': visible
-// CHECK-NEXT: |-ClassTemplateSpecialization 'TypeParameter<X>': visible
-// CHECK-NEXT: `-ClassTemplateSpecialization 'TypeParameter<Y>': visible
+// CHECK-NEXT: |-ClassTemplateSpecialization 'NonTypeParameter<123>' as 'Test123': visible
+// CHECK-NEXT: |-ClassTemplateSpecialization 'NonTypeParameter<42>' as 'Test42': visible
+// CHECK-NEXT: |-ClassTemplateSpecialization 'TypeParameter<X>' as 'TestX': visible
+// CHECK-NEXT: `-ClassTemplateSpecialization 'TypeParameter<Y>' as 'TestY': visible

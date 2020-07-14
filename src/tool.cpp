@@ -68,7 +68,8 @@ static void inspectGraph(const DeclContextGraph &graph,
   if (llvm::is_contained(g_inspect_graph, stage))
     viewGraph(&graph, annotations, "DeclContextGraph");
   if (llvm::is_contained(g_dump_graph, stage))
-    printGraph(llvm::errs(), &graph, visibilities, graphTitle(stage));
+    printGraph(llvm::errs(), &graph, visibilities, annotations,
+               graphTitle(stage));
 }
 
 class GenpybindASTConsumer : public clang::ASTConsumer {
