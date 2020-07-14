@@ -337,23 +337,27 @@ void AnnotatedTypedefNameDecl::propagateAnnotations(
   }
 }
 
-AnnotatedDecl *AnnotationStorage::getOrInsert(const clang::NamedDecl *decl) {
-  assert(decl != nullptr);
-  auto result = annotations.try_emplace(decl, AnnotatedDecl::create(decl));
-  AnnotatedDecl *annotated_decl = result.first->getSecond().get();
-  assert(annotated_decl != nullptr);
-  if (result.second)
-    annotated_decl->processAnnotations();
-  return annotated_decl;
+AnnotatedDecl *AnnotationStorage::getOrInsert(const clang::Decl *declaration) {
+  if (const auto *named_decl =
+          llvm::dyn_cast_or_null<clang::NamedDecl>(declaration)) {
+    auto result =
+        annotations.try_emplace(named_decl, AnnotatedDecl::create(named_decl));
+    AnnotatedDecl *annotated_decl = result.first->getSecond().get();
+    assert(annotated_decl != nullptr);
+    if (result.second)
+      annotated_decl->processAnnotations();
+    return annotated_decl;
+  }
+  return nullptr;
 }
 
-/// Return the entry for the specified declaration.
-/// If there is no entry, `nullptr` is returned.
 const AnnotatedDecl *
-AnnotationStorage::get(const clang::NamedDecl *decl) const {
-  assert(decl != nullptr);
-  auto it = annotations.find(decl);
-  if (it != annotations.end())
-    return it->second.get();
+AnnotationStorage::get(const clang::Decl *declaration) const {
+  if (const auto *named_decl =
+          llvm::dyn_cast_or_null<clang::NamedDecl>(declaration)) {
+    auto it = annotations.find(named_decl);
+    if (it != annotations.end())
+      return it->second.get();
+  }
   return nullptr;
 }

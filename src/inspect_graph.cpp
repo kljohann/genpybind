@@ -126,10 +126,9 @@ struct DOTGraphTraits<DeclContextGraphWithAnnotations>
   static std::string
   getNodeDescription(const DeclContextNode *node,
                      const DeclContextGraphWithAnnotations &graph) {
-    if (const auto *decl = llvm::dyn_cast<clang::NamedDecl>(node->getDecl()))
-      if (const auto *annotated = llvm::dyn_cast_or_null<AnnotatedNamedDecl>(
-              graph.annotations.get(decl)))
-        return annotated->spelling;
+    if (const auto *annotated = llvm::dyn_cast_or_null<AnnotatedNamedDecl>(
+            graph.annotations.get(node->getDecl())))
+      return annotated->spelling;
     return "";
   }
 
@@ -139,14 +138,12 @@ struct DOTGraphTraits<DeclContextGraphWithAnnotations>
     std::string result;
     llvm::raw_string_ostream stream(result);
     stream << R"(style=")";
-    if (const auto *decl = llvm::dyn_cast<clang::NamedDecl>(node->getDecl())) {
-      if (const auto *annotated = llvm::dyn_cast_or_null<AnnotatedNamedDecl>(
-              graph.annotations.get(decl))) {
-        if (!annotated->visible.hasValue()) {
-          stream << "dotted";
-        } else if (!annotated->visible.getValue()) {
-          stream << "dashed";
-        }
+    if (const auto *annotated = llvm::dyn_cast_or_null<AnnotatedNamedDecl>(
+            graph.annotations.get(node->getDecl()))) {
+      if (!annotated->visible.hasValue()) {
+        stream << "dotted";
+      } else if (!annotated->visible.getValue()) {
+        stream << "dashed";
       }
     }
 

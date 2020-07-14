@@ -75,10 +75,9 @@ genpybind::deriveEffectiveVisibility(const DeclContextGraph &graph,
     }
 
     // Retrieve value from annotations, if specified explicitly.
-    if (const auto *named_decl = llvm::dyn_cast<clang::NamedDecl>(decl))
-      if (const auto *annotated = llvm::dyn_cast_or_null<AnnotatedNamedDecl>(
-              annotations.get(named_decl)))
-        is_visible = annotated->visible.getValueOr(is_visible);
+    if (const auto *annotated =
+            llvm::dyn_cast_or_null<AnnotatedNamedDecl>(annotations.get(decl)))
+      is_visible = annotated->visible.getValueOr(is_visible);
 
     result[decl_context] = is_visible;
   }

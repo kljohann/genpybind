@@ -59,11 +59,12 @@ llvm::Optional<DeclContextGraph> DeclContextGraphBuilder::buildGraph() {
     if (!annotated->encourage && !annotated->expose_here)
       continue;
     const clang::TagDecl *target_decl = aliasTarget(alias_decl);
-    AnnotatedDecl &annotated_target = *annotations.getOrInsert(target_decl);
+    AnnotatedDecl *annotated_target = annotations.getOrInsert(target_decl);
+    assert(annotated_target != nullptr);
     if (annotated->encourage)
-      annotated_target.processAnnotation(Annotation(AnnotationKind::Visible));
+      annotated_target->processAnnotation(Annotation(AnnotationKind::Visible));
     if (annotated->expose_here && addEdgeForExposeHereAlias(alias_decl))
-      annotated->propagateAnnotations(annotated_target);
+      annotated->propagateAnnotations(*annotated_target);
   }
 
   // Bail out if establishing "expose_here" aliases failed, e.g. due to

@@ -109,17 +109,21 @@ public:
   void propagateAnnotations(AnnotatedDecl &other) const;
 };
 
+/// Holds and owns annotations s.t. they do not have to be processed multiple
+/// times.  Currently only named declarations are checked for annotations.
 class AnnotationStorage {
   llvm::DenseMap<const clang::NamedDecl *, std::unique_ptr<AnnotatedDecl>>
       annotations;
 
 public:
-  /// Add an entry for the specified declaration.
-  AnnotatedDecl *getOrInsert(const clang::NamedDecl *decl);
+  /// Add an entry for the specified `declaration`.
+  /// If `declaration` is `nullptr` or unnamed, `nullptr` is returned.
+  AnnotatedDecl *getOrInsert(const clang::Decl *declaration);
 
-  /// Return the entry for the specified declaration.
-  /// If there is no entry, `nullptr` is returned.
-  const AnnotatedDecl *get(const clang::NamedDecl *decl) const;
+  /// Return the entry for the specified `declaration`.
+  /// If `declaration` is `nullptr`, unnamed or there is no corresponding entry,
+  /// `nullptr` is returned.
+  const AnnotatedDecl *get(const clang::Decl *declaration) const;
 };
 
 } // namespace genpybind
