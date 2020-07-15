@@ -11,6 +11,7 @@
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Support/CommandLine.h>
 #include <llvm/Support/FileSystem.h>
+#include <llvm/Support/Path.h>
 #include <llvm/Support/Program.h>
 
 #include <memory>
@@ -19,6 +20,7 @@
 #include "genpybind/decl_context_graph_processing.h"
 #include "genpybind/inspect_graph.h"
 #include "genpybind/instantiate_alias_targets.h"
+#include "genpybind/string_utils.h"
 
 using namespace genpybind;
 
@@ -64,9 +66,9 @@ static const char *graphTitle(InspectGraphStage stage) {
 static void inspectGraph(const DeclContextGraph &graph,
                          const AnnotationStorage &annotations,
                          const EffectiveVisibilityMap &visibilities,
-                         InspectGraphStage stage) {
+                         const llvm::Twine &name, InspectGraphStage stage) {
   if (llvm::is_contained(g_inspect_graph, stage))
-    viewGraph(&graph, annotations, "DeclContextGraph");
+    viewGraph(&graph, annotations, "genpybind_" + name);
   if (llvm::is_contained(g_dump_graph, stage))
     printGraph(llvm::errs(), &graph, visibilities, annotations,
                graphTitle(stage));
@@ -77,6 +79,19 @@ class GenpybindASTConsumer : public clang::ASTConsumer {
 
 public:
   void HandleTranslationUnit(clang::ASTContext &context) override {
+    llvm::StringRef main_file = [&] {
+      const auto &source_manager = context.getSourceManager();
+      const auto *main_file =
+          source_manager.getFileEntryForID(source_manager.getMainFileID());
+      assert(main_file != nullptr);
+      return main_file->getName();
+    }();
+    const auto module_name = [&] {
+      llvm::SmallString<128> name = llvm::sys::path::stem(main_file);
+      makeValidIdentifier(name);
+      return name;
+    }();
+
     DeclContextGraphBuilder builder(annotations,
                                     context.getTranslationUnitDecl());
     auto graph = builder.buildGraph();
@@ -89,7 +104,7 @@ public:
                                builder.getRelocatedDecls()))
       return;
 
-    inspectGraph(*graph, annotations, visibilities,
+    inspectGraph(*graph, annotations, visibilities, module_name,
                  InspectGraphStage::Visibility);
 
     const auto contexts_with_visible_decls =
@@ -100,7 +115,8 @@ public:
     reportUnreachableVisibleDeclContexts(*graph, contexts_with_visible_decls,
                                          builder.getRelocatedDecls());
 
-    inspectGraph(*graph, annotations, visibilities, InspectGraphStage::Pruned);
+    inspectGraph(*graph, annotations, visibilities, module_name,
+                 InspectGraphStage::Pruned);
   }
 };
 
