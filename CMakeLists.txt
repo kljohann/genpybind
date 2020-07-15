@@ -34,6 +34,7 @@ add_library(genpybind SHARED
   src/diagnostics.cpp
   src/inspect_graph.cpp
   src/instantiate_alias_targets.cpp
+  src/string_utils.cpp
 )
 
 # Use same compiler flags as LLVM.
