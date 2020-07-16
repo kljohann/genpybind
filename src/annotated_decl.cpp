@@ -1,14 +1,18 @@
 #include "genpybind/annotated_decl.h"
 
-#include "genpybind/annotations/parser.h"
-#include "genpybind/diagnostics.h"
-
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/Attr.h>
+#include <clang/AST/DeclTemplate.h>
 #include <clang/Basic/CharInfo.h>
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/ADT/STLExtras.h>
+#include <llvm/ADT/SmallString.h>
 #include <llvm/Support/Error.h>
+#include <llvm/Support/raw_ostream.h>
+
+#include "genpybind/annotations/parser.h"
+#include "genpybind/diagnostics.h"
+#include "genpybind/string_utils.h"
 
 using namespace genpybind;
 
@@ -172,9 +176,26 @@ bool AnnotatedNamedDecl::processAnnotation(const Annotation &annotation) {
   return true;
 }
 
-llvm::StringRef AnnotatedNamedDecl::getSpelling() const {
-  return spelling.empty() ? llvm::cast<clang::NamedDecl>(getDecl())->getName()
-                          : llvm::StringRef(spelling);
+std::string AnnotatedNamedDecl::getSpelling() const {
+  if (!spelling.empty())
+    return spelling;
+
+  const auto *const decl = llvm::cast<clang::NamedDecl>(getDecl());
+  const clang::PrintingPolicy &policy =
+      decl->getASTContext().getPrintingPolicy();
+
+  if (const auto *tpl_decl =
+          llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(decl)) {
+    llvm::SmallString<128> result;
+    llvm::raw_svector_ostream os(result);
+    os << tpl_decl->getName();
+    const clang::TemplateArgumentList &args = tpl_decl->getTemplateArgs();
+    clang::printTemplateArgumentList(os, args.asArray(), policy);
+    makeValidIdentifier(result);
+    return result.str().str();
+  }
+
+  return decl->getName();
 }
 
 llvm::StringRef AnnotatedEnumDecl::getFriendlyDeclKindName() const {

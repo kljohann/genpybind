@@ -27,9 +27,9 @@ template struct GENPYBIND(hidden) ExposeAll<double>;
 // CHECK:      Declaration context graph after pruning:
 // CHECK-NEXT: |-ClassTemplateSpecialization 'ExposeSomeInstantiations<int>' as 'IntSomething': visible
 // CHECK-NEXT: |-ClassTemplateSpecialization 'ExposeSomeInstantiations<float>' as 'FloatSomething': visible
-// CHECK-NEXT: |-ClassTemplateSpecialization 'ExposeSomeInstantiations<bool>': visible
-// CHECK-NEXT: |-ClassTemplateSpecialization 'ExposeAll<int>': visible
-// CHECK-NEXT: |-ClassTemplateSpecialization 'ExposeAll<float>': visible
+// CHECK-NEXT: |-ClassTemplateSpecialization 'ExposeSomeInstantiations<bool>' as 'ExposeSomeInstantiations_bool_': visible
+// CHECK-NEXT: |-ClassTemplateSpecialization 'ExposeAll<int>' as 'ExposeAll_int_': visible
+// CHECK-NEXT: |-ClassTemplateSpecialization 'ExposeAll<float>' as 'ExposeAll_float_': visible
 // CHECK-NEXT: |-ClassTemplateSpecialization 'ExposeAll<bool>' as 'BoolSomething': visible
 // NOTE/FIXME: This instantiation is visible, despite the 'hidden' annotation.
-// CHECK-NEXT: `-ClassTemplateSpecialization 'ExposeAll<double>': visible
+// CHECK-NEXT: `-ClassTemplateSpecialization 'ExposeAll<double>' as 'ExposeAll_double_': visible
