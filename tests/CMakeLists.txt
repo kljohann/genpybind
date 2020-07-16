@@ -31,3 +31,44 @@ else()
   )
   add_dependencies(test lit-tests-run)
 endif()
+
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
+# Each `TEST_NAME.cpp` file in `integration/` defines an integration test, for
+# which a shared library target called `integration-TEST_NAME` is created.
+# The corresponding header file is analyzed using genpybind in order to generate
+# code for a pybind11-based Python module `TEST_NAME`.
+# Any Python test files in `integration/` are executed afterwards (using pytest).
+add_custom_target(integration-tests
+  COMMAND Python3::Interpreter -m pytest
+  ${CMAKE_CURRENT_SOURCE_DIR}/integration
+  DEPENDS ${module_name}
+  COMMENT "Running integration tests"
+  VERBATIM USES_TERMINAL
+)
+add_dependencies(test integration-tests)
+file(GLOB integration_tests CONFIGURE_DEPENDS "integration/*.cpp")
+foreach(test_implementation IN LISTS integration_tests)
+  get_filename_component(test_name ${test_implementation} NAME_WE)
+  set(test_target integration-${test_name})
+  get_filename_component(test_header integration/${test_name}.h ABSOLUTE)
+  set(test_bindings ${CMAKE_CURRENT_BINARY_DIR}/genpybind-${test_name}.cpp)
+  string(MAKE_C_IDENTIFIER ${test_name} module_name)
+
+  add_library(${test_target} SHARED ${test_implementation})
+  target_include_directories(${test_target} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+  add_custom_command(
+    OUTPUT ${test_bindings}
+    MAIN_DEPENDENCY ${test_header}
+    DEPENDS genpybind-tool
+    IMPLICIT_DEPENDS CXX ${test_header}
+    COMMAND $<TARGET_FILE:genpybind-tool>
+    ARGS -p ${CMAKE_BINARY_DIR} ${test_header} --extra-arg=-D__GENPYBIND__
+    > ${test_bindings}
+    COMMENT "Analyzing ${test_header}"
+    VERBATIM USES_TERMINAL
+  )
+  pybind11_add_module(${module_name} MODULE ${test_bindings})
+  target_link_libraries(${module_name} PUBLIC ${test_target})
+  add_dependencies(integration-tests ${module_name})
+endforeach()
