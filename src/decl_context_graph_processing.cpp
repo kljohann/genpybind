@@ -16,9 +16,9 @@
 
 using namespace genpybind;
 
-ParentNamedDeclMap
-genpybind::findClosestNamedDeclAncestors(const DeclContextGraph &graph) {
-  ParentNamedDeclMap result;
+EnclosingNamedDeclMap genpybind::findEnclosingScopeIntroducingAncestors(
+    const DeclContextGraph &graph, const AnnotationStorage &annotations) {
+  EnclosingNamedDeclMap result;
 
   // Visit the nodes in a depth-first pre-order traversal; any other traversal
   // would also do, but `DepthFirstIterator` allows convenient access to
@@ -29,6 +29,15 @@ genpybind::findClosestNamedDeclAncestors(const DeclContextGraph &graph) {
     assert(it.getPathLength() > 0 && "path should always contain decl itself");
     for (unsigned index = it.getPathLength() - 1; index > 0; --index) {
       const clang::Decl *ancestor = it.getPath(index - 1)->getDecl();
+
+      // Namespaces are transparent unless they define a submodule.
+      if (const auto *annotated_ns =
+              llvm::dyn_cast_or_null<AnnotatedNamespaceDecl>(
+                  annotations.get(ancestor)))
+        if (!annotated_ns->module)
+          continue;
+
+      // Otherwise use the first enclosing named ancestor.
       named_ancestor = llvm::dyn_cast<clang::NamedDecl>(ancestor);
       if (named_ancestor != nullptr)
         break;

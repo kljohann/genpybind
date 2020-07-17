@@ -15,13 +15,19 @@ namespace genpybind {
 
 class AnnotationStorage;
 
-using ParentNamedDeclMap =
+using EnclosingNamedDeclMap =
     llvm::DenseMap<const clang::DeclContext *, const clang::NamedDecl *>;
 
-/// Determines the closest `NamedDecl` ancestor for each reachable node of
-/// `graph`.  A `nullptr` value is associated with all nodes that have no
-/// `NamedDecl` ancestors (e.g. nodes directly below the `TranslationUnitDecl`).
-ParentNamedDeclMap findClosestNamedDeclAncestors(const DeclContextGraph &graph);
+/// Determine the first enclosing non-transparent `NamedDecl` for each reachable
+/// node of `graph`.  A declaration context is considered "transparent" if
+/// contained declarations are not exposed in a nested scope, but in the same
+/// scope as the context itself.  This is the case for unnamed declaration
+/// contexts and namespaces that do not introduce a submodule (`module`
+/// annotation).  A `nullptr` value is associated with all nodes that have no
+/// such ancestor (e.g. nodes directly below the `TranslationUnitDecl`).
+EnclosingNamedDeclMap
+findEnclosingScopeIntroducingAncestors(const DeclContextGraph &graph,
+                                       const AnnotationStorage &annotations);
 
 using EffectiveVisibilityMap = llvm::DenseMap<const clang::DeclContext *, bool>;
 
