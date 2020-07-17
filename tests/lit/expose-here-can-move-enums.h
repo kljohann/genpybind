@@ -16,8 +16,6 @@ struct GENPYBIND(visible) Outer {
 };
 
 // CHECK:      Declaration context graph after pruning:
-// TODO: The namespace should have been pruned
-// CHECK-NEXT: |-Namespace 'nested': hidden
 // CHECK-NEXT: `-CXXRecord 'Outer': visible
 // CHECK-NEXT:   |-Enum 'nested::UnscopedEnum' as 'Unscoped': visible
 // CHECK-NEXT:   `-Enum 'nested::ScopedEnum' as 'Scoped': visible

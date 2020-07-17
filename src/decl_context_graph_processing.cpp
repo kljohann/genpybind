@@ -152,7 +152,22 @@ ConstDeclContextSet genpybind::declContextsWithVisibleNamedDecls(
   };
 
   auto containsVisibleNamedDecls =
-      [&annotations, &visibilities](const clang::DeclContext *context) -> bool {
+      [&annotations, &visibilities](const DeclContextNode *const node) -> bool {
+    const clang::DeclContext *const context = node->getDeclContext();
+
+    // Check if there are any visible nested tag declarations.  Namespaces and
+    // unnamed nested declaration contexts do not need to be considered here, as
+    // these only serve to provide a default visibility (see predicate above).
+    // As tag declarations could have been moved using `expose_here`, the graph
+    // is used instead of iterating the declarations stored in `context`.
+    for (const DeclContextNode *child : *node) {
+      const auto visible = visibilities.find(child->getDeclContext());
+      assert(visible != visibilities.end() &&
+             "visibility should be known for all nodes");
+      if (llvm::isa<clang::TagDecl>(child->getDecl()) && visible->getSecond())
+        return true;
+    }
+
     const auto visible = visibilities.find(context);
     assert(visible != visibilities.end() &&
            "visibility should be known for all nodes");
@@ -172,8 +187,14 @@ ConstDeclContextSet genpybind::declContextsWithVisibleNamedDecls(
              it(context->decls_begin()),
          end_it(context->decls_end());
          it != end_it; ++it) {
-      // Skip namespaces, as those only serve to provide a default visibility.
-      if (llvm::isa<clang::NamespaceDecl>(*it))
+      // Nested declaration contexts that are represented in the graph are taken
+      // into account above.
+      // NOTE: Since e.g. `FunctionDecl`s are also `DeclContext`s, it's not
+      // correct to check for `isa<DeclContext>` here.
+      assert(visibilities.count(nullptr) == 0);
+      bool is_also_represented_as_graph_node =
+          visibilities.count(llvm::dyn_cast<clang::DeclContext>(*it));
+      if (is_also_represented_as_graph_node)
         continue;
       // Do not visit implicit declarations, as these cannot have been annotated
       // explicitly by the user.  This avoids false positives on the implicit
@@ -193,7 +214,7 @@ ConstDeclContextSet genpybind::declContextsWithVisibleNamedDecls(
   for (const DeclContextNode *node : llvm::post_order(graph)) {
     const clang::DeclContext *context = node->getDeclContext();
     if (isParentOfContextWithVisibleNamedDecls(node) ||
-        containsVisibleNamedDecls(context))
+        containsVisibleNamedDecls(node))
       result.insert(context);
   }
 
