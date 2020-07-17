@@ -115,6 +115,8 @@ AnnotatedDecl::create(const clang::NamedDecl *decl) {
   assert(decl != nullptr);
   if (const auto *td = llvm::dyn_cast<clang::TypedefNameDecl>(decl))
     return std::make_unique<AnnotatedTypedefNameDecl>(td);
+  if (const auto *ns = llvm::dyn_cast<clang::NamespaceDecl>(decl))
+    return std::make_unique<AnnotatedNamespaceDecl>(ns);
   if (const auto *en = llvm::dyn_cast<clang::EnumDecl>(decl))
     return std::make_unique<AnnotatedEnumDecl>(en);
   if (const auto *rec = llvm::dyn_cast<clang::RecordDecl>(decl))
@@ -211,6 +213,35 @@ std::string AnnotatedNamedDecl::getSpelling() const {
   }
 
   return decl->getName();
+}
+
+llvm::StringRef AnnotatedNamespaceDecl::getFriendlyDeclKindName() const {
+  return "namespace";
+}
+
+bool AnnotatedNamespaceDecl::processAnnotation(const Annotation &annotation) {
+  if (AnnotatedNamedDecl::processAnnotation(annotation))
+    return true;
+
+  ArgumentsConsumer arguments(annotation.getArguments());
+  switch (annotation.getKind().value()) {
+  case AnnotationKind::Module:
+    if (arguments.empty()) {
+      module = true;
+    } else if (auto value = arguments.take<LiteralValue::Kind::String>()) {
+      module = true;
+      AnnotatedNamedDecl::processAnnotation(
+          Annotation(AnnotationKind::ExposeAs, {*value}));
+    } else if ((value = arguments.take())) {
+      reportWrongArgumentTypeError(getDecl(), annotation.getKind(), *value);
+    }
+    break;
+  default:
+    return false;
+  }
+  if (arguments)
+    reportWrongNumberOfArgumentsError(getDecl(), annotation.getKind());
+  return true;
 }
 
 llvm::StringRef AnnotatedEnumDecl::getFriendlyDeclKindName() const {

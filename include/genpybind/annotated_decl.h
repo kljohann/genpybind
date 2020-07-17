@@ -61,6 +61,19 @@ public:
   }
 };
 
+class AnnotatedNamespaceDecl : public AnnotatedNamedDecl {
+public:
+  bool module = false;
+
+  llvm::StringRef getFriendlyDeclKindName() const override;
+  bool processAnnotation(const annotations::Annotation &annotation) override;
+
+  using AnnotatedNamedDecl::AnnotatedNamedDecl;
+  static bool classof(const AnnotatedDecl *decl) {
+    return clang::NamespaceDecl::classofKind(decl->getKind());
+  }
+};
+
 class AnnotatedEnumDecl : public AnnotatedNamedDecl {
 public:
   bool arithmetic = false;
