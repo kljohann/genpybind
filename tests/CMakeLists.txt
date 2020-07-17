@@ -13,7 +13,7 @@ add_custom_target(genpybind-tests-run
 )
 add_dependencies(test genpybind-tests-run)
 
-find_program(LIT_COMMAND NAMES lit.py)
+find_program(LIT_COMMAND NAMES lit.py lit)
 find_program(FILECHECK_COMMAND NAMES FileCheck)
 if(FILECHECK_COMMAND STREQUAL "FILECHECK_COMMAND-NOTFOUND")
   message(WARNING "FileCheck not found, skipping (some) tests")
