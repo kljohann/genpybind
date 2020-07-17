@@ -22,6 +22,16 @@ find_package(Clang REQUIRED
 list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
 include(AddLLVM)
 
+find_program(IWYU_PATH NAMES include-what-you-use iwyu)
+if(NOT IWYU_PATH STREQUAL "IWYU_PATH-NOTFOUND")
+  set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE
+    ${IWYU_PATH}
+    -Xiwyu --mapping_file=${CMAKE_CURRENT_SOURCE_DIR}/genpybind.imp
+    -Xiwyu --transitive_includes_only
+    -Xiwyu --quoted_includes_first
+  )
+endif()
+
 add_library(genpybind SHARED
   src/annotated_decl.cpp
   src/annotations/annotation.cpp
