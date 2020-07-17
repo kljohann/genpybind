@@ -1,12 +1,19 @@
 #pragma once
 
+#include "genpybind/decl_context_graph.h"
+
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/Optional.h>
 
-#include "genpybind/annotated_decl.h"
-#include "genpybind/decl_context_graph.h"
+namespace clang {
+class Decl;
+class TagDecl;
+class TranslationUnitDecl;
+class TypedefNameDecl;
+} // namespace clang
 
 namespace genpybind {
+class AnnotationStorage;
 
 /// Builds a graph of declaration contexts from the AST.  As described for
 /// DeclContextGraph, this graph is used to determine where and in which order

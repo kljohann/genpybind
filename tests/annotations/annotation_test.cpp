@@ -1,6 +1,9 @@
 #include "genpybind/annotations/annotation.h"
 
-#include <gmock/gmock.h>
+#include "genpybind/annotations/literal_value.h"
+
+#include <llvm/Support/raw_ostream.h>
+
 #include <gtest/gtest.h>
 
 namespace {

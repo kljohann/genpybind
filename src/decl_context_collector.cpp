@@ -1,5 +1,9 @@
 #include "genpybind/decl_context_collector.h"
 
+#include "genpybind/diagnostics.h"
+
+#include <clang/AST/Type.h>
+
 using namespace genpybind;
 
 void DeclContextCollector::warnIfAliasHasQualifiers(

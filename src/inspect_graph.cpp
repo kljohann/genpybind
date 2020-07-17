@@ -1,9 +1,24 @@
 #include "genpybind/inspect_graph.h"
 
-#include "clang/AST/TextNodeDumper.h"
-#include <llvm/Support/GraphWriter.h>
-
+#include "genpybind/annotated_decl.h"
+#include "genpybind/decl_context_graph.h"
 #include "genpybind/diagnostics.h"
+
+#include <clang/AST/Decl.h>
+#include <clang/AST/TextNodeDumper.h>
+#include <llvm/ADT/DenseMap.h>
+#include <llvm/ADT/Optional.h>
+#include <llvm/ADT/StringRef.h>
+#include <llvm/Support/Casting.h>
+#include <llvm/Support/DOTGraphTraits.h>
+#include <llvm/Support/GraphWriter.h>
+#include <llvm/Support/raw_ostream.h>
+
+#include <string>
+
+namespace llvm {
+template <class GraphType> struct GraphTraits;
+} // namespace llvm
 
 using namespace genpybind;
 

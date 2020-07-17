@@ -1,14 +1,17 @@
 #pragma once
 
-#include "genpybind/annotations/literal_value.h"
+#include "genpybind/annotations/literal_value.h" // IWYU pragma: keep
 
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringRef.h>
-#include <llvm/Support/raw_ostream.h>
 
 #include <iosfwd>
 #include <string>
 #include <utility>
+
+namespace llvm {
+class raw_ostream;
+} // namespace llvm
 
 namespace genpybind {
 namespace annotations {
@@ -17,7 +20,7 @@ class AnnotationKind {
 public:
   enum Kind {
 #define ANNOTATION_KIND(Enum, Spelling) Enum,
-#include "genpybind/annotations/annotations.def"
+#include "genpybind/annotations/annotations.def" // IWYU pragma: export
   };
 
   AnnotationKind(Kind kind) : kind(kind) {}

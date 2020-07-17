@@ -1,11 +1,16 @@
 #include "genpybind/annotations/parser.h"
 
 #include <clang/Basic/CharInfo.h>
+#include <clang/Basic/SourceLocation.h>
 #include <llvm/ADT/Sequence.h>
+#include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringSwitch.h>
+#include <llvm/Support/Error.h>
+#include <llvm/Support/ErrorHandling.h>
+#include <llvm/Support/raw_ostream.h>
 
 #include <cassert>
-#include <llvm/Support/Error.h>
+#include <utility>
 
 using namespace genpybind::annotations;
 
@@ -82,7 +87,7 @@ void Parser::Tokenizer::tokenizeNumberLiteral(Token &result) {
 void Parser::Tokenizer::tokenizeStringLiteral(Token &result) {
   assert(text.front() == '"');
   bool escape_next_char = false;
-  for (size_t pos : llvm::seq<size_t>(1, text.size())) {
+  for (auto pos : llvm::seq<llvm::StringRef::size_type>(1, text.size())) {
     if (escape_next_char || text[pos] == '\\') {
       escape_next_char = !escape_next_char;
       continue;
@@ -241,3 +246,5 @@ auto Parser::Error::report(clang::SourceLocation loc,
     -> clang::DiagnosticBuilder {
   return diagnostics.Report(loc, getCustomDiagID(diagnostics, kind)) << token;
 }
+
+void Parser::Error::log(llvm::raw_ostream &OS) const { OS << "parser error"; }

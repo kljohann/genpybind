@@ -1,6 +1,8 @@
 #include "genpybind/annotations/literal_value.h"
 
+#include <llvm/Support/ErrorHandling.h>
 #include <llvm/Support/raw_os_ostream.h>
+#include <llvm/Support/raw_ostream.h>
 
 #include <cassert>
 #include <utility>

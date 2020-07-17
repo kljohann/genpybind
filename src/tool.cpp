@@ -1,26 +1,46 @@
-#include <clang/AST/ASTConsumer.h>
-#include <clang/AST/Decl.h>
-#include <clang/Basic/Version.inc>
-#include <clang/Driver/Driver.h>
-#include <clang/Frontend/CompilerInstance.h>
-#include <clang/Frontend/MultiplexConsumer.h>
-#include <clang/Tooling/ArgumentsAdjusters.h>
-#include <clang/Tooling/CommonOptionsParser.h>
-#include <clang/Tooling/Tooling.h>
-#include <llvm/ADT/STLExtras.h>
-#include <llvm/ADT/StringRef.h>
-#include <llvm/Support/CommandLine.h>
-#include <llvm/Support/FileSystem.h>
-#include <llvm/Support/Path.h>
-#include <llvm/Support/Program.h>
-
-#include <memory>
-
+#include "genpybind/annotated_decl.h"
+#include "genpybind/decl_context_graph.h"
 #include "genpybind/decl_context_graph_builder.h"
 #include "genpybind/decl_context_graph_processing.h"
 #include "genpybind/inspect_graph.h"
 #include "genpybind/instantiate_alias_targets.h"
 #include "genpybind/string_utils.h"
+
+#include <clang/AST/ASTConsumer.h>
+#include <clang/AST/ASTContext.h>
+#include <clang/Basic/FileManager.h>
+#include <clang/Basic/SourceManager.h>
+#include <clang/Basic/Version.inc> // IWYU pragma: keep
+#include <clang/Driver/Driver.h>
+#include <clang/Frontend/FrontendAction.h>
+#include <clang/Frontend/MultiplexConsumer.h>
+#include <clang/Tooling/ArgumentsAdjusters.h>
+#include <clang/Tooling/CommonOptionsParser.h>
+#include <clang/Tooling/Tooling.h>
+#include <llvm/ADT/ArrayRef.h>
+#include <llvm/ADT/Optional.h>
+#include <llvm/ADT/STLExtras.h>
+#include <llvm/ADT/SmallString.h>
+#include <llvm/ADT/SmallVector.h>
+#include <llvm/ADT/StringRef.h>
+#include <llvm/ADT/Twine.h>
+#include <llvm/Support/CommandLine.h>
+#include <llvm/Support/ErrorHandling.h>
+#include <llvm/Support/ErrorOr.h>
+#include <llvm/Support/FileSystem.h>
+#include <llvm/Support/Path.h>
+#include <llvm/Support/Program.h>
+#include <llvm/Support/raw_ostream.h>
+
+#include <cassert>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
+
+namespace clang {
+class CompilerInstance;
+} // namespace clang
 
 using namespace genpybind;
 

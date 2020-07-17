@@ -1,6 +1,8 @@
 #pragma once
 
-#include <llvm/ADT/SmallVector.h>
+namespace llvm {
+template <typename T> class SmallVectorImpl;
+} // namespace llvm
 
 namespace genpybind {
 

@@ -1,11 +1,18 @@
 #include "genpybind/decl_context_graph_processing.h"
 
-#include <llvm/ADT/DenseSet.h>
-#include <llvm/ADT/DepthFirstIterator.h>
-#include <llvm/ADT/PostOrderIterator.h>
-
 #include "genpybind/annotated_decl.h"
 #include "genpybind/diagnostics.h"
+
+#include <clang/AST/Decl.h>
+#include <clang/Basic/Diagnostic.h>
+#include <clang/Basic/Specifiers.h>
+#include <llvm/ADT/DepthFirstIterator.h>
+#include <llvm/ADT/Optional.h>
+#include <llvm/ADT/PostOrderIterator.h>
+#include <llvm/Support/Casting.h>
+
+#include <cassert>
+#include <memory>
 
 using namespace genpybind;
 

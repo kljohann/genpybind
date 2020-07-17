@@ -1,11 +1,20 @@
 #include "genpybind/decl_context_graph_builder.h"
 
-#include <clang/Basic/Diagnostic.h>
-#include <llvm/ADT/DepthFirstIterator.h>
-
-#include <utility>
-
+#include "genpybind/annotated_decl.h"
+#include "genpybind/annotations/annotation.h"
 #include "genpybind/decl_context_collector.h"
+#include "genpybind/diagnostics.h"
+
+#include <clang/AST/ASTContext.h>
+#include <clang/AST/Decl.h>
+#include <clang/AST/Type.h>
+#include <clang/Basic/Diagnostic.h>
+#include <llvm/ADT/None.h>
+#include <llvm/Support/Casting.h>
+
+#include <cassert>
+#include <utility>
+#include <vector>
 
 using namespace genpybind;
 

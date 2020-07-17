@@ -1,1 +1,14 @@
 BasedOnStyle: LLVM
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex:           '^"genpybind/'
+    Priority:        2
+  - Regex:           '^<(llvm|clang)/'
+    Priority:        3
+  - Regex:           '^<(gtest|gmock)/'
+    Priority:        4
+  - Regex:           '<[[:alnum:]_.]+>'
+    Priority:        5
+  - Regex:           '.*'
+    Priority:        1
+IncludeIsMainRegex: "(_test)?$"

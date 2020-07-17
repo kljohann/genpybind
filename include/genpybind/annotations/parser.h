@@ -1,14 +1,22 @@
 #pragma once
 
 #include "genpybind/annotations/annotation.h"
+#include "genpybind/annotations/literal_value.h"
 
 #include <clang/Basic/Diagnostic.h>
-#include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Support/Error.h>
 
-#include <utility>
+#include <system_error>
 #include <vector>
+
+namespace clang {
+class SourceLocation;
+} // namespace clang
+
+namespace llvm {
+class raw_ostream;
+} // namespace llvm
 
 namespace genpybind {
 namespace annotations {
@@ -16,8 +24,8 @@ namespace annotations {
 class Parser {
 public:
   class Error;
-  struct Token;
   class Tokenizer;
+  struct Token;
 
   using Annotations = std::vector<Annotation>;
 
@@ -52,7 +60,7 @@ public:
   clang::DiagnosticBuilder report(clang::SourceLocation loc,
                                   clang::DiagnosticsEngine &diagnostics) const;
 
-  void log(llvm::raw_ostream &OS) const override { OS << "parser error"; }
+  void log(llvm::raw_ostream &OS) const override;
 
   static char ID;
 

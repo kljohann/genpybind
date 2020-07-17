@@ -1,10 +1,13 @@
 #pragma once
 
-#include <clang/AST/Decl.h>
 #include <clang/Basic/Diagnostic.h>
-#include <clang/Basic/SourceLocation.h>
 
 #include <string>
+
+namespace clang {
+class Decl;
+class SourceLocation;
+} // namespace clang
 
 namespace genpybind {
 

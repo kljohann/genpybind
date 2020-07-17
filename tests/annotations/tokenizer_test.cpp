@@ -1,4 +1,7 @@
+#include "genpybind/annotations/literal_value.h"
 #include "genpybind/annotations/parser.h"
+
+#include <llvm/ADT/StringRef.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>

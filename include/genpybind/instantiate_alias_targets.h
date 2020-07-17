@@ -5,6 +5,14 @@
 
 #include <vector>
 
+namespace clang {
+class ASTContext;
+class Sema;
+class Stmt;
+class TagDecl;
+class TypedefNameDecl;
+} // namespace clang
+
 namespace genpybind {
 
 /// Recursively visits all annotated `TypedefNameDecl`s that are not in a

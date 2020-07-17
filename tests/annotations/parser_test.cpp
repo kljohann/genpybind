@@ -1,11 +1,13 @@
 #include "genpybind/annotations/parser.h"
 
+#include "expected.h"
+
 #include <llvm/Testing/Support/Error.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "expected.h"
+#include <initializer_list>
 
 namespace {
 

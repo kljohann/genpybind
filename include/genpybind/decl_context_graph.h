@@ -2,10 +2,16 @@
 
 #include <clang/AST/Decl.h>
 #include <llvm/ADT/DenseMap.h>
-#include <llvm/ADT/GraphTraits.h>
+#include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/SmallVector.h>
+#include <llvm/Support/Casting.h>
 
+#include <cassert>
 #include <memory>
+
+namespace llvm {
+template <class GraphType> struct GraphTraits;
+} // namespace llvm
 
 namespace genpybind {
 

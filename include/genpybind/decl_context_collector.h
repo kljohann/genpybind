@@ -1,12 +1,16 @@
 #pragma once
 
 #include "genpybind/annotated_decl.h"
-#include "genpybind/diagnostics.h"
 
 #include <clang/AST/Decl.h>
+#include <clang/AST/DeclCXX.h>
 #include <clang/AST/RecursiveASTVisitor.h>
 
 #include <vector>
+
+namespace clang {
+class Stmt;
+} // namespace clang
 
 namespace genpybind {
 

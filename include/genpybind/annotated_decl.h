@@ -5,7 +5,9 @@
 #include <clang/AST/Decl.h>
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/Optional.h>
+#include <llvm/ADT/StringRef.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 

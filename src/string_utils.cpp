@@ -1,6 +1,9 @@
 #include "genpybind/string_utils.h"
 
 #include <clang/Basic/CharInfo.h>
+#include <llvm/ADT/SmallVector.h>
+
+#include <algorithm>
 
 void genpybind::makeValidIdentifier(llvm::SmallVectorImpl<char> &name) {
   char *const end = name.end();

@@ -1,18 +1,33 @@
 #include "genpybind/annotated_decl.h"
 
-#include <clang/AST/ASTContext.h>
-#include <clang/AST/Attr.h>
-#include <clang/AST/DeclTemplate.h>
-#include <clang/Basic/CharInfo.h>
-#include <llvm/ADT/ArrayRef.h>
-#include <llvm/ADT/STLExtras.h>
-#include <llvm/ADT/SmallString.h>
-#include <llvm/Support/Error.h>
-#include <llvm/Support/raw_ostream.h>
-
+#include "genpybind/annotations/literal_value.h"
 #include "genpybind/annotations/parser.h"
 #include "genpybind/diagnostics.h"
 #include "genpybind/string_utils.h"
+
+#include <clang/AST/ASTContext.h>
+#include <clang/AST/Attr.h>
+#include <clang/AST/DeclTemplate.h>
+#include <clang/AST/Type.h>
+#include <clang/Basic/CharInfo.h>
+#include <clang/Basic/Diagnostic.h>
+#include <clang/Basic/SourceLocation.h>
+#include <clang/Basic/SourceManager.h>
+#include <llvm/ADT/ArrayRef.h>
+#include <llvm/ADT/None.h>
+#include <llvm/ADT/STLExtras.h>
+#include <llvm/ADT/SmallString.h>
+#include <llvm/Support/Casting.h>
+#include <llvm/Support/Error.h>
+#include <llvm/Support/raw_ostream.h>
+
+#include <cassert>
+#include <type_traits>
+#include <utility>
+
+namespace clang {
+struct PrintingPolicy;
+} // namespace clang
 
 using namespace genpybind;
 

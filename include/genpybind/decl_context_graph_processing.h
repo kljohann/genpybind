@@ -1,10 +1,15 @@
 #pragma once
 
+#include "genpybind/decl_context_graph.h"
+#include "genpybind/decl_context_graph_builder.h"
+
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/DenseSet.h>
 
-#include "genpybind/decl_context_graph.h"
-#include "genpybind/decl_context_graph_builder.h"
+namespace clang {
+class DeclContext;
+class NamedDecl;
+} // namespace clang
 
 namespace genpybind {
 

@@ -1,13 +1,16 @@
 #pragma once
 
-#include "genpybind/decl_context_graph.h"
 #include "genpybind/decl_context_graph_processing.h"
-#include "genpybind/annotated_decl.h"
 
 #include <llvm/ADT/Twine.h>
-#include <llvm/Support/raw_ostream.h>
+
+namespace llvm {
+class raw_ostream;
+} // namespace llvm
 
 namespace genpybind {
+class AnnotationStorage;
+class DeclContextGraph;
 
 void viewGraph(const DeclContextGraph *graph,
                const AnnotationStorage &annotations, const llvm::Twine &name,
