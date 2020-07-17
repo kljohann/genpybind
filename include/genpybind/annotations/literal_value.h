@@ -15,7 +15,7 @@ namespace annotations {
 /// a string, an unsigned integer, a boolean, or the special values
 /// `default` and `nothing` (i.e. contains no value).
 class LiteralValue {
-  public:
+public:
   enum class Kind {
     Nothing,
     String,
@@ -45,8 +45,7 @@ public:
   LiteralValue(LiteralValue &&other) noexcept;
   LiteralValue &operator=(LiteralValue &&other) noexcept;
 
-  template <Kind other>
-  bool is() const { return kind == other; }
+  template <Kind other> bool is() const { return kind == other; }
   bool isNothing() const { return kind == Kind::Nothing; }
   bool isString() const { return kind == Kind::String; }
   bool isUnsigned() const { return kind == Kind::Unsigned; }

@@ -24,7 +24,7 @@ class InstantiateAliasTargetsASTConsumer
       public clang::RecursiveASTVisitor<InstantiateAliasTargetsASTConsumer> {
   clang::Sema *sema = nullptr;
   bool parsing_completed = false;
-  std::vector<const clang::TypedefNameDecl*> pending;
+  std::vector<const clang::TypedefNameDecl *> pending;
 
 public:
   void InitializeSema(clang::Sema &sema_) override { sema = &sema_; }

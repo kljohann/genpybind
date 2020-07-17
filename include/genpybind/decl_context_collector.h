@@ -28,13 +28,13 @@ namespace genpybind {
 /// instantiation.
 class DeclContextCollector
     : public clang::RecursiveASTVisitor<DeclContextCollector> {
-  AnnotationStorage& annotations;
+  AnnotationStorage &annotations;
 
 public:
   std::vector<const clang::DeclContext *> decl_contexts;
   std::vector<const clang::TypedefNameDecl *> aliases;
 
-  DeclContextCollector(AnnotationStorage& annotations)
+  DeclContextCollector(AnnotationStorage &annotations)
       : annotations(annotations) {}
 
   bool shouldWalkTypesOfTypeLocs() const { return false; }
@@ -89,4 +89,4 @@ public:
   }
 };
 
-}  // namespace genpybind
+} // namespace genpybind

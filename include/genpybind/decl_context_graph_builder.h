@@ -28,11 +28,11 @@ namespace genpybind {
 /// aliases before the declaration contexts themselves and later ignoring
 /// declaration contexts if a corresponding node is already found in the graph.
 class DeclContextGraphBuilder {
- public:
+public:
   using RelocatedDeclsMap =
       llvm::DenseMap<const clang::Decl *, const clang::TypedefNameDecl *>;
 
- private:
+private:
   clang::TranslationUnitDecl *translation_unit;
   AnnotationStorage &annotations;
   DeclContextGraph graph;
