@@ -38,6 +38,10 @@ public:
   DeclContextNode *getNode(const clang::Decl *decl) const;
   DeclContextNode *getOrInsertNode(const clang::Decl *decl);
 
+  /// Return whether the given `declaration` fulfills the criteria to be
+  /// represented in the graph.
+  static bool accepts(const clang::Decl *declaration);
+
   unsigned size() const { return nodes.size(); }
 
   using iterator = NodeStorage::iterator;
@@ -60,8 +64,8 @@ private:
 
 public:
   DeclContextNode(const clang::Decl *decl) : decl(decl) {
-    assert(llvm::isa<clang::DeclContext>(decl) &&
-           "DeclContextGraph should only contain DeclContext nodes");
+    assert(DeclContextGraph::accepts(decl) &&
+           "graph should only contain valid nodes");
   }
 
   void addChild(DeclContextNode *child) { children.push_back(child); }

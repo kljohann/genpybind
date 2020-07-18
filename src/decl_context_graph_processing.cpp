@@ -200,10 +200,7 @@ ConstDeclContextSet genpybind::declContextsWithVisibleNamedDecls(
       // into account above.
       // NOTE: Since e.g. `FunctionDecl`s are also `DeclContext`s, it's not
       // correct to check for `isa<DeclContext>` here.
-      assert(visibilities.count(nullptr) == 0);
-      bool is_also_represented_as_graph_node =
-          visibilities.count(llvm::dyn_cast<clang::DeclContext>(*it));
-      if (is_also_represented_as_graph_node)
+      if (DeclContextGraph::accepts(*it))
         continue;
       // Do not visit implicit declarations, as these cannot have been annotated
       // explicitly by the user.  This avoids false positives on the implicit
