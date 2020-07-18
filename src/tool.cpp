@@ -3,7 +3,7 @@
 #include "genpybind/decl_context_graph_builder.h"
 #include "genpybind/decl_context_graph_processing.h"
 #include "genpybind/inspect_graph.h"
-#include "genpybind/instantiate_alias_targets.h"
+#include "genpybind/instantiate_annotated_templates.h"
 #include "genpybind/string_utils.h"
 
 #include <clang/AST/ASTConsumer.h>
@@ -154,7 +154,8 @@ public:
   CreateASTConsumer(clang::CompilerInstance & /*compiler*/,
                     llvm::StringRef /*in_file*/) {
     std::vector<std::unique_ptr<clang::ASTConsumer>> consumers;
-    consumers.push_back(std::make_unique<InstantiateAliasTargetsASTConsumer>());
+    consumers.push_back(
+        std::make_unique<InstantiateAnnotatedTemplatesASTConsumer>());
     consumers.push_back(std::make_unique<GenpybindASTConsumer>());
     return std::make_unique<clang::MultiplexConsumer>(std::move(consumers));
   }

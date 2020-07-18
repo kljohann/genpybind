@@ -43,7 +43,7 @@ add_library(genpybind SHARED
   src/decl_context_graph_processing.cpp
   src/diagnostics.cpp
   src/inspect_graph.cpp
-  src/instantiate_alias_targets.cpp
+  src/instantiate_annotated_templates.cpp
   src/string_utils.cpp
 )
 

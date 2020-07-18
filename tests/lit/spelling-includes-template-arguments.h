@@ -31,12 +31,12 @@ template struct WithType<arguments::X>;
 template struct with_types::WithType<with_types::arguments::Y>;
 
 // CHECK:      Declaration context graph after pruning:
-// CHECK-NEXT: |-ClassTemplateSpecialization 'Encouraged<123>' as 'Encouraged_123_': visible
-// CHECK-NEXT: |-ClassTemplateSpecialization 'Encouraged<42>' as 'Encouraged_42_': visible
 // CHECK-NEXT: |-ClassTemplateSpecialization 'WithInteger<123>' as 'WithInteger_123_': visible
 // CHECK-NEXT: |-ClassTemplateSpecialization 'WithInteger<42>' as 'WithInteger_42_': visible
 // CHECK-NEXT: |-Namespace 'with_types': hidden
+// CHECK-NEXT: | |-ClassTemplateSpecialization 'with_types::WithType<with_types::arguments::X>' as 'WithType_with_types_arguments_X_': visible
 // CHECK-NEXT: | |-ClassTemplateSpecialization 'with_types::Encouraged<with_types::arguments::X>' as 'Encouraged_with_types_arguments_X_': visible
-// CHECK-NEXT: | |-ClassTemplateSpecialization 'with_types::Encouraged<with_types::arguments::Y>' as 'Encouraged_with_types_arguments_Y_': visible
-// CHECK-NEXT: | `-ClassTemplateSpecialization 'with_types::WithType<with_types::arguments::X>' as 'WithType_with_types_arguments_X_': visible
-// CHECK-NEXT: `-ClassTemplateSpecialization 'with_types::WithType<with_types::arguments::Y>' as 'WithType_with_types_arguments_Y_': visible
+// CHECK-NEXT: | `-ClassTemplateSpecialization 'with_types::Encouraged<with_types::arguments::Y>' as 'Encouraged_with_types_arguments_Y_': visible
+// CHECK-NEXT: |-ClassTemplateSpecialization 'with_types::WithType<with_types::arguments::Y>' as 'WithType_with_types_arguments_Y_': visible
+// CHECK-NEXT: |-ClassTemplateSpecialization 'Encouraged<123>' as 'Encouraged_123_': visible
+// CHECK-NEXT: `-ClassTemplateSpecialization 'Encouraged<42>' as 'Encouraged_42_': visible
