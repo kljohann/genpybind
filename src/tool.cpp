@@ -73,6 +73,11 @@ static llvm::cl::list<InspectGraphStage>
                  getInspectGraphValues(), llvm::cl::ZeroOrMore,
                  llvm::cl::Hidden);
 
+static llvm::cl::opt<bool>
+    g_dump_ast("dump-ast", llvm::cl::cat(g_genpybind_category),
+               llvm::cl::desc("Debug dump the AST after initial augmentation"),
+               llvm::cl::init(false), llvm::cl::Hidden);
+
 static const char *graphTitle(InspectGraphStage stage) {
   switch (stage) {
   case InspectGraphStage::Visibility:
@@ -99,6 +104,9 @@ class GenpybindASTConsumer : public clang::ASTConsumer {
 
 public:
   void HandleTranslationUnit(clang::ASTContext &context) override {
+    if (g_dump_ast)
+      context.getTranslationUnitDecl()->dump();
+
     llvm::StringRef main_file = [&] {
       const auto &source_manager = context.getSourceManager();
       const auto *main_file =
