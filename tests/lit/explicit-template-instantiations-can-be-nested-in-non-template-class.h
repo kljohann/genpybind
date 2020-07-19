@@ -3,14 +3,11 @@
 
 #include "genpybind.h"
 
-struct Outer {
+struct GENPYBIND(visible) Outer {
   template <typename T> struct Type {
     enum class Whatever { A, B, C };
   };
 };
-
-// TODO: These should probably be nested inside `Outer` in the declaration
-// context graph!?
 
 template struct GENPYBIND(visible) Outer::Type<bool>;
 
@@ -28,11 +25,11 @@ struct GENPYBIND(visible) Stop {};
 // CHECK-NEXT: | `-Enum 'Outer::Type<int>::Whatever': visible
 // CHECK-NEXT: |-ClassTemplateSpecialization 'Outer::Type<void>' as 'InstantiationOfDeclaredViaAlias': visible
 // CHECK-NEXT: | `-Enum 'Outer::Type<void>::Whatever': visible
-// CHECK-NEXT: |-CXXRecord 'Outer': hidden
-// CHECK-NEXT: |-ClassTemplateSpecialization 'Outer::Type<bool>' as 'Type_bool_': visible
-// CHECK-NEXT: | `-Enum 'Outer::Type<bool>::Whatever': visible
-// CHECK-NEXT: |-ClassTemplateSpecialization 'Outer::Type<float>' as 'Type_float_': visible
-// CHECK-NEXT: | `-Enum 'Outer::Type<float>::Whatever': visible
+// CHECK-NEXT: |-CXXRecord 'Outer': visible
+// CHECK-NEXT: | |-ClassTemplateSpecialization 'Outer::Type<bool>' as 'Type_bool_': visible
+// CHECK-NEXT: | | `-Enum 'Outer::Type<bool>::Whatever': visible
+// CHECK-NEXT: | `-ClassTemplateSpecialization 'Outer::Type<float>' as 'Type_float_': visible
+// CHECK-NEXT: |   `-Enum 'Outer::Type<float>::Whatever': visible
 // CHECK-NEXT: `-CXXRecord 'Stop': visible
 
 // CHECK:      Declaration context graph after pruning:
@@ -40,8 +37,9 @@ struct GENPYBIND(visible) Stop {};
 // CHECK-NEXT: | `-Enum 'Outer::Type<int>::Whatever': visible
 // CHECK-NEXT: |-ClassTemplateSpecialization 'Outer::Type<void>' as 'InstantiationOfDeclaredViaAlias': visible
 // CHECK-NEXT: | `-Enum 'Outer::Type<void>::Whatever': visible
-// CHECK-NEXT: |-ClassTemplateSpecialization 'Outer::Type<bool>' as 'Type_bool_': visible
-// CHECK-NEXT: | `-Enum 'Outer::Type<bool>::Whatever': visible
-// CHECK-NEXT: |-ClassTemplateSpecialization 'Outer::Type<float>' as 'Type_float_': visible
-// CHECK-NEXT: | `-Enum 'Outer::Type<float>::Whatever': visible
+// CHECK-NEXT: |-CXXRecord 'Outer': visible
+// CHECK-NEXT: | |-ClassTemplateSpecialization 'Outer::Type<bool>' as 'Type_bool_': visible
+// CHECK-NEXT: | | `-Enum 'Outer::Type<bool>::Whatever': visible
+// CHECK-NEXT: | `-ClassTemplateSpecialization 'Outer::Type<float>' as 'Type_float_': visible
+// CHECK-NEXT: |   `-Enum 'Outer::Type<float>::Whatever': visible
 // CHECK-NEXT: `-CXXRecord 'Stop': visible

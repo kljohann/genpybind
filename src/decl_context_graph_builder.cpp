@@ -7,6 +7,7 @@
 
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/Decl.h>
+#include <clang/AST/DeclTemplate.h>
 #include <clang/AST/Type.h>
 #include <clang/Basic/Diagnostic.h>
 #include <llvm/ADT/None.h>
@@ -88,6 +89,8 @@ llvm::Optional<DeclContextGraph> DeclContextGraphBuilder::buildGraph() {
       continue;
     const auto *parent =
         llvm::dyn_cast<clang::Decl>(decl->getLexicalDeclContext());
+    if (llvm::isa<clang::ClassTemplateSpecializationDecl>(decl))
+      parent = llvm::dyn_cast<clang::Decl>(decl->getDeclContext());
     graph.getOrInsertNode(parent)->addChild(graph.getOrInsertNode(decl));
   }
 
