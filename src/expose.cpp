@@ -13,7 +13,6 @@
 #include <clang/AST/Type.h>
 #include <clang/Basic/Specifiers.h>
 #include <llvm/ADT/DenseMap.h>
-#include <llvm/ADT/DepthFirstIterator.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/ADT/StringExtras.h>
 #include <llvm/ADT/StringMap.h>
@@ -84,18 +83,15 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
   // ancestor.  Consequently treat `nullptr` as the module root.
   context_identifiers[nullptr] = "root";
 
-  // As the context in which a declaration is exposed needs to be defined
-  // before the declaration, visit nodes in a topological order.
-  // TODO: This also needs to consider base classes, which need to be exposed
-  // before the derived class.
-  for (const DeclContextNode *node : llvm::depth_first(&graph)) {
-    const clang::Decl *decl = node->getDecl();
+  const auto contexts = declContextsSortedByDependencies(graph, parents);
+  for (const clang::DeclContext *decl_context : contexts) {
+    const clang::Decl *decl = llvm::cast<clang::Decl>(decl_context);
     // Ensure annotation is available for exposer.
     const AnnotatedDecl *annotated_decl = annotations.getOrInsert(decl);
     std::unique_ptr<DeclContextExposer> exposer =
-        DeclContextExposer::create(graph, annotations, node->getDeclContext());
+        DeclContextExposer::create(graph, annotations, decl_context);
 
-    auto parent = parents.find(node->getDeclContext());
+    auto parent = parents.find(decl_context);
     assert(parent != parents.end() &&
            "context should have an associated ancestor");
     const std::string identifier = used_identifiers.discriminate([&] {

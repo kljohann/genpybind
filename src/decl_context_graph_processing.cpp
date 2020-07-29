@@ -4,10 +4,14 @@
 #include "genpybind/diagnostics.h"
 
 #include <clang/AST/Decl.h>
+#include <clang/AST/DeclCXX.h>
+#include <clang/AST/Type.h>
 #include <clang/Basic/Diagnostic.h>
 #include <clang/Basic/Specifiers.h>
+#include <llvm/ADT/DenseSet.h>
 #include <llvm/ADT/DepthFirstIterator.h>
 #include <llvm/ADT/Optional.h>
+#include <llvm/ADT/PointerIntPair.h>
 #include <llvm/ADT/PostOrderIterator.h>
 #include <llvm/Support/Casting.h>
 
@@ -287,4 +291,60 @@ void genpybind::reportUnreachableVisibleDeclContexts(
     Diagnostics::report(decl, Diagnostics::Kind::UnreachableDeclContextWarning)
         << getNameForDisplay(decl);
   }
+}
+
+llvm::SmallVector<const clang::DeclContext *, 0>
+genpybind::declContextsSortedByDependencies(
+    const DeclContextGraph &graph, const EnclosingNamedDeclMap &parents) {
+  llvm::SmallVector<const clang::DeclContext *, 0> result;
+  llvm::DenseSet<const clang::DeclContext *> visited;
+  // Boolean encodes whether all dependencies have been visited.
+  using WorklistItem =
+      llvm::PointerIntPair<const clang::DeclContext *, 1, bool>;
+  llvm::SmallVector<WorklistItem, 0> worklist;
+  result.reserve(graph.size());
+  visited.reserve(graph.size());
+  worklist.reserve(2 * graph.size());
+  for (const DeclContextNode *node : llvm::depth_first(&graph)) {
+    worklist.push_back({node->getDeclContext(), false});
+  }
+
+  while (!worklist.empty()) {
+    const WorklistItem item = worklist.back();
+    worklist.pop_back();
+    const clang::DeclContext *decl_context = item.getPointer();
+    bool after_dependencies = item.getInt();
+
+    if (visited.count(decl_context))
+      continue;
+
+    if (after_dependencies) {
+      visited.insert(decl_context);
+      result.push_back(decl_context);
+    }
+
+    // Re-visit this node after all its dependencies.
+    worklist.push_back({decl_context, true});
+    auto parent = parents.find(decl_context);
+    // Add parent context as dependency.
+    if (parent != parents.end() && parent->getSecond() != nullptr) {
+      const DeclContextNode *parent_node = graph.getNode(parent->getSecond());
+      assert(parent_node != nullptr && "parent should be in graph");
+      worklist.push_back({parent_node->getDeclContext(), false});
+    }
+    // Add all exposed (i.e. part of graph) public bases as dependencies.
+    if (const auto *decl = llvm::dyn_cast<clang::CXXRecordDecl>(decl_context)) {
+      for (const clang::CXXBaseSpecifier &base : decl->bases()) {
+        if (base.getAccessSpecifier() != clang::AS_public)
+          continue;
+        const clang::TagDecl *base_decl = base.getType()->getAsTagDecl();
+        if (const DeclContextNode *base_node =
+                graph.getNode(base_decl->getDefinition())) {
+          worklist.push_back({base_node->getDeclContext(), false});
+        }
+      }
+    }
+  }
+
+  return result;
 }

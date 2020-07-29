@@ -66,6 +66,10 @@ public:
   DeclContextNode(const clang::Decl *decl) : decl(decl) {
     assert(DeclContextGraph::accepts(decl) &&
            "graph should only contain valid nodes");
+    assert([](const clang::TagDecl *decl) {
+      return decl == nullptr || decl->getDefinition() == decl;
+    }(llvm::dyn_cast<clang::TagDecl>(decl)) &&
+           "graph should only contain tag decls that are their definition");
   }
 
   void addChild(DeclContextNode *child) { children.push_back(child); }

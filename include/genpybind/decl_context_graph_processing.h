@@ -5,6 +5,7 @@
 
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/DenseSet.h>
+#include <llvm/ADT/SmallVector.h>
 
 namespace clang {
 class DeclContext;
@@ -87,5 +88,16 @@ void reportUnreachableVisibleDeclContexts(
     const DeclContextGraph &graph,
     const ConstDeclContextSet &contexts_with_visible_decls,
     const DeclContextGraphBuilder::RelocatedDeclsMap &relocated_decls);
+
+/// Returns reachable declaration contexts of `graph` in an order suitable for
+/// binding generation.
+/// As the context in which a declaration is exposed needs to be defined
+/// before the declaration itself, nested declarations are sorted after their
+/// `parents`.  In addition, exposed base classes (i.e. those that are also
+/// represented in the `graph`) are exposed before derived classes, as required
+/// by pybind11.
+llvm::SmallVector<const clang::DeclContext *, 0>
+declContextsSortedByDependencies(const DeclContextGraph &graph,
+                                 const EnclosingNamedDeclMap &parents);
 
 } // namespace genpybind
