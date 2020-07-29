@@ -45,7 +45,7 @@ public:
   virtual ~DeclContextExposer() = default;
 
   static std::unique_ptr<DeclContextExposer>
-  create(const AnnotationStorage &annotations,
+  create(const DeclContextGraph &graph, const AnnotationStorage &annotations,
          const clang::DeclContext *decl_context);
 
   virtual void emitDeclaration(llvm::raw_ostream &os) = 0;
@@ -56,8 +56,7 @@ public:
 
 class UnnamedContextExposer : public DeclContextExposer {
 public:
-  UnnamedContextExposer(const AnnotationStorage &annotations,
-                        const clang::DeclContext *decl);
+  UnnamedContextExposer(const clang::DeclContext *decl);
 
   void emitDeclaration(llvm::raw_ostream &os) override;
   void emitIntroducer(llvm::raw_ostream &os,
@@ -95,10 +94,12 @@ private:
 };
 
 class RecordExposer : public DeclContextExposer {
+  const DeclContextGraph &graph;
   const AnnotatedRecordDecl *annotated_decl;
 
 public:
-  RecordExposer(const AnnotationStorage &annotations,
+  RecordExposer(const DeclContextGraph &graph,
+                const AnnotationStorage &annotations,
                 const clang::RecordDecl *decl);
 
   void emitDeclaration(llvm::raw_ostream &os) override;

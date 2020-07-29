@@ -7,6 +7,7 @@
 
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/Decl.h>
+#include <clang/AST/DeclCXX.h>
 #include <clang/AST/PrettyPrinter.h>
 #include <clang/AST/QualTypeNames.h>
 #include <clang/AST/Type.h>
@@ -92,7 +93,7 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
     // Ensure annotation is available for exposer.
     const AnnotatedDecl *annotated_decl = annotations.getOrInsert(decl);
     std::unique_ptr<DeclContextExposer> exposer =
-        DeclContextExposer::create(annotations, node->getDeclContext());
+        DeclContextExposer::create(graph, annotations, node->getDeclContext());
 
     auto parent = parents.find(node->getDeclContext());
     assert(parent != parents.end() &&
@@ -140,7 +141,8 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
 }
 
 std::unique_ptr<DeclContextExposer>
-DeclContextExposer::create(const AnnotationStorage &annotations,
+DeclContextExposer::create(const DeclContextGraph &graph,
+                           const AnnotationStorage &annotations,
                            const clang::DeclContext *decl_context) {
   assert(decl_context != nullptr);
   const auto *decl = llvm::cast<clang::Decl>(decl_context);
@@ -149,15 +151,14 @@ DeclContextExposer::create(const AnnotationStorage &annotations,
   if (const auto *en = llvm::dyn_cast<clang::EnumDecl>(decl))
     return std::make_unique<EnumExposer>(annotations, en);
   if (const auto *rec = llvm::dyn_cast<clang::RecordDecl>(decl))
-    return std::make_unique<RecordExposer>(annotations, rec);
+    return std::make_unique<RecordExposer>(graph, annotations, rec);
   if (DeclContextGraph::accepts(decl))
-    return std::make_unique<UnnamedContextExposer>(annotations, decl_context);
+    return std::make_unique<UnnamedContextExposer>(decl_context);
 
   llvm_unreachable("Unknown declaration context kind.");
 }
 
 UnnamedContextExposer::UnnamedContextExposer(
-    const AnnotationStorage & /*annotations*/,
     const clang::DeclContext * /*decl*/) {}
 
 void UnnamedContextExposer::emitDeclaration(llvm::raw_ostream &os) {
@@ -233,10 +234,11 @@ void EnumExposer::emitType(llvm::raw_ostream &os) {
      << ">";
 }
 
-RecordExposer::RecordExposer(const AnnotationStorage &annotations,
+RecordExposer::RecordExposer(const DeclContextGraph &graph,
+                             const AnnotationStorage &annotations,
                              const clang::RecordDecl *decl)
-    : annotated_decl(
-          llvm::dyn_cast_or_null<AnnotatedRecordDecl>(annotations.get(decl))) {
+    : graph(graph), annotated_decl(llvm::dyn_cast_or_null<AnnotatedRecordDecl>(
+                        annotations.get(decl))) {
   assert(annotated_decl != nullptr);
 }
 
@@ -259,12 +261,27 @@ void RecordExposer::emitIntroducer(llvm::raw_ostream &os,
 void RecordExposer::emitDefinition(llvm::raw_ostream &os) {
   os << "(";
   emitType(os);
-  os << "& /*context*/) {}";
+  // As a placeholder always add a constructor for now.
+  os << "& context) { context.def(::pybind11::init<>(), \"\"); }";
 }
 
 void RecordExposer::emitType(llvm::raw_ostream &os) {
   os << "::pybind11::class_<"
      << getFullyQualifiedName(
-            llvm::cast<clang::TypeDecl>(annotated_decl->getDecl()))
-     << ">";
+            llvm::cast<clang::TypeDecl>(annotated_decl->getDecl()));
+
+  // Add all exposed (i.e. part of graph) public bases as arguments.
+  if (const auto *decl =
+          llvm::dyn_cast<clang::CXXRecordDecl>(annotated_decl->getDecl())) {
+    for (const clang::CXXBaseSpecifier &base : decl->bases()) {
+      if (base.getAccessSpecifier() != clang::AS_public)
+        continue;
+      const clang::TagDecl *base_decl =
+          base.getType()->getAsTagDecl()->getDefinition();
+      if (graph.getNode(base_decl) != nullptr)
+        os << ", " << getFullyQualifiedName(base_decl);
+    }
+  }
+
+  os << ">";
 }
