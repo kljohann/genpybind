@@ -295,15 +295,17 @@ void genpybind::reportUnreachableVisibleDeclContexts(
 
 llvm::SmallVector<const clang::DeclContext *, 0>
 genpybind::declContextsSortedByDependencies(
-    const DeclContextGraph &graph, const EnclosingNamedDeclMap &parents) {
+    const DeclContextGraph &graph, const EnclosingNamedDeclMap &parents,
+    const clang::DeclContext **cycle) {
   llvm::SmallVector<const clang::DeclContext *, 0> result;
-  llvm::DenseSet<const clang::DeclContext *> visited;
+  llvm::DenseSet<const clang::DeclContext *> started, finished;
   // Boolean encodes whether all dependencies have been visited.
   using WorklistItem =
       llvm::PointerIntPair<const clang::DeclContext *, 1, bool>;
   llvm::SmallVector<WorklistItem, 0> worklist;
   result.reserve(graph.size());
-  visited.reserve(graph.size());
+  started.reserve(graph.size());
+  finished.reserve(graph.size());
   worklist.reserve(2 * graph.size());
   for (const DeclContextNode *node : llvm::depth_first(&graph)) {
     worklist.push_back({node->getDeclContext(), false});
@@ -315,12 +317,21 @@ genpybind::declContextsSortedByDependencies(
     const clang::DeclContext *decl_context = item.getPointer();
     bool after_dependencies = item.getInt();
 
-    if (visited.count(decl_context))
+    if (finished.count(decl_context))
       continue;
 
     if (after_dependencies) {
-      visited.insert(decl_context);
+      finished.insert(decl_context);
       result.push_back(decl_context);
+      continue;
+    }
+
+    bool cycle_detected = !started.insert(decl_context).second;
+    if (cycle_detected) {
+      if (cycle != nullptr)
+        *cycle = decl_context;
+      result.clear();
+      break;
     }
 
     // Re-visit this node after all its dependencies.

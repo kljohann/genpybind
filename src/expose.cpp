@@ -3,6 +3,7 @@
 #include "genpybind/annotated_decl.h"
 #include "genpybind/decl_context_graph.h"
 #include "genpybind/decl_context_graph_processing.h"
+#include "genpybind/diagnostics.h"
 #include "genpybind/string_utils.h"
 
 #include <clang/AST/ASTContext.h>
@@ -83,7 +84,17 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
   // ancestor.  Consequently treat `nullptr` as the module root.
   context_identifiers[nullptr] = "root";
 
-  const auto contexts = declContextsSortedByDependencies(graph, parents);
+  const clang::DeclContext *cycle = nullptr;
+  const auto contexts =
+      declContextsSortedByDependencies(graph, parents, &cycle);
+  if (cycle != nullptr) {
+    // TODO: Report this before any other output, ideally pointing to the
+    // typedef name decl for `expose_here` cycles.
+    Diagnostics::report(llvm::cast<clang::Decl>(cycle),
+                        Diagnostics::Kind::ExposeHereCycleError);
+    return;
+  }
+
   for (const clang::DeclContext *decl_context : contexts) {
     const clang::Decl *decl = llvm::cast<clang::Decl>(decl_context);
     // Ensure annotation is available for exposer.

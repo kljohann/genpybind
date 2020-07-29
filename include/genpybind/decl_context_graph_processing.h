@@ -96,8 +96,11 @@ void reportUnreachableVisibleDeclContexts(
 /// `parents`.  In addition, exposed base classes (i.e. those that are also
 /// represented in the `graph`) are exposed before derived classes, as required
 /// by pybind11.
+/// If the dependency graph contains a cycle, an empty sequence is returned and
+/// `cycle` is set to one declaration context on this cycle.
 llvm::SmallVector<const clang::DeclContext *, 0>
 declContextsSortedByDependencies(const DeclContextGraph &graph,
-                                 const EnclosingNamedDeclMap &parents);
+                                 const EnclosingNamedDeclMap &parents,
+                                 const clang::DeclContext **cycle);
 
 } // namespace genpybind
