@@ -5,6 +5,7 @@
 #include <clang/AST/Decl.h>
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/Optional.h>
+#include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/ADT/StringRef.h>
 
 #include <memory>
@@ -91,6 +92,7 @@ public:
 class AnnotatedRecordDecl : public AnnotatedNamedDecl {
 public:
   bool dynamic_attr = false;
+  llvm::SmallPtrSet<const clang::TagDecl *, 1> hide_base;
 
   llvm::StringRef getFriendlyDeclKindName() const override;
   bool processAnnotation(const annotations::Annotation &annotation) override;

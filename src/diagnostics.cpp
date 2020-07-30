@@ -31,6 +31,9 @@ static unsigned getCustomDiagID(clang::DiagnosticsEngine &engine,
   case Kind::AlreadyExposedElsewhereError:
     return engine.getCustomDiagID(clang::DiagnosticsEngine::Error,
                                   "'%0' has already been exposed elsewhere");
+  case Kind::AnnotationContainsUnknownBaseTypeWarning:
+    return engine.getCustomDiagID(clang::DiagnosticsEngine::Warning,
+                                  "Unknown base type in '%0' annotation");
   case Kind::AnnotationInvalidForDeclKindError:
     return engine.getCustomDiagID(clang::DiagnosticsEngine::Error,
                                   "Invalid annotation for %0: %1");

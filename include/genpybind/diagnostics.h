@@ -19,6 +19,7 @@ class Diagnostics {
 public:
   enum class Kind {
     AlreadyExposedElsewhereError,
+    AnnotationContainsUnknownBaseTypeWarning,
     AnnotationInvalidForDeclKindError,
     AnnotationInvalidSpellingError,
     AnnotationWrongArgumentTypeError,

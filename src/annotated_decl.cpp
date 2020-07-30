@@ -9,6 +9,7 @@
 #include <clang/AST/Attr.h>
 #include <clang/AST/DeclTemplate.h>
 #include <clang/AST/Type.h>
+#include <clang/ASTMatchers/ASTMatchersInternal.h>
 #include <clang/Basic/CharInfo.h>
 #include <clang/Basic/Diagnostic.h>
 #include <clang/Basic/SourceLocation.h>
@@ -22,8 +23,10 @@
 #include <llvm/Support/raw_ostream.h>
 
 #include <cassert>
+#include <string>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 namespace clang {
 struct PrintingPolicy;
@@ -301,13 +304,33 @@ bool AnnotatedRecordDecl::processAnnotation(const Annotation &annotation) {
       reportWrongArgumentTypeError(getDecl(), annotation.getKind(), *value);
     }
     break;
-  case AnnotationKind::HideBase:
-    // Annotation value isn't stored / made use of yet.
+  case AnnotationKind::HideBase: {
+    std::vector<std::string> names;
     while (auto value = arguments.take<LiteralValue::Kind::String>())
-      continue;
+      names.push_back(value->getString());
     if (auto value = arguments.take())
       reportWrongArgumentTypeError(getDecl(), annotation.getKind(), *value);
+
+    clang::ast_matchers::internal::HasNameMatcher matcher(names);
+    bool found_match = false;
+    if (const auto *decl = llvm::dyn_cast<clang::CXXRecordDecl>(getDecl())) {
+      for (const clang::CXXBaseSpecifier &base : decl->bases()) {
+        const clang::TagDecl *base_decl =
+            base.getType()->getAsTagDecl()->getDefinition();
+        if (names.empty() || matcher.matchesNode(*base_decl)) {
+          hide_base.insert(base_decl);
+          found_match = true;
+        }
+      }
+    }
+    if (!found_match) {
+      Diagnostics::report(
+          getDecl(),
+          Diagnostics::Kind::AnnotationContainsUnknownBaseTypeWarning)
+          << toString(annotation.getKind());
+    }
     break;
+  }
   case AnnotationKind::HolderType:
     // Annotation value isn't stored / made use of yet.
     if (auto value = arguments.take<LiteralValue::Kind::String>()) {

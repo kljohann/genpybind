@@ -281,12 +281,13 @@ void RecordExposer::emitType(llvm::raw_ostream &os) {
   if (const auto *decl =
           llvm::dyn_cast<clang::CXXRecordDecl>(annotated_decl->getDecl())) {
     for (const clang::CXXBaseSpecifier &base : decl->bases()) {
-      if (base.getAccessSpecifier() != clang::AS_public)
-        continue;
       const clang::TagDecl *base_decl =
           base.getType()->getAsTagDecl()->getDefinition();
-      if (graph.getNode(base_decl) != nullptr)
-        os << ", " << getFullyQualifiedName(base_decl);
+      if (base.getAccessSpecifier() != clang::AS_public ||
+          annotated_decl->hide_base.count(base_decl) != 0 ||
+          graph.getNode(base_decl) == nullptr)
+        continue;
+      os << ", " << getFullyQualifiedName(base_decl);
     }
   }
 
