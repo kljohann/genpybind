@@ -38,15 +38,7 @@ find_package(Python3 COMPONENTS Interpreter REQUIRED)
 # which a shared library target called `integration-TEST_NAME` is created.
 # The corresponding header file is analyzed using genpybind in order to generate
 # code for a pybind11-based Python module `TEST_NAME`.
-# Any Python test files in `integration/` are executed afterwards (using pytest).
-add_custom_target(integration-tests
-  COMMAND Python3::Interpreter -m pytest
-  ${CMAKE_CURRENT_SOURCE_DIR}/integration
-  DEPENDS ${module_name}
-  COMMENT "Running integration tests"
-  VERBATIM USES_TERMINAL
-)
-add_dependencies(test integration-tests)
+# Finally `TEST_NAME_test.py` is executed using pytest.
 file(GLOB integration_tests CONFIGURE_DEPENDS "integration/*.cpp")
 foreach(test_implementation IN LISTS integration_tests)
   get_filename_component(test_name ${test_implementation} NAME_WE)
@@ -70,5 +62,12 @@ foreach(test_implementation IN LISTS integration_tests)
   )
   pybind11_add_module(${module_name} MODULE ${test_bindings})
   target_link_libraries(${module_name} PUBLIC ${test_target})
-  add_dependencies(integration-tests ${module_name})
+  add_custom_target(${test_target}-test
+    COMMAND Python3::Interpreter -m pytest -q
+    ${CMAKE_CURRENT_SOURCE_DIR}/integration/${test_name}_test.py
+    DEPENDS ${module_name}
+    COMMENT "Running ${test_name}_test.py"
+    VERBATIM USES_TERMINAL
+  )
+  add_dependencies(test ${test_target}-test)
 endforeach()
