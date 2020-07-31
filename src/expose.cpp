@@ -231,7 +231,18 @@ void EnumExposer::emitIntroducer(llvm::raw_ostream &os,
 void EnumExposer::emitDefinition(llvm::raw_ostream &os) {
   os << "(";
   emitType(os);
-  os << "& /*context*/) {}";
+  os << "& context) {\n";
+  const auto *decl = llvm::cast<clang::EnumDecl>(annotated_decl->getDecl());
+  const std::string scope = getFullyQualifiedName(decl);
+  for (const clang::EnumConstantDecl *enumerator : decl->enumerators()) {
+    const llvm::StringRef name = enumerator->getName();
+    os << R"(context.value(")";
+    os.write_escaped(name);
+    os << R"(", )" << scope << "::" << name << ");\n";
+  }
+  if (annotated_decl->export_values.getValueOr(!decl->isScoped()))
+    os << "context.export_values();\n";
+  os << "}";
 }
 
 void EnumExposer::emitType(llvm::raw_ostream &os) {
