@@ -1,4 +1,4 @@
-// RUN: genpybind-tool -dump-graph=visibility -dump-graph=pruned %s -- -std=c++17 -xc++ -D__GENPYBIND__ 2>&1 | FileCheck %s
+// RUN: genpybind-tool -dump-graph=visibility -dump-graph=pruned %s -- -std=c++17 -xc++ -D__GENPYBIND__ 2>&1 | FileCheck %s --strict-whitespace
 #pragma once
 
 #include "genpybind.h"

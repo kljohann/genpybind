@@ -1,4 +1,4 @@
-// RUN: genpybind-tool -dump-graph=visibility %s -- -std=c++17 -xc++ -D__GENPYBIND__ 2>&1 | FileCheck %s
+// RUN: genpybind-tool -dump-graph=visibility %s -- -std=c++17 -xc++ -D__GENPYBIND__ 2>&1 | FileCheck %s --strict-whitespace
 #pragma once
 
 #include "genpybind.h"
@@ -58,7 +58,7 @@ namespace in_nested_hidden_namespace GENPYBIND_HIDDEN {
 class UnannotatedInHiddenInVisible {};
 // CHECK-NEXT: | | |-CXXRecord 'in_visible_namespace::in_nested_hidden_namespace::VisibleInHiddenInVisible': visible
 class GENPYBIND(visible) VisibleInHiddenInVisible {};
-// CHECK-NEXT: | | |-CXXRecord   'in_visible_namespace::in_nested_hidden_namespace::DefaultInHiddenInVisible': hidden
+// CHECK-NEXT: | | |-CXXRecord 'in_visible_namespace::in_nested_hidden_namespace::DefaultInHiddenInVisible': hidden
 class GENPYBIND(visible(default)) DefaultInHiddenInVisible {};
 // CHECK-NEXT: | | |-CXXRecord 'in_visible_namespace::in_nested_hidden_namespace::HiddenInHiddenInVisible': hidden
 class GENPYBIND(hidden) HiddenInHiddenInVisible {};
