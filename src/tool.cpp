@@ -16,6 +16,7 @@
 #include <clang/Driver/Driver.h>
 #include <clang/Frontend/FrontendAction.h>
 #include <clang/Frontend/MultiplexConsumer.h>
+#include <clang/Sema/SemaConsumer.h>
 #include <clang/Tooling/ArgumentsAdjusters.h>
 #include <clang/Tooling/CommonOptionsParser.h>
 #include <clang/Tooling/Tooling.h>
@@ -101,10 +102,14 @@ static void inspectGraph(const DeclContextGraph &graph,
                graphTitle(stage));
 }
 
-class GenpybindASTConsumer : public clang::ASTConsumer {
+class GenpybindASTConsumer : public clang::SemaConsumer {
   AnnotationStorage annotations;
+  clang::Sema *sema = nullptr;
 
 public:
+  void InitializeSema(clang::Sema &sema_) override { sema = &sema_; }
+  void ForgetSema() override { sema = nullptr; }
+
   void HandleTranslationUnit(clang::ASTContext &context) override {
     if (g_dump_ast)
       context.getTranslationUnitDecl()->dump();
@@ -148,7 +153,7 @@ public:
     inspectGraph(*graph, annotations, visibilities, module_name,
                  InspectGraphStage::Pruned);
 
-    TranslationUnitExposer exposer(*graph, annotations);
+    TranslationUnitExposer exposer(*sema, *graph, annotations);
 
     llvm::outs() << "#include \"" << main_file << "\"\n"
                  << "#include <pybind11/pybind11.h>\n\n";

@@ -10,6 +10,7 @@ class DeclContext;
 class EnumDecl;
 class NamespaceDecl;
 class RecordDecl;
+class Sema;
 class TypeDecl;
 } // namespace clang
 namespace llvm {
@@ -30,11 +31,12 @@ void emitSpelling(llvm::raw_ostream &os,
                   const AnnotatedNamedDecl *annotated_decl);
 
 class TranslationUnitExposer {
+  clang::Sema &sema;
   const DeclContextGraph &graph;
   AnnotationStorage &annotations;
 
 public:
-  TranslationUnitExposer(const DeclContextGraph &graph,
+  TranslationUnitExposer(clang::Sema &sema, const DeclContextGraph &graph,
                          AnnotationStorage &annotations);
 
   void emitModule(llvm::raw_ostream &os, llvm::StringRef name);

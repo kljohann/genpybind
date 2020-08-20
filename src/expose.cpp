@@ -62,9 +62,10 @@ void genpybind::emitSpelling(llvm::raw_ostream &os,
   os << '"';
 }
 
-TranslationUnitExposer::TranslationUnitExposer(const DeclContextGraph &graph,
+TranslationUnitExposer::TranslationUnitExposer(clang::Sema &sema,
+                                               const DeclContextGraph &graph,
                                                AnnotationStorage &annotations)
-    : graph(graph), annotations(annotations) {}
+    : sema(sema), graph(graph), annotations(annotations) {}
 
 void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
                                         llvm::StringRef name) {
