@@ -4,11 +4,9 @@
 #include "genpybind.h"
 
 namespace nested {
-enum class ScopedEnum {
-};
-enum UnscopedEnum {
-};
-}  // namespace nested
+enum class ScopedEnum { X };
+enum UnscopedEnum { Y };
+} // namespace nested
 
 struct GENPYBIND(visible) Outer {
   using Unscoped GENPYBIND(expose_here) = nested::UnscopedEnum;
