@@ -93,6 +93,7 @@ class AnnotatedRecordDecl : public AnnotatedNamedDecl {
 public:
   bool dynamic_attr = false;
   llvm::SmallPtrSet<const clang::TagDecl *, 1> hide_base;
+  llvm::SmallPtrSet<const clang::TagDecl *, 1> inline_base;
 
   llvm::StringRef getFriendlyDeclKindName() const override;
   bool processAnnotation(const annotations::Annotation &annotation) override;

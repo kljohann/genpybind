@@ -7,6 +7,7 @@
 
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/Attr.h>
+#include <clang/AST/DeclCXX.h>
 #include <clang/AST/DeclTemplate.h>
 #include <clang/AST/Type.h>
 #include <clang/ASTMatchers/ASTMatchersInternal.h>
@@ -313,6 +314,7 @@ bool AnnotatedRecordDecl::processAnnotation(const Annotation &annotation) {
 
     clang::ast_matchers::internal::HasNameMatcher matcher(names);
     bool found_match = false;
+    // TODO: More verbose error if this is not the case?
     if (const auto *decl = llvm::dyn_cast<clang::CXXRecordDecl>(getDecl())) {
       for (const clang::CXXBaseSpecifier &base : decl->bases()) {
         const clang::TagDecl *base_decl =
@@ -338,13 +340,35 @@ bool AnnotatedRecordDecl::processAnnotation(const Annotation &annotation) {
       reportWrongArgumentTypeError(getDecl(), annotation.getKind(), *value);
     }
     break;
-  case AnnotationKind::InlineBase:
-    // Annotation value isn't stored / made use of yet.
+  case AnnotationKind::InlineBase: {
+    std::vector<std::string> names;
     while (auto value = arguments.take<LiteralValue::Kind::String>())
-      continue;
+      names.push_back(value->getString());
     if (auto value = arguments.take())
       reportWrongArgumentTypeError(getDecl(), annotation.getKind(), *value);
+
+    clang::ast_matchers::internal::HasNameMatcher matcher(names);
+    bool found_match = false;
+    // TODO: More verbose error if this is not the case?
+    if (const auto *decl = llvm::dyn_cast<clang::CXXRecordDecl>(getDecl())) {
+      found_match = !decl->forallBases(
+          [&](const clang::CXXRecordDecl *base_decl) -> bool {
+            base_decl = base_decl->getDefinition();
+            if (!names.empty() && !matcher.matchesNode(*base_decl))
+              return true;
+            inline_base.insert(base_decl);
+            return false;
+          },
+          /*AllowShortCircuit=*/false);
+    }
+    if (!found_match) {
+      Diagnostics::report(
+          getDecl(),
+          Diagnostics::Kind::AnnotationContainsUnknownBaseTypeWarning)
+          << toString(annotation.getKind());
+    }
     break;
+  }
   default:
     return false;
   }

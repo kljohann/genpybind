@@ -297,6 +297,7 @@ void RecordExposer::emitType(llvm::raw_ostream &os) {
           base.getType()->getAsTagDecl()->getDefinition();
       if (base.getAccessSpecifier() != clang::AS_public ||
           annotated_decl->hide_base.count(base_decl) != 0 ||
+          annotated_decl->inline_base.count(base_decl) != 0 ||
           graph.getNode(base_decl) == nullptr)
         continue;
       os << ", " << getFullyQualifiedName(base_decl);
