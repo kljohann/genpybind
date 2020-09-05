@@ -70,4 +70,6 @@ foreach(test_implementation IN LISTS integration_tests)
     VERBATIM USES_TERMINAL
   )
   add_dependencies(test ${test_target}-test)
+  set_target_properties(${test_target} ${module_name}
+    PROPERTIES CXX_INCLUDE_WHAT_YOU_USE "")
 endforeach()
