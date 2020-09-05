@@ -69,21 +69,9 @@ TranslationUnitExposer::TranslationUnitExposer(clang::Sema &sema,
 
 void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
                                         llvm::StringRef name) {
-  std::string expose_declarations;
-  std::string context_introducers;
-  std::string expose_calls;
-  llvm::raw_string_ostream expose_declarations_stream(expose_declarations);
-  llvm::raw_string_ostream context_introducers_stream(context_introducers);
-  llvm::raw_string_ostream expose_calls_stream(expose_calls);
-
-  DiscriminateIdentifiers used_identifiers;
-  llvm::DenseMap<const clang::Decl *, std::string> context_identifiers;
 
   const EnclosingNamedDeclMap parents =
       findEnclosingScopeIntroducingAncestors(graph, annotations);
-  // `nullptr` is used in the parent map to indicate the absence of a named
-  // ancestor.  Consequently treat `nullptr` as the module root.
-  context_identifiers[nullptr] = "root";
 
   const clang::DeclContext *cycle = nullptr;
   const auto contexts =
@@ -96,56 +84,93 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
     return;
   }
 
-  for (const clang::DeclContext *decl_context : contexts) {
-    const clang::Decl *decl = llvm::cast<clang::Decl>(decl_context);
-    // Ensure annotation is available for exposer.
-    const AnnotatedDecl *annotated_decl = annotations.getOrInsert(decl);
-    std::unique_ptr<DeclContextExposer> exposer =
-        DeclContextExposer::create(graph, annotations, decl_context);
+  llvm::DenseMap<const clang::DeclContext *, std::string> context_identifiers;
+  // `nullptr` is used in the parent map to indicate the absence of a named
+  // ancestor.  Consequently treat `nullptr` as the module root.
+  context_identifiers[nullptr] = "root";
 
-    auto parent = parents.find(decl_context);
-    assert(parent != parents.end() &&
-           "context should have an associated ancestor");
-    const std::string identifier = used_identifiers.discriminate([&] {
+  {
+    DiscriminateIdentifiers used_identifiers;
+    for (const clang::DeclContext *decl_context : contexts) {
+      // `getOrInsert` ensures annotation is available in later steps.
+      const AnnotatedDecl *annotated_decl =
+          annotations.getOrInsert(llvm::cast<clang::Decl>(decl_context));
       llvm::SmallString<128> name =
           annotated_decl == nullptr ? llvm::StringRef("context")
                                     : annotated_decl->getFriendlyDeclKindName();
-      if (auto const *type_decl = llvm::dyn_cast<clang::TypeDecl>(decl)) {
+      if (auto const *type_decl =
+              llvm::dyn_cast<clang::TypeDecl>(decl_context)) {
         name += getFullyQualifiedName(type_decl);
-      } else if (auto const *ns_decl = llvm::dyn_cast<clang::NamedDecl>(decl)) {
+      } else if (auto const *ns_decl =
+                     llvm::dyn_cast<clang::NamedDecl>(decl_context)) {
         name.push_back('_');
         name += ns_decl->getQualifiedNameAsString();
       }
       makeValidIdentifier(name);
-      return name;
-    }());
-    context_identifiers[decl] = identifier;
-    auto parent_identifier = context_identifiers.find(parent->getSecond());
+      context_identifiers.try_emplace(decl_context,
+                                      used_identifiers.discriminate(name));
+    }
+  }
+
+  // Emit declarations for `expose_` functions
+  for (const clang::DeclContext *decl_context : contexts) {
+    std::unique_ptr<DeclContextExposer> exposer =
+        DeclContextExposer::create(graph, annotations, decl_context);
+    const std::string &identifier = context_identifiers[decl_context];
+    os << "void expose_" << identifier;
+    exposer->emitDeclaration(os);
+    os << '\n';
+  }
+
+  os << '\n';
+
+  // Emit module definition
+  os << "PYBIND11_MODULE(" << name << ", root) {\n";
+
+  // Emit context introducers
+  for (const clang::DeclContext *decl_context : contexts) {
+    std::unique_ptr<DeclContextExposer> exposer =
+        DeclContextExposer::create(graph, annotations, decl_context);
+
+    const std::string &identifier = context_identifiers[decl_context];
+    auto parent = parents.find(decl_context);
+    assert(parent != parents.end() &&
+           "context should have an associated ancestor");
+    auto parent_identifier = context_identifiers.find(
+        llvm::cast_or_null<clang::DeclContext>(parent->getSecond()));
     assert(parent_identifier != context_identifiers.end() &&
            "identifier should have been stored at this point");
 
-    expose_declarations_stream << "void expose_" << identifier;
-    exposer->emitDeclaration(expose_declarations_stream);
-    expose_declarations_stream << '\n';
-
-    // TODO: Move elsewhere...
-    expose_declarations_stream << "void expose_" << identifier;
-    exposer->emitDefinition(expose_declarations_stream);
-    expose_declarations_stream << '\n';
-
-    context_introducers_stream << "auto " << identifier << " = ";
-    exposer->emitIntroducer(context_introducers_stream,
-                            parent_identifier->getSecond());
-    context_introducers_stream << ";\n";
-
-    expose_calls_stream << "expose_" << identifier << "(" << identifier
-                        << ");\n";
+    os << "auto " << identifier << " = ";
+    exposer->emitIntroducer(os, parent_identifier->getSecond());
+    os << ";\n";
   }
 
-  os << expose_declarations_stream.str() << "\n"
-     << "PYBIND11_MODULE(" << name << ", root) {\n"
-     << context_introducers_stream.str() << "\n"
-     << expose_calls_stream.str() << "}\n";
+  os << '\n';
+
+  // Emit calls to `expose_` functions
+  for (const clang::DeclContext *decl_context : contexts) {
+    std::unique_ptr<DeclContextExposer> exposer =
+        DeclContextExposer::create(graph, annotations, decl_context);
+    const std::string &identifier = context_identifiers[decl_context];
+    os << "expose_" << identifier << "(" << identifier << ");\n";
+  }
+
+  os << "}\n\n";
+
+  // Emit definitions for `expose_` functions
+  // (can be partitioned into several files in the future)
+  for (const clang::DeclContext *decl_context : contexts) {
+    const clang::Decl *decl = llvm::cast<clang::Decl>(decl_context);
+    std::unique_ptr<DeclContextExposer> exposer =
+        DeclContextExposer::create(graph, annotations, decl_context);
+
+    const std::string &identifier = context_identifiers[decl_context];
+
+    os << "void expose_" << identifier;
+    exposer->emitDefinition(os);
+    os << '\n';
+  }
 }
 
 std::unique_ptr<DeclContextExposer>
