@@ -2,10 +2,12 @@
 
 #include <llvm/ADT/None.h>
 #include <llvm/ADT/Optional.h>
+#include <llvm/ADT/SetVector.h>
 
 #include <vector>
 
 namespace clang {
+class CXXRecordDecl;
 class DeclContext;
 class NamedDecl;
 class Sema;
@@ -20,17 +22,37 @@ namespace genpybind {
 
 class AnnotatedRecordDecl;
 
-struct RecordInliningPolicy {
-  /*implicit*/ RecordInliningPolicy(
-      const AnnotatedRecordDecl &annotated_record);
+/// A set of base classes whose declarations should be "inlined" into
+/// a given record.  There has to be a path with public access from
+/// the record to the base class.
+class RecordInliningPolicy {
+  using BaseSet = llvm::SmallSetVector<const clang::TagDecl *, 1>;
+  using const_iterator = BaseSet::const_iterator;
 
-  /// Set of base classes whose declarations should be "inlined" into
-  /// a given record.  There has to be a path with public access from
-  /// the record to the base class.
-  const llvm::SmallPtrSetImpl<const clang::TagDecl *> &inline_base;
-  /// Set of base classes that should be hidden from the hierarchy,
-  /// effectively cutting the path considered for `inline_base`.
-  const llvm::SmallPtrSetImpl<const clang::TagDecl *> &hide_base;
+public:
+  RecordInliningPolicy() = default;
+
+  /// Create a policy for `record_decl`, where all reachable base classes also
+  /// contained in `inline_candidates` are considered for inlining.
+  /// The specified `hidden_bases` effectively cut the path to certain base
+  /// classes, making them unreachable.
+  RecordInliningPolicy(
+      const clang::CXXRecordDecl *record_decl,
+      const llvm::SmallPtrSetImpl<const clang::TagDecl *> &inline_candidates,
+      const llvm::SmallPtrSetImpl<const clang::TagDecl *> &hidden_bases);
+
+  static RecordInliningPolicy
+  createFromAnnotation(const AnnotatedRecordDecl &annotated_record);
+
+  /// Iterate through inline base classes in a deterministic but unspecified
+  /// order.
+  const_iterator begin() const { return inline_bases.begin(); }
+  const_iterator end() const { return inline_bases.end(); }
+
+  bool shouldInline(const clang::TagDecl *decl) const;
+
+private:
+  BaseSet inline_bases;
 };
 
 /// Return all visible (in the language sense of name hiding) named declarations

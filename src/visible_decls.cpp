@@ -15,14 +15,11 @@
 #include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/Support/Casting.h>
 
-#include <cassert>
-
 using namespace genpybind;
 
 namespace {
 
 class ExposableDeclConsumer : public clang::VisibleDeclConsumer {
-  const clang::DeclContext *context;
   llvm::Optional<RecordInliningPolicy> inlining_policy;
   std::vector<const clang::NamedDecl *> &decls;
 
@@ -33,12 +30,9 @@ class ExposableDeclConsumer : public clang::VisibleDeclConsumer {
   }
 
 public:
-  ExposableDeclConsumer(const clang::DeclContext *context,
-                        llvm::Optional<RecordInliningPolicy> inlining_policy,
+  ExposableDeclConsumer(llvm::Optional<RecordInliningPolicy> inlining_policy,
                         std::vector<const clang::NamedDecl *> &decls)
-      : context(context), inlining_policy(inlining_policy), decls(decls) {
-    assert(context != nullptr);
-  }
+      : inlining_policy(inlining_policy), decls(decls) {}
 
   bool shouldInlineDecl(clang::NamedDecl *proposed_decl) {
     // TODO: What about using declarations? Where should they be resolved?
@@ -46,39 +40,12 @@ public:
         llvm::isa<clang::CXXDestructorDecl>(proposed_decl))
       return false;
 
-    const auto *record_decl = llvm::dyn_cast<clang::CXXRecordDecl>(context);
-    if (record_decl == nullptr)
-      return false;
-
     const auto *parent_decl =
         llvm::dyn_cast<clang::CXXRecordDecl>(proposed_decl->getDeclContext());
     if (parent_decl == nullptr)
       return false;
 
-    // TODO: Calls to getDefinition necessary here?
-    parent_decl = parent_decl->getDefinition();
-
-    if (inlining_policy->inline_base.count(parent_decl) == 0)
-      return false;
-
-    // Check if there is a public path to this base class, which does not
-    // contain a hidden base class.
-
-    auto is_hidden_base =
-        [&](const clang::CXXBasePathElement &element) -> bool {
-      const auto *base_decl = element.Base->getType()->getAsCXXRecordDecl();
-      base_decl = base_decl->getDefinition();
-      return inlining_policy->hide_base.count(base_decl) != 0;
-    };
-
-    auto is_valid_path = [&](const clang::CXXBasePath &path) -> bool {
-      return path.Access == clang::AS_public &&
-             !llvm::any_of(path, is_hidden_base);
-    };
-
-    clang::CXXBasePaths paths;
-    record_decl->isDerivedFrom(parent_decl, paths);
-    return llvm::any_of(paths, is_valid_path);
+    return inlining_policy->shouldInline(parent_decl);
   }
 
   void FoundDecl(clang::NamedDecl *proposed_decl, clang::NamedDecl *hiding,
@@ -105,17 +72,59 @@ public:
 
 } // namespace
 
+RecordInliningPolicy RecordInliningPolicy::createFromAnnotation(
+    const AnnotatedRecordDecl &annotated_record) {
+  if (const auto *decl =
+          llvm::dyn_cast<clang::CXXRecordDecl>(annotated_record.getDecl()))
+    return {decl, annotated_record.inline_base, annotated_record.hide_base};
+  return {};
+}
+
 RecordInliningPolicy::RecordInliningPolicy(
-    const AnnotatedRecordDecl &annotated_record)
-    : inline_base(annotated_record.inline_base),
-      hide_base(annotated_record.hide_base) {}
+    const clang::CXXRecordDecl *record_decl,
+    const llvm::SmallPtrSetImpl<const clang::TagDecl *> &inline_candidates,
+    const llvm::SmallPtrSetImpl<const clang::TagDecl *> &hidden_bases) {
+  auto is_hidden_base = [&](const clang::CXXBasePathElement &element) -> bool {
+    const auto *base_decl = element.Base->getType()->getAsCXXRecordDecl();
+    base_decl = base_decl->getDefinition();
+    return hidden_bases.count(base_decl) != 0;
+  };
+
+  auto is_valid_path = [&](const clang::CXXBasePath &path) -> bool {
+    return path.Access == clang::AS_public &&
+           !llvm::any_of(path, is_hidden_base);
+  };
+
+  auto should_inline = [&](const clang::CXXRecordDecl *base_decl) -> bool {
+    base_decl = base_decl->getDefinition();
+    if (inline_candidates.count(base_decl) == 0)
+      return false;
+
+    clang::CXXBasePaths paths;
+    record_decl->isDerivedFrom(base_decl, paths);
+    return llvm::any_of(paths, is_valid_path);
+  };
+
+  // Use `forallBases` in order to provide a deterministic iteration order.
+  record_decl->forallBases([&](const clang::CXXRecordDecl *base_decl) -> bool {
+    if (should_inline(base_decl))
+      inline_bases.insert(base_decl);
+    return true;
+  });
+}
+
+bool RecordInliningPolicy::shouldInline(const clang::TagDecl *decl) const {
+  // TODO: Calls to getDefinition necessary here?
+  decl = decl->getDefinition();
+  return inline_bases.count(decl) != 0;
+}
 
 std::vector<const clang::NamedDecl *>
 genpybind::collectVisibleDeclsFromDeclContext(
     clang::Sema &sema, const clang::DeclContext *decl_context,
     llvm::Optional<RecordInliningPolicy> inlining_policy) {
   std::vector<const clang::NamedDecl *> decls;
-  ExposableDeclConsumer consumer(decl_context, inlining_policy, decls);
+  ExposableDeclConsumer consumer(inlining_policy, decls);
   sema.LookupVisibleDecls(const_cast<clang::DeclContext *>(decl_context),
                           clang::Sema::LookupOrdinaryName, consumer,
                           /*IncludeGlobalScope=*/false,
