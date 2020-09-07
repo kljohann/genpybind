@@ -20,6 +20,7 @@ public:
   enum class Kind {
     AlreadyExposedElsewhereError,
     AnnotationContainsUnknownBaseTypeWarning,
+    AnnotationInvalidArgumentSpecifierError,
     AnnotationInvalidForDeclKindError,
     AnnotationInvalidSpellingError,
     AnnotationWrongArgumentTypeError,

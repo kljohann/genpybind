@@ -19,11 +19,15 @@
 #include <llvm/ADT/None.h>
 #include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/SmallString.h>
+#include <llvm/ADT/StringRef.h>
 #include <llvm/Support/Casting.h>
 #include <llvm/Support/Error.h>
+#include <llvm/Support/ErrorHandling.h>
 #include <llvm/Support/raw_ostream.h>
 
 #include <cassert>
+#include <cstdint>
+#include <iterator>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -94,6 +98,7 @@ public:
     return llvm::None;
   }
 
+  std::size_t size() const { return remaining.size(); }
   bool empty() const { return remaining.empty(); }
   operator bool() const { return !remaining.empty(); }
 };
@@ -115,18 +120,22 @@ static void reportWrongNumberOfArgumentsError(const clang::Decl *decl,
 }
 
 std::unique_ptr<AnnotatedDecl>
-AnnotatedDecl::create(const clang::NamedDecl *decl) {
-  assert(decl != nullptr);
-  if (const auto *td = llvm::dyn_cast<clang::TypedefNameDecl>(decl))
-    return std::make_unique<AnnotatedTypedefNameDecl>(td);
-  if (const auto *ns = llvm::dyn_cast<clang::NamespaceDecl>(decl))
-    return std::make_unique<AnnotatedNamespaceDecl>(ns);
-  if (const auto *en = llvm::dyn_cast<clang::EnumDecl>(decl))
-    return std::make_unique<AnnotatedEnumDecl>(en);
-  if (const auto *rec = llvm::dyn_cast<clang::RecordDecl>(decl))
-    return std::make_unique<AnnotatedRecordDecl>(rec);
-  return std::make_unique<AnnotatedNamedDecl>(
-      llvm::cast<clang::NamedDecl>(decl));
+AnnotatedDecl::create(const clang::NamedDecl *named_decl) {
+  assert(named_decl != nullptr);
+  if (const auto *decl = llvm::dyn_cast<clang::TypedefNameDecl>(named_decl))
+    return std::make_unique<AnnotatedTypedefNameDecl>(decl);
+  if (const auto *decl = llvm::dyn_cast<clang::NamespaceDecl>(named_decl))
+    return std::make_unique<AnnotatedNamespaceDecl>(decl);
+  if (const auto *decl = llvm::dyn_cast<clang::EnumDecl>(named_decl))
+    return std::make_unique<AnnotatedEnumDecl>(decl);
+  if (const auto *decl = llvm::dyn_cast<clang::RecordDecl>(named_decl))
+    return std::make_unique<AnnotatedRecordDecl>(decl);
+
+  if (const auto *decl = llvm::dyn_cast<clang::FunctionDecl>(named_decl)) {
+    return std::make_unique<AnnotatedFunctionDecl>(decl);
+  }
+
+  return std::make_unique<AnnotatedNamedDecl>(named_decl);
 }
 
 void AnnotatedDecl::processAnnotations() {
@@ -451,6 +460,98 @@ void AnnotatedTypedefNameDecl::propagateAnnotations(
   }
 }
 
+AnnotatedFunctionDecl::AnnotatedFunctionDecl(const clang::FunctionDecl *decl)
+    : AnnotatedNamedDecl(decl) {}
+
+llvm::StringRef AnnotatedFunctionDecl::getFriendlyDeclKindName() const {
+  return "function";
+}
+
+bool AnnotatedFunctionDecl::processAnnotation(const Annotation &annotation) {
+  if (AnnotatedNamedDecl::processAnnotation(annotation))
+    return true;
+
+  ArgumentsConsumer arguments(annotation.getArguments());
+  std::vector<llvm::StringRef> parameter_names;
+  switch (annotation.getKind().value()) {
+  case AnnotationKind::KeepAlive:
+    if (arguments.size() != 2) {
+      reportWrongNumberOfArgumentsError(getDecl(), annotation.getKind());
+      return true;
+    }
+    parameter_names.push_back("return");
+    if (llvm::isa<clang::CXXMethodDecl>(getDecl()))
+      parameter_names.push_back("this");
+    break;
+  case AnnotationKind::Noconvert:
+    if (arguments.empty()) {
+      reportWrongNumberOfArgumentsError(getDecl(), annotation.getKind());
+      return true;
+    }
+    break;
+  case AnnotationKind::Required:
+    if (arguments.empty()) {
+      reportWrongNumberOfArgumentsError(getDecl(), annotation.getKind());
+      return true;
+    }
+    break;
+  case AnnotationKind::ReturnValuePolicy: {
+    if (arguments.size() != 1) {
+      reportWrongNumberOfArgumentsError(getDecl(), annotation.getKind());
+    } else if (auto value = arguments.take<LiteralValue::Kind::String>()) {
+      return_value_policy = value->getString();
+    } else if ((value = arguments.take())) {
+      reportWrongArgumentTypeError(getDecl(), annotation.getKind(), *value);
+    }
+    return true;
+  }
+  default:
+    return false;
+  }
+
+  const auto *decl = llvm::cast<clang::FunctionDecl>(getDecl());
+  for (const clang::ParmVarDecl *param : decl->parameters()) {
+    parameter_names.push_back(param->getName());
+  }
+
+  bool success = true;
+  llvm::SmallVector<unsigned, 2> parameter_indices;
+  while (auto value = arguments.take<LiteralValue::Kind::String>()) {
+    auto it = llvm::find(parameter_names, value->getString());
+    if (it == parameter_names.end()) {
+      Diagnostics::report(
+          getDecl(), Diagnostics::Kind::AnnotationInvalidArgumentSpecifierError)
+          << toString(annotation.getKind()) << value->getString();
+      success = false;
+      continue;
+    }
+    parameter_indices.push_back(
+        static_cast<unsigned>(std::distance(parameter_names.begin(), it)));
+  }
+  if (auto value = arguments.take()) {
+    reportWrongArgumentTypeError(getDecl(), annotation.getKind(), *value);
+    success = false;
+  }
+
+  if (success) {
+    switch (annotation.getKind().value()) {
+    case AnnotationKind::KeepAlive:
+      assert(parameter_indices.size() == 2);
+      keep_alive.emplace_back(parameter_indices[0], parameter_indices[1]);
+      break;
+    case AnnotationKind::Noconvert:
+      noconvert.insert(parameter_indices.begin(), parameter_indices.end());
+      break;
+    case AnnotationKind::Required:
+      required.insert(parameter_indices.begin(), parameter_indices.end());
+      break;
+    default:
+      llvm_unreachable("Unexpected annotation kind.");
+    }
+  }
+
+  return true;
+}
 AnnotatedDecl *AnnotationStorage::getOrInsert(const clang::Decl *declaration) {
   if (const auto *named_decl =
           llvm::dyn_cast_or_null<clang::NamedDecl>(declaration)) {

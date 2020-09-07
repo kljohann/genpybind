@@ -6,10 +6,13 @@
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/Optional.h>
 #include <llvm/ADT/SmallPtrSet.h>
+#include <llvm/ADT/SmallSet.h>
+#include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringRef.h>
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace genpybind {
@@ -124,6 +127,22 @@ public:
   /// This is used to propagate spelling and visibility in the case of
   /// "expose_here" type aliases.
   void propagateAnnotations(AnnotatedDecl &other) const;
+};
+
+class AnnotatedFunctionDecl : public AnnotatedNamedDecl {
+public:
+  llvm::SmallVector<std::pair<unsigned, unsigned>, 1> keep_alive;
+  llvm::SmallSet<unsigned, 1> noconvert;
+  llvm::SmallSet<unsigned, 1> required;
+  llvm::Optional<std::string> return_value_policy;
+
+  AnnotatedFunctionDecl(const clang::FunctionDecl *decl);
+  llvm::StringRef getFriendlyDeclKindName() const override;
+  bool processAnnotation(const annotations::Annotation &annotation) override;
+
+  static bool classof(const AnnotatedDecl *decl) {
+    return clang::FunctionDecl::classofKind(decl->getKind());
+  }
 };
 
 /// Holds and owns annotations s.t. they do not have to be processed multiple

@@ -34,6 +34,10 @@ static unsigned getCustomDiagID(clang::DiagnosticsEngine &engine,
   case Kind::AnnotationContainsUnknownBaseTypeWarning:
     return engine.getCustomDiagID(clang::DiagnosticsEngine::Warning,
                                   "Unknown base type in '%0' annotation");
+  case Kind::AnnotationInvalidArgumentSpecifierError:
+    return engine.getCustomDiagID(
+        clang::DiagnosticsEngine::Error,
+        "Invalid argument specifier in '%0' annotation: '%1'");
   case Kind::AnnotationInvalidForDeclKindError:
     return engine.getCustomDiagID(clang::DiagnosticsEngine::Error,
                                   "Invalid annotation for %0: %1");
