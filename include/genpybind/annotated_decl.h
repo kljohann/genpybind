@@ -15,6 +15,11 @@
 #include <utility>
 #include <vector>
 
+namespace clang {
+class CXXMethodDecl;
+class CXXConstructorDecl;
+}  // namespace clang
+
 namespace genpybind {
 
 bool hasAnnotations(const clang::Decl *decl);
@@ -140,9 +145,30 @@ public:
   llvm::StringRef getFriendlyDeclKindName() const override;
   bool processAnnotation(const annotations::Annotation &annotation) override;
 
-  static bool classof(const AnnotatedDecl *decl) {
-    return clang::FunctionDecl::classofKind(decl->getKind());
-  }
+  static bool classof(const AnnotatedDecl *decl);
+};
+
+class AnnotatedMethodDecl final : public AnnotatedFunctionDecl {
+public:
+  llvm::SmallSet<std::string, 1> getter_for;
+  llvm::SmallSet<std::string, 1> setter_for;
+
+  AnnotatedMethodDecl(const clang::CXXMethodDecl *decl);
+  llvm::StringRef getFriendlyDeclKindName() const override;
+  bool processAnnotation(const annotations::Annotation &annotation) override;
+
+  static bool classof(const AnnotatedDecl *decl);
+};
+
+class AnnotatedConstructorDecl : public AnnotatedFunctionDecl {
+public:
+  bool implicit_conversion = false;
+
+  AnnotatedConstructorDecl(const clang::CXXConstructorDecl *decl);
+  llvm::StringRef getFriendlyDeclKindName() const override;
+  bool processAnnotation(const annotations::Annotation &annotation) override;
+
+  static bool classof(const AnnotatedDecl *decl);
 };
 
 /// Holds and owns annotations s.t. they do not have to be processed multiple

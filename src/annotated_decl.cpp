@@ -7,6 +7,7 @@
 
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/Attr.h>
+#include <clang/AST/DeclBase.h>
 #include <clang/AST/DeclCXX.h>
 #include <clang/AST/DeclTemplate.h>
 #include <clang/AST/Type.h>
@@ -131,7 +132,18 @@ AnnotatedDecl::create(const clang::NamedDecl *named_decl) {
   if (const auto *decl = llvm::dyn_cast<clang::RecordDecl>(named_decl))
     return std::make_unique<AnnotatedRecordDecl>(decl);
 
-  if (const auto *decl = llvm::dyn_cast<clang::FunctionDecl>(named_decl)) {
+  if (llvm::isa<clang::CXXConversionDecl>(named_decl) ||
+      llvm::isa<clang::CXXDeductionGuideDecl>(named_decl) ||
+      llvm::isa<clang::CXXDestructorDecl>(named_decl)) {
+    // Fall through to generic AnnotatedNamedDecl case.
+  } else if (const auto *decl =
+                 llvm::dyn_cast<clang::CXXConstructorDecl>(named_decl)) {
+    return std::make_unique<AnnotatedConstructorDecl>(decl);
+  } else if (const auto *decl =
+                 llvm::dyn_cast<clang::CXXMethodDecl>(named_decl)) {
+    return std::make_unique<AnnotatedMethodDecl>(decl);
+  } else if (const auto *decl =
+                 llvm::dyn_cast<clang::FunctionDecl>(named_decl)) {
     return std::make_unique<AnnotatedFunctionDecl>(decl);
   }
 
@@ -464,7 +476,7 @@ AnnotatedFunctionDecl::AnnotatedFunctionDecl(const clang::FunctionDecl *decl)
     : AnnotatedNamedDecl(decl) {}
 
 llvm::StringRef AnnotatedFunctionDecl::getFriendlyDeclKindName() const {
-  return "function";
+  return "free function";
 }
 
 bool AnnotatedFunctionDecl::processAnnotation(const Annotation &annotation) {
@@ -552,6 +564,129 @@ bool AnnotatedFunctionDecl::processAnnotation(const Annotation &annotation) {
 
   return true;
 }
+
+bool AnnotatedFunctionDecl::classof(const AnnotatedDecl *decl) {
+  return clang::FunctionDecl::classofKind(decl->getKind()) &&
+         !(clang::CXXConversionDecl::classofKind(decl->getKind()) ||
+           clang::CXXDeductionGuideDecl::classofKind(decl->getKind()) ||
+           clang::CXXDestructorDecl::classofKind(decl->getKind()));
+}
+
+AnnotatedMethodDecl::AnnotatedMethodDecl(const clang::CXXMethodDecl *decl)
+    : AnnotatedFunctionDecl(decl) {
+  assert(classof(this) && "expected CXXMethodDecl, not derived class");
+}
+
+llvm::StringRef AnnotatedMethodDecl::getFriendlyDeclKindName() const {
+  return "method";
+}
+
+bool AnnotatedMethodDecl::processAnnotation(const Annotation &annotation) {
+  if (AnnotatedFunctionDecl::processAnnotation(annotation))
+    return true;
+
+  auto report_invalid_signature = [&]() {
+    Diagnostics::report(getDecl(),
+                        Diagnostics::Kind::AnnotationIncompatibleSignatureError)
+        << getFriendlyDeclKindName() << toString(annotation.getKind());
+  };
+
+  const auto *decl = llvm::cast<clang::FunctionDecl>(getDecl());
+  clang::QualType return_type = decl->getReturnType();
+  switch (annotation.getKind().value()) {
+  case AnnotationKind::GetterFor:
+    if (decl->getMinRequiredArguments() != 0 || return_type->isVoidType())
+      report_invalid_signature();
+    break;
+  case AnnotationKind::SetterFor:
+    if (decl->getNumParams() < 1 || decl->getMinRequiredArguments() > 1)
+      report_invalid_signature();
+    break;
+  default:
+    return false;
+  }
+
+  ArgumentsConsumer arguments(annotation.getArguments());
+
+  if (arguments.empty()) {
+    reportWrongNumberOfArgumentsError(getDecl(), annotation.getKind());
+    return true;
+  }
+
+  llvm::SmallVector<std::string, 1> identifiers;
+  while (auto value = arguments.take<LiteralValue::Kind::String>()) {
+    llvm::StringRef identifier = value->getString();
+    if (!clang::isValidIdentifier(identifier)) {
+      Diagnostics::report(getDecl(),
+                          Diagnostics::Kind::AnnotationInvalidSpellingError)
+          << toString(annotation.getKind()) << identifier;
+      continue;
+    }
+    identifiers.push_back(identifier);
+  }
+  if (auto value = arguments.take()) {
+    reportWrongArgumentTypeError(getDecl(), annotation.getKind(), *value);
+  }
+
+  switch (annotation.getKind().value()) {
+  case AnnotationKind::GetterFor:
+    getter_for.insert(identifiers.begin(), identifiers.end());
+    break;
+  case AnnotationKind::SetterFor:
+    setter_for.insert(identifiers.begin(), identifiers.end());
+    break;
+  default:
+    llvm_unreachable("Unexpected annotation kind.");
+  }
+
+  return true;
+}
+
+bool AnnotatedMethodDecl::classof(const AnnotatedDecl *decl) {
+  // The extra annotations only apply to methods, not to derived classes
+  // such as constructors.  Therefore `AnnotatedConstructorDecl` directly
+  // derives from `AnnotatedFunctionDecl`.
+  return decl->getKind() == clang::Decl::Kind::CXXMethod;
+}
+
+AnnotatedConstructorDecl::AnnotatedConstructorDecl(
+    const clang::CXXConstructorDecl *decl)
+    : AnnotatedFunctionDecl(decl) {}
+
+llvm::StringRef AnnotatedConstructorDecl::getFriendlyDeclKindName() const {
+  return "constructor";
+}
+
+bool AnnotatedConstructorDecl::processAnnotation(const Annotation &annotation) {
+  if (AnnotatedFunctionDecl::processAnnotation(annotation))
+    return true;
+
+  ArgumentsConsumer arguments(annotation.getArguments());
+  switch (annotation.getKind().value()) {
+  case AnnotationKind::ImplicitConversion: {
+    if (arguments.empty()) {
+      implicit_conversion = true;
+    } else if (auto value = arguments.take<LiteralValue::Kind::Boolean>()) {
+      implicit_conversion = value->getBoolean();
+    } else if ((value = arguments.take())) {
+      reportWrongArgumentTypeError(getDecl(), annotation.getKind(), *value);
+    }
+    break;
+  }
+  default:
+    return false;
+  }
+
+  if (arguments)
+    reportWrongNumberOfArgumentsError(getDecl(), annotation.getKind());
+
+  return true;
+}
+
+bool AnnotatedConstructorDecl::classof(const AnnotatedDecl *decl) {
+  return clang::CXXConstructorDecl::classofKind(decl->getKind());
+}
+
 AnnotatedDecl *AnnotationStorage::getOrInsert(const clang::Decl *declaration) {
   if (const auto *named_decl =
           llvm::dyn_cast_or_null<clang::NamedDecl>(declaration)) {

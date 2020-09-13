@@ -11,9 +11,9 @@ ANNOTATION_KIND(Visible, visible)    // (Boolean|Default)?
 ANNOTATION_KIND(Arithmetic, arithmetic)      // (Boolean)?
 ANNOTATION_KIND(ExportValues, export_values) // (Boolean|Default)?
 
-// CXXMethodDecl only
-ANNOTATION_KIND(GetterFor, getter_for) // (String)
-ANNOTATION_KIND(SetterFor, setter_for) // (String)
+// CXXMethodDecl only (but not CXXConstructorDecl, CXXConversionDecl, CXXDestructorDecl)
+ANNOTATION_KIND(GetterFor, getter_for) // (String)+
+ANNOTATION_KIND(SetterFor, setter_for) // (String)+
 
 // RecordDecl
 ANNOTATION_KIND(DynamicAttr, dynamic_attr) // (Boolean)?
@@ -24,7 +24,7 @@ ANNOTATION_KIND(InlineBase, inline_base)   // (String)+
 // CXXConstructorDecl
 ANNOTATION_KIND(ImplicitConversion, implicit_conversion) // (Boolean)?
 
-// FunctionDecl
+// FunctionDecl (but not CXXConversionDecl, CXXDeductionGuideDecl, CXXDestructorDecl)
 ANNOTATION_KIND(KeepAlive, keep_alive)                  // (String)+
 ANNOTATION_KIND(Noconvert, noconvert)                   // (String)+
 ANNOTATION_KIND(Required, required)                     // (String)+
