@@ -43,7 +43,7 @@ public:
   clang::Decl::Kind getKind() const { return decl->getKind(); }
 
   /// Retrieve annotations from the annotation attributes of the declaration.
-  /// Any errors (e.g. invalid annotations) are reported via the declarations
+  /// Any errors (e.g. invalid annotations) are reported via the declaration's
   /// associated diagnostics engine.
   void processAnnotations();
 };

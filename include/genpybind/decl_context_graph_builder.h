@@ -19,9 +19,9 @@ class AnnotationStorage;
 /// DeclContextGraph, this graph is used to determine where and in which order
 /// to expose the different declaration contexts.
 ///
-/// A `TagDecl` can only be exposed as a single location.  By default, the
+/// A `TagDecl` can only be exposed at a single location.  By default, the
 /// parent node of a `TagDecl` corresponds to the node of the lexical
-/// declaration context, where it was declared and defined.  However, they can
+/// declaration context, where it was declared and defined.  However, it can
 /// also be exposed at a different location by moving the corresponding
 /// sub-graph to a new parent.  This is effected by typedef or type alias
 /// declarations that have an `expose_here` annotation.  Their underlying type

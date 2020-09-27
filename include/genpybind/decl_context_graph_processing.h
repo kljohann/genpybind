@@ -59,7 +59,7 @@ bool reportExposeHereCycles(
 
 /// Returns the set of reachable declaration contexts, which are ancestors to at
 /// least one visible, named declaration that is not a namespace.
-/// While the visibility of a namespace or unnamed declaraiton context only
+/// While the visibility of a namespace or unnamed declaration context only
 /// has an effect on the default visibility of its descendants, a hidden tag
 /// declaration effectively conceals the sub-tree of all contained declarations.
 ConstDeclContextSet
