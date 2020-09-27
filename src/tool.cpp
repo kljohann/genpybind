@@ -153,7 +153,7 @@ public:
     inspectGraph(*graph, annotations, visibilities, module_name,
                  InspectGraphStage::Pruned);
 
-    TranslationUnitExposer exposer(*sema, *graph, annotations);
+    TranslationUnitExposer exposer(*sema, *graph, visibilities, annotations);
 
     llvm::outs() << "#include \"" << main_file << "\"\n"
                  << "#include <pybind11/pybind11.h>\n\n";

@@ -1,5 +1,9 @@
 #pragma once
 
+#include "genpybind/decl_context_graph_processing.h"
+#include "genpybind/visible_decls.h"
+
+#include <llvm/ADT/Optional.h>
 #include <llvm/ADT/StringRef.h>
 
 #include <memory>
@@ -27,16 +31,15 @@ class DeclContextGraph;
 
 std::string getFullyQualifiedName(const clang::TypeDecl *decl);
 
-void emitSpelling(llvm::raw_ostream &os,
-                  const AnnotatedNamedDecl *annotated_decl);
-
 class TranslationUnitExposer {
   clang::Sema &sema;
   const DeclContextGraph &graph;
+  const EffectiveVisibilityMap &visibilities;
   AnnotationStorage &annotations;
 
 public:
   TranslationUnitExposer(clang::Sema &sema, const DeclContextGraph &graph,
+                         const EffectiveVisibilityMap &visibilities,
                          AnnotationStorage &annotations);
 
   void emitModule(llvm::raw_ostream &os, llvm::StringRef name);
@@ -47,52 +50,49 @@ public:
   virtual ~DeclContextExposer() = default;
 
   static std::unique_ptr<DeclContextExposer>
-  create(const DeclContextGraph &graph, const AnnotationStorage &annotations,
+  create(const DeclContextGraph &graph, AnnotationStorage &annotations,
          const clang::DeclContext *decl_context);
 
-  virtual void emitDeclaration(llvm::raw_ostream &os) = 0;
+  virtual llvm::Optional<RecordInliningPolicy> inliningPolicy() const;
+  virtual void emitParameter(llvm::raw_ostream &os);
   virtual void emitIntroducer(llvm::raw_ostream &os,
-                              llvm::StringRef parent_identifier) = 0;
-  virtual void emitDefinition(llvm::raw_ostream &os) = 0;
-};
+                              llvm::StringRef parent_identifier);
+  void handleDecl(llvm::raw_ostream &os, const clang::NamedDecl *decl,
+                  const AnnotatedNamedDecl *annotation,
+                  bool default_visibility);
+  virtual void finalizeDefinition(llvm::raw_ostream &os);
 
-class UnnamedContextExposer : public DeclContextExposer {
-public:
-  UnnamedContextExposer(const clang::DeclContext *decl);
-
-  void emitDeclaration(llvm::raw_ostream &os) override;
-  void emitIntroducer(llvm::raw_ostream &os,
-                      llvm::StringRef parent_identifier) override;
-  void emitDefinition(llvm::raw_ostream &os) override;
+private:
+  virtual void handleDeclImpl(llvm::raw_ostream &os,
+                              const clang::NamedDecl *decl,
+                              const AnnotatedNamedDecl *annotation);
 };
 
 class NamespaceExposer : public DeclContextExposer {
   const AnnotatedNamespaceDecl *annotated_decl;
 
 public:
-  NamespaceExposer(const AnnotationStorage &annotations,
-                   const clang::NamespaceDecl *decl);
+  NamespaceExposer(const AnnotatedNamespaceDecl *annotated_decl);
 
-  void emitDeclaration(llvm::raw_ostream &os) override;
   void emitIntroducer(llvm::raw_ostream &os,
                       llvm::StringRef parent_identifier) override;
-  void emitDefinition(llvm::raw_ostream &os) override;
 };
 
 class EnumExposer : public DeclContextExposer {
   const AnnotatedEnumDecl *annotated_decl;
 
 public:
-  EnumExposer(const AnnotationStorage &annotations,
-              const clang::EnumDecl *decl);
+  EnumExposer(const AnnotatedEnumDecl *annotated_decl);
 
-  void emitDeclaration(llvm::raw_ostream &os) override;
+  void emitParameter(llvm::raw_ostream &os) override;
   void emitIntroducer(llvm::raw_ostream &os,
                       llvm::StringRef parent_identifier) override;
-  void emitDefinition(llvm::raw_ostream &os) override;
+  void finalizeDefinition(llvm::raw_ostream &os) override;
 
 private:
   void emitType(llvm::raw_ostream &os);
+  void handleDeclImpl(llvm::raw_ostream &os, const clang::NamedDecl *decl,
+                      const AnnotatedNamedDecl *annotation) override;
 };
 
 class RecordExposer : public DeclContextExposer {
@@ -101,13 +101,13 @@ class RecordExposer : public DeclContextExposer {
 
 public:
   RecordExposer(const DeclContextGraph &graph,
-                const AnnotationStorage &annotations,
-                const clang::RecordDecl *decl);
+                const AnnotatedRecordDecl *annotated_decl);
 
-  void emitDeclaration(llvm::raw_ostream &os) override;
+  llvm::Optional<RecordInliningPolicy> inliningPolicy() const override;
+  void emitParameter(llvm::raw_ostream &os) override;
   void emitIntroducer(llvm::raw_ostream &os,
                       llvm::StringRef parent_identifier) override;
-  void emitDefinition(llvm::raw_ostream &os) override;
+  void finalizeDefinition(llvm::raw_ostream &os) override;
 
 private:
   void emitType(llvm::raw_ostream &os);

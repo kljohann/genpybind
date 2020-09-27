@@ -43,38 +43,42 @@ public:
 
 } // namespace
 
-std::string genpybind::getFullyQualifiedName(const clang::TypeDecl *decl) {
-  const clang::ASTContext &context = decl->getASTContext();
-  const clang::QualType qual_type = context.getTypeDeclType(decl);
+static void emitStringLiteral(llvm::raw_ostream &os, llvm::StringRef text) {
+  os << '"';
+  os.write_escaped(text);
+  os << '"';
+}
+
+static clang::PrintingPolicy
+getPrintingPolicyForExposedNames(const clang::ASTContext &context) {
   auto policy = context.getPrintingPolicy();
   policy.SuppressScope = false;
   policy.AnonymousTagLocations = false;
   policy.PolishForDeclaration = true;
+  return policy;
+}
+
+std::string genpybind::getFullyQualifiedName(const clang::TypeDecl *decl) {
+  const clang::ASTContext &context = decl->getASTContext();
+  const clang::QualType qual_type = context.getTypeDeclType(decl);
+  auto policy = getPrintingPolicyForExposedNames(context);
   return clang::TypeName::getFullyQualifiedName(qual_type, context, policy,
                                                 /*WithGlobalNsPrefix=*/true);
 }
 
-void genpybind::emitSpelling(llvm::raw_ostream &os,
-                             const AnnotatedNamedDecl *annotated_decl) {
-  assert(annotated_decl != nullptr); // FIXME
-  os << '"';
-  os.write_escaped(annotated_decl->getSpelling());
-  os << '"';
-}
-
-TranslationUnitExposer::TranslationUnitExposer(clang::Sema &sema,
-                                               const DeclContextGraph &graph,
-                                               AnnotationStorage &annotations)
-    : sema(sema), graph(graph), annotations(annotations) {}
+TranslationUnitExposer::TranslationUnitExposer(
+    clang::Sema &sema, const DeclContextGraph &graph,
+    const EffectiveVisibilityMap &visibilities, AnnotationStorage &annotations)
+    : sema(sema), graph(graph), visibilities(visibilities),
+      annotations(annotations) {}
 
 void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
                                         llvm::StringRef name) {
-
   const EnclosingNamedDeclMap parents =
       findEnclosingScopeIntroducingAncestors(graph, annotations);
 
   const clang::DeclContext *cycle = nullptr;
-  const auto contexts =
+  const auto sorted_contexts =
       declContextsSortedByDependencies(graph, parents, &cycle);
   if (cycle != nullptr) {
     // TODO: Report this before any other output, ideally pointing to the
@@ -84,20 +88,25 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
     return;
   }
 
-  llvm::DenseMap<const clang::DeclContext *, std::string> context_identifiers;
+  llvm::DenseMap<const clang::DeclContext *, std::string> context_identifiers(
+      static_cast<unsigned>(sorted_contexts.size() + 1));
   // `nullptr` is used in the parent map to indicate the absence of a named
   // ancestor.  Consequently treat `nullptr` as the module root.
   context_identifiers[nullptr] = "root";
 
+  struct WorklistItem {
+    const clang::DeclContext *decl_context;
+    std::unique_ptr<DeclContextExposer> exposer;
+    llvm::StringRef identifier;
+  };
+
+  std::vector<WorklistItem> worklist;
+  worklist.reserve(sorted_contexts.size());
+
   {
     DiscriminateIdentifiers used_identifiers;
-    for (const clang::DeclContext *decl_context : contexts) {
-      // `getOrInsert` ensures annotation is available in later steps.
-      const AnnotatedDecl *annotated_decl =
-          annotations.getOrInsert(llvm::cast<clang::Decl>(decl_context));
-      llvm::SmallString<128> name =
-          annotated_decl == nullptr ? llvm::StringRef("context")
-                                    : annotated_decl->getFriendlyDeclKindName();
+    for (const clang::DeclContext *decl_context : sorted_contexts) {
+      llvm::SmallString<128> name("context");
       if (auto const *type_decl =
               llvm::dyn_cast<clang::TypeDecl>(decl_context)) {
         name += getFullyQualifiedName(type_decl);
@@ -107,19 +116,21 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
         name += ns_decl->getQualifiedNameAsString();
       }
       makeValidIdentifier(name);
-      context_identifiers.try_emplace(decl_context,
-                                      used_identifiers.discriminate(name));
+      auto result = context_identifiers.try_emplace(
+          decl_context, used_identifiers.discriminate(name));
+      llvm::StringRef identifier = result.first->getSecond();
+      worklist.push_back(
+          {decl_context,
+           DeclContextExposer::create(graph, annotations, decl_context),
+           identifier});
     }
   }
 
   // Emit declarations for `expose_` functions
-  for (const clang::DeclContext *decl_context : contexts) {
-    std::unique_ptr<DeclContextExposer> exposer =
-        DeclContextExposer::create(graph, annotations, decl_context);
-    const std::string &identifier = context_identifiers[decl_context];
-    os << "void expose_" << identifier;
-    exposer->emitDeclaration(os);
-    os << '\n';
+  for (const auto &item : worklist) {
+    os << "void expose_" << item.identifier << "(";
+    item.exposer->emitParameter(os);
+    os << ");\n";
   }
 
   os << '\n';
@@ -128,12 +139,8 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
   os << "PYBIND11_MODULE(" << name << ", root) {\n";
 
   // Emit context introducers
-  for (const clang::DeclContext *decl_context : contexts) {
-    std::unique_ptr<DeclContextExposer> exposer =
-        DeclContextExposer::create(graph, annotations, decl_context);
-
-    const std::string &identifier = context_identifiers[decl_context];
-    auto parent = parents.find(decl_context);
+  for (const auto &item : worklist) {
+    auto parent = parents.find(item.decl_context);
     assert(parent != parents.end() &&
            "context should have an associated ancestor");
     auto parent_identifier = context_identifiers.find(
@@ -141,80 +148,107 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
     assert(parent_identifier != context_identifiers.end() &&
            "identifier should have been stored at this point");
 
-    os << "auto " << identifier << " = ";
-    exposer->emitIntroducer(os, parent_identifier->getSecond());
+    os << "auto " << item.identifier << " = ";
+    item.exposer->emitIntroducer(os, parent_identifier->getSecond());
     os << ";\n";
   }
 
   os << '\n';
 
   // Emit calls to `expose_` functions
-  for (const clang::DeclContext *decl_context : contexts) {
-    std::unique_ptr<DeclContextExposer> exposer =
-        DeclContextExposer::create(graph, annotations, decl_context);
-    const std::string &identifier = context_identifiers[decl_context];
-    os << "expose_" << identifier << "(" << identifier << ");\n";
+  for (const auto &item : worklist) {
+    os << "expose_" << item.identifier << "(" << item.identifier << ");\n";
   }
 
   os << "}\n\n";
 
   // Emit definitions for `expose_` functions
   // (can be partitioned into several files in the future)
-  for (const clang::DeclContext *decl_context : contexts) {
-    const clang::Decl *decl = llvm::cast<clang::Decl>(decl_context);
-    std::unique_ptr<DeclContextExposer> exposer =
-        DeclContextExposer::create(graph, annotations, decl_context);
+  for (const auto &item : worklist) {
+    os << "void expose_" << item.identifier << "(";
+    item.exposer->emitParameter(os);
+    os << ") {\n";
 
-    const std::string &identifier = context_identifiers[decl_context];
+    bool default_visibility = [&] {
+      auto it = visibilities.find(item.decl_context);
+      return it != visibilities.end() ? it->getSecond() : false;
+    }();
 
-    os << "void expose_" << identifier;
-    exposer->emitDefinition(os);
-    os << '\n';
+    auto handle_decl = [&](const clang::NamedDecl *proposed_decl) {
+      const auto *annotation = llvm::dyn_cast<AnnotatedNamedDecl>(
+          annotations.getOrInsert(proposed_decl));
+      item.exposer->handleDecl(os, proposed_decl, annotation,
+                               default_visibility);
+    };
+
+    // TODO: Sort / make deterministic
+    std::vector<const clang::NamedDecl *> decls =
+        collectVisibleDeclsFromDeclContext(sema, item.decl_context,
+                                           item.exposer->inliningPolicy());
+
+    llvm::for_each(decls, handle_decl);
+
+    item.exposer->finalizeDefinition(os);
+    os << "}\n\n";
   }
 }
 
 std::unique_ptr<DeclContextExposer>
 DeclContextExposer::create(const DeclContextGraph &graph,
-                           const AnnotationStorage &annotations,
+                           AnnotationStorage &annotations,
                            const clang::DeclContext *decl_context) {
   assert(decl_context != nullptr);
   const auto *decl = llvm::cast<clang::Decl>(decl_context);
-  if (const auto *ns = llvm::dyn_cast<clang::NamespaceDecl>(decl))
-    return std::make_unique<NamespaceExposer>(annotations, ns);
-  if (const auto *en = llvm::dyn_cast<clang::EnumDecl>(decl))
-    return std::make_unique<EnumExposer>(annotations, en);
-  if (const auto *rec = llvm::dyn_cast<clang::RecordDecl>(decl))
-    return std::make_unique<RecordExposer>(graph, annotations, rec);
+  if (const AnnotatedDecl *annotated_decl = annotations.getOrInsert(decl)) {
+    if (const auto *ad = llvm::dyn_cast<AnnotatedNamespaceDecl>(annotated_decl))
+      return std::make_unique<NamespaceExposer>(ad);
+    if (const auto *ad = llvm::dyn_cast<AnnotatedEnumDecl>(annotated_decl))
+      return std::make_unique<EnumExposer>(ad);
+    if (const auto *ad = llvm::dyn_cast<AnnotatedRecordDecl>(annotated_decl))
+      return std::make_unique<RecordExposer>(graph, ad);
+  }
   if (DeclContextGraph::accepts(decl))
-    return std::make_unique<UnnamedContextExposer>(decl_context);
+    return std::make_unique<DeclContextExposer>();
 
   llvm_unreachable("Unknown declaration context kind.");
 }
 
-UnnamedContextExposer::UnnamedContextExposer(
-    const clang::DeclContext * /*decl*/) {}
-
-void UnnamedContextExposer::emitDeclaration(llvm::raw_ostream &os) {
-  os << "(::pybind11::module& /*context*/);";
+llvm::Optional<RecordInliningPolicy>
+DeclContextExposer::inliningPolicy() const {
+  return llvm::None;
 }
 
-void UnnamedContextExposer::emitIntroducer(llvm::raw_ostream &os,
-                                           llvm::StringRef parent_identifier) {
+void DeclContextExposer::emitParameter(llvm::raw_ostream &os) {
+  os << "::pybind11::module& context";
+}
+
+void DeclContextExposer::emitIntroducer(llvm::raw_ostream &os,
+                                        llvm::StringRef parent_identifier) {
   os << parent_identifier;
 }
 
-void UnnamedContextExposer::emitDefinition(llvm::raw_ostream &os) {
-  os << "(::pybind11::module& /*context*/) {}";
+void DeclContextExposer::handleDecl(llvm::raw_ostream &os,
+                                    const clang::NamedDecl *decl,
+                                    const AnnotatedNamedDecl *annotation,
+                                    bool default_visibility) {
+  assert(decl != nullptr);
+  assert(annotation != nullptr);
+  if (!annotation->visible.getValueOr(default_visibility))
+    return;
+
+  return handleDeclImpl(os, decl, annotation);
 }
 
-NamespaceExposer::NamespaceExposer(const AnnotationStorage &annotations,
-                                   const clang::NamespaceDecl *decl)
-    : annotated_decl(llvm::dyn_cast_or_null<AnnotatedNamespaceDecl>(
-          annotations.get(decl))) {}
+void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &,
+                                        const clang::NamedDecl *,
+                                        const AnnotatedNamedDecl *) {}
 
-void NamespaceExposer::emitDeclaration(llvm::raw_ostream &os) {
-  os << "(::pybind11::module& /*context*/);";
+void DeclContextExposer::finalizeDefinition(llvm::raw_ostream &os) {
+  os << "(void)context;\n";
 }
+
+NamespaceExposer::NamespaceExposer(const AnnotatedNamespaceDecl *annotated_decl)
+    : annotated_decl(annotated_decl) {}
 
 void NamespaceExposer::emitIntroducer(llvm::raw_ostream &os,
                                       llvm::StringRef parent_identifier) {
@@ -222,53 +256,35 @@ void NamespaceExposer::emitIntroducer(llvm::raw_ostream &os,
   // TODO: Emit only for the _first_ declaration of this namespace.
   if (annotated_decl != nullptr && annotated_decl->module) {
     os << ".def_submodule(";
-    emitSpelling(os, annotated_decl);
+    emitStringLiteral(os, annotated_decl->getSpelling());
     os << ")";
   }
 }
 
-void NamespaceExposer::emitDefinition(llvm::raw_ostream &os) {
-  os << "(::pybind11::module& /*context*/) {}";
-}
-
-EnumExposer::EnumExposer(const AnnotationStorage &annotations,
-                         const clang::EnumDecl *decl)
-    : annotated_decl(
-          llvm::dyn_cast_or_null<AnnotatedEnumDecl>(annotations.get(decl))) {
+EnumExposer::EnumExposer(const AnnotatedEnumDecl *annotated_decl)
+    : annotated_decl(annotated_decl) {
   assert(annotated_decl != nullptr);
 }
 
-void EnumExposer::emitDeclaration(llvm::raw_ostream &os) {
-  os << "(";
+void EnumExposer::emitParameter(llvm::raw_ostream &os) {
   emitType(os);
-  os << "& /*context*/);";
+  os << "& context";
 }
 
 void EnumExposer::emitIntroducer(llvm::raw_ostream &os,
                                  llvm::StringRef parent_identifier) {
   emitType(os);
   os << "(" << parent_identifier << ", ";
-  emitSpelling(os, annotated_decl);
+  emitStringLiteral(os, annotated_decl->getSpelling());
   if (annotated_decl->arithmetic)
     os << ", ::pybind11::arithmetic()";
   os << ")";
 }
 
-void EnumExposer::emitDefinition(llvm::raw_ostream &os) {
-  os << "(";
-  emitType(os);
-  os << "& context) {\n";
+void EnumExposer::finalizeDefinition(llvm::raw_ostream &os) {
   const auto *decl = llvm::cast<clang::EnumDecl>(annotated_decl->getDecl());
-  const std::string scope = getFullyQualifiedName(decl);
-  for (const clang::EnumConstantDecl *enumerator : decl->enumerators()) {
-    const llvm::StringRef name = enumerator->getName();
-    os << R"(context.value(")";
-    os.write_escaped(name);
-    os << R"(", )" << scope << "::" << name << ");\n";
-  }
   if (annotated_decl->export_values.getValueOr(!decl->isScoped()))
     os << "context.export_values();\n";
-  os << "}";
 }
 
 void EnumExposer::emitType(llvm::raw_ostream &os) {
@@ -278,35 +294,47 @@ void EnumExposer::emitType(llvm::raw_ostream &os) {
      << ">";
 }
 
+void EnumExposer::handleDeclImpl(llvm::raw_ostream &os,
+                                 const clang::NamedDecl *decl,
+                                 const AnnotatedNamedDecl *annotation) {
+  if (const auto *enumerator = llvm::dyn_cast<clang::EnumConstantDecl>(decl)) {
+    const auto *enum_decl =
+        llvm::cast<clang::EnumDecl>(annotated_decl->getDecl());
+    const std::string scope = getFullyQualifiedName(enum_decl);
+    os << "context.value(";
+    emitStringLiteral(os, annotation->getSpelling());
+    os << ", " << scope << "::" << enumerator->getName() << ");\n";
+  }
+}
+
 RecordExposer::RecordExposer(const DeclContextGraph &graph,
-                             const AnnotationStorage &annotations,
-                             const clang::RecordDecl *decl)
-    : graph(graph), annotated_decl(llvm::dyn_cast_or_null<AnnotatedRecordDecl>(
-                        annotations.get(decl))) {
+                             const AnnotatedRecordDecl *annotated_decl)
+    : graph(graph), annotated_decl(annotated_decl) {
   assert(annotated_decl != nullptr);
 }
 
-void RecordExposer::emitDeclaration(llvm::raw_ostream &os) {
-  os << "(";
+llvm::Optional<RecordInliningPolicy> RecordExposer::inliningPolicy() const {
+  return RecordInliningPolicy::createFromAnnotation(*annotated_decl);
+}
+
+void RecordExposer::emitParameter(llvm::raw_ostream &os) {
   emitType(os);
-  os << "& /*context*/);";
+  os << "& context";
 }
 
 void RecordExposer::emitIntroducer(llvm::raw_ostream &os,
                                    llvm::StringRef parent_identifier) {
   emitType(os);
   os << "(" << parent_identifier << ", ";
-  emitSpelling(os, annotated_decl);
+  emitStringLiteral(os, annotated_decl->getSpelling());
   if (annotated_decl->dynamic_attr)
     os << ", ::pybind11::dynamic_attr()";
   os << ")";
 }
 
-void RecordExposer::emitDefinition(llvm::raw_ostream &os) {
-  os << "(";
-  emitType(os);
+void RecordExposer::finalizeDefinition(llvm::raw_ostream &os) {
   // As a placeholder always add a constructor for now.
-  os << "& context) { context.def(::pybind11::init<>(), \"\"); }";
+  os << "context.def(::pybind11::init<>(), \"\");";
 }
 
 void RecordExposer::emitType(llvm::raw_ostream &os) {
