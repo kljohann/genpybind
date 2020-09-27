@@ -17,6 +17,16 @@ class GENPYBIND(visible(default)) Default {};
 // CHECK-NEXT: |-CXXRecord 'Hidden': hidden
 class GENPYBIND(hidden) Hidden {};
 
+void unannotated();
+void visible() GENPYBIND(visible);
+void defaulted() GENPYBIND(visible(default));
+void hidden() GENPYBIND(hidden);
+
+// CHECK-NEXT: |-LinkageSpec: hidden
+extern "C" {
+void with_linkage();
+}
+
 // CHECK-NEXT: |-Namespace 'in_unannotated_namespace': hidden
 namespace in_unannotated_namespace {
 // CHECK-NEXT: | |-CXXRecord 'in_unannotated_namespace::UnannotatedInNs': hidden
@@ -28,10 +38,16 @@ class GENPYBIND(visible(default)) DefaultInNs {};
 // CHECK-NEXT: | |-CXXRecord 'in_unannotated_namespace::HiddenInNs': hidden
 class GENPYBIND(hidden) HiddenInNs {};
 
-// CHECK-NEXT: | `-LinkageSpec:
+void unannotated_in_ns();
+void visible_in_ns() GENPYBIND(visible);
+void defaulted_in_ns() GENPYBIND(visible(default));
+void hidden_in_ns() GENPYBIND(hidden);
+
+// CHECK-NEXT: | `-LinkageSpec: hidden
 extern "C" {
 // CHECK-NEXT: |   `-CXXRecord 'in_unannotated_namespace::WithLinkageInNs': hidden
 class WithLinkageInNs {};
+void with_linkage_in_ns();
 }
 } // namespace in_unannotated_namespace
 
@@ -46,10 +62,16 @@ class GENPYBIND(visible(default)) DefaultInVisible {};
 // CHECK-NEXT: | |-CXXRecord 'in_visible_namespace::HiddenInVisible': hidden
 class GENPYBIND(hidden) HiddenInVisible {};
 
-// CHECK-NEXT: | |-LinkageSpec:
+void unannotated_in_visible();
+void visible_in_visible() GENPYBIND(visible);
+void defaulted_in_visible() GENPYBIND(visible(default));
+void hidden_in_visible() GENPYBIND(hidden);
+
+// CHECK-NEXT: | |-LinkageSpec: visible
 extern "C" {
 // CHECK-NEXT: | | `-CXXRecord 'in_visible_namespace::WithLinkageInVisible': visible
 class WithLinkageInVisible {};
+void with_linkage_in_visible();
 }
 
 // CHECK-NEXT: | |-Namespace 'in_visible_namespace::in_nested_hidden_namespace': hidden
@@ -63,10 +85,16 @@ class GENPYBIND(visible(default)) DefaultInHiddenInVisible {};
 // CHECK-NEXT: | | |-CXXRecord 'in_visible_namespace::in_nested_hidden_namespace::HiddenInHiddenInVisible': hidden
 class GENPYBIND(hidden) HiddenInHiddenInVisible {};
 
-// CHECK-NEXT: | | `-LinkageSpec:
+void unannotated_in_hidden_in_visible();
+void visible_in_hidden_in_visible() GENPYBIND(visible);
+void defaulted_in_hidden_in_visible() GENPYBIND(visible(default));
+void hidden_in_hidden_in_visible() GENPYBIND(hidden);
+
+// CHECK-NEXT: | | `-LinkageSpec: hidden
 extern "C" {
 // CHECK-NEXT: | |   `-CXXRecord 'in_visible_namespace::in_nested_hidden_namespace::WithLinkageInHiddenInVisible': hidden
 class WithLinkageInHiddenInVisible {};
+void with_linkage_in_hidden_in_visible();
 }
 } // namespace GENPYBIND_HIDDEN
 
@@ -81,10 +109,16 @@ class GENPYBIND(visible(default)) DefaultInNsInVisible {};
 // CHECK-NEXT: |   |-CXXRecord 'in_visible_namespace::in_nested_unannotated_namespace::HiddenInNsInVisible': hidden
 class GENPYBIND(hidden) HiddenInNsInVisible {};
 
-// CHECK-NEXT: |   `-LinkageSpec:
+void unannotated_in_ns_in_visible();
+void visible_in_ns_in_visible() GENPYBIND(visible);
+void defaulted_in_ns_in_visible() GENPYBIND(visible(default));
+void hidden_in_ns_in_visible() GENPYBIND(hidden);
+
+// CHECK-NEXT: |   `-LinkageSpec: visible
 extern "C" {
 // CHECK-NEXT: |     `-CXXRecord 'in_visible_namespace::in_nested_unannotated_namespace::WithLinkageInNsInVisible': visible
 class WithLinkageInNsInVisible {};
+void with_linkage_in_ns_in_visible();
 }
 } // namespace in_nested_unannotated_namespace
 } // namespace GENPYBIND_VISIBLE
@@ -100,9 +134,15 @@ class GENPYBIND(visible(default)) DefaultInHidden {};
 // CHECK-NEXT:   |-CXXRecord 'in_hidden_namespace::HiddenInHidden': hidden
 class GENPYBIND(hidden) HiddenInHidden {};
 
-// CHECK-NEXT:   `-LinkageSpec:
+void unannotated_in_hidden();
+void visible_in_hidden() GENPYBIND(visible);
+void defaulted_in_hidden() GENPYBIND(visible(default));
+void hidden_in_hidden() GENPYBIND(hidden);
+
+// CHECK-NEXT:   `-LinkageSpec: hidden
 extern "C" {
 // CHECK-NEXT:     `-CXXRecord 'in_hidden_namespace::WithLinkageInHidden': hidden
 class WithLinkageInHidden {};
+void with_linkage_in_hidden();
 }
 } // namespace GENPYBIND_HIDDEN

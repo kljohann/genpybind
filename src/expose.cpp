@@ -9,6 +9,7 @@
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/Decl.h>
 #include <clang/AST/DeclCXX.h>
+#include <clang/AST/DeclTemplate.h>
 #include <clang/AST/PrettyPrinter.h>
 #include <clang/AST/QualTypeNames.h>
 #include <clang/AST/Type.h>
@@ -49,6 +50,14 @@ static void emitStringLiteral(llvm::raw_ostream &os, llvm::StringRef text) {
   os << '"';
 }
 
+static llvm::StringRef getBriefText(const clang::Decl *decl) {
+  const clang::ASTContext &context = decl->getASTContext();
+  if (const clang::RawComment *raw = context.getRawCommentForAnyRedecl(decl)) {
+    return raw->getBriefText(context);
+  }
+  return {};
+}
+
 static clang::PrintingPolicy
 getPrintingPolicyForExposedNames(const clang::ASTContext &context) {
   auto policy = context.getPrintingPolicy();
@@ -56,6 +65,37 @@ getPrintingPolicyForExposedNames(const clang::ASTContext &context) {
   policy.AnonymousTagLocations = false;
   policy.PolishForDeclaration = true;
   return policy;
+}
+
+static void emitParameterTypes(llvm::raw_ostream &os,
+                               const clang::FunctionDecl *function) {
+  const clang::ASTContext &context = function->getASTContext();
+  auto policy = getPrintingPolicyForExposedNames(context);
+  bool comma = false;
+  for (const clang::ParmVarDecl *param : function->parameters()) {
+    if (comma)
+      os << ", ";
+    os << clang::TypeName::getFullyQualifiedName(param->getOriginalType(),
+                                                 context, policy,
+                                                 /*WithGlobalNsPrefix=*/true);
+    comma = true;
+  }
+}
+
+static void emitFunctionPointer(llvm::raw_ostream &os,
+                                const clang::FunctionDecl *function) {
+  // TODO: All names need to be printed in a fully-qualified way (also nested
+  // template arguments)
+  os << "pybind11::overload_cast<";
+  emitParameterTypes(os, function);
+  os << ">(&";
+  function->printQualifiedName(os);
+  if (const clang::TemplateArgumentList *args =
+          function->getTemplateSpecializationArgs()) {
+    auto policy = getPrintingPolicyForExposedNames(function->getASTContext());
+    clang::printTemplateArgumentList(os, args->asArray(), policy);
+  }
+  os << ")";
 }
 
 std::string genpybind::getFullyQualifiedName(const clang::TypeDecl *decl) {
@@ -186,7 +226,17 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
         collectVisibleDeclsFromDeclContext(sema, item.decl_context,
                                            item.exposer->inliningPolicy());
 
-    llvm::for_each(decls, handle_decl);
+    for (const clang::NamedDecl *proposed_decl : decls) {
+      // If there are several declarations of a function template,
+      // only one is picked up here.  Thus all specializations can be
+      // processed unconditionally.
+      if (const auto *tpl =
+              llvm::dyn_cast<clang::FunctionTemplateDecl>(proposed_decl)) {
+        llvm::for_each(tpl->specializations(), handle_decl);
+      } else {
+        handle_decl(proposed_decl);
+      }
+    }
 
     item.exposer->finalizeDefinition(os);
     os << "}\n\n";
@@ -239,9 +289,29 @@ void DeclContextExposer::handleDecl(llvm::raw_ostream &os,
   return handleDeclImpl(os, decl, annotation);
 }
 
-void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &,
-                                        const clang::NamedDecl *,
-                                        const AnnotatedNamedDecl *) {}
+void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &os,
+                                        const clang::NamedDecl *decl,
+                                        const AnnotatedNamedDecl *annotation) {
+  if (llvm::isa<AnnotatedConstructorDecl>(annotation)) {
+  } else if (llvm::isa<AnnotatedMethodDecl>(annotation)) {
+  } else if (const auto *annot =
+                 llvm::dyn_cast<AnnotatedFunctionDecl>(annotation)) {
+    const auto *function = llvm::cast<clang::FunctionDecl>(decl);
+    llvm::StringRef comment = getBriefText(decl);
+    if (comment.empty())
+      if (const clang::FunctionTemplateDecl *primary =
+              function->getPrimaryTemplate())
+        comment = getBriefText(primary);
+    os << "context.def(";
+    emitStringLiteral(os, annot->getSpelling());
+    os << ", ";
+    emitFunctionPointer(os, function);
+    os << ", ";
+    emitStringLiteral(os, comment);
+    // TODO: Emit arguments, policies
+    os << ");\n";
+  }
+}
 
 void DeclContextExposer::finalizeDefinition(llvm::raw_ostream &os) {
   os << "(void)context;\n";
