@@ -125,9 +125,12 @@ genpybind::collectVisibleDeclsFromDeclContext(
     llvm::Optional<RecordInliningPolicy> inlining_policy) {
   std::vector<const clang::NamedDecl *> decls;
   ExposableDeclConsumer consumer(inlining_policy, decls);
+  // Include global scope *iff* looking up decls in the TU decl context.
+  bool include_global_scope = llvm::dyn_cast<clang::Decl>(decl_context) ==
+                              sema.getASTContext().getTranslationUnitDecl();
   sema.LookupVisibleDecls(const_cast<clang::DeclContext *>(decl_context),
                           clang::Sema::LookupOrdinaryName, consumer,
-                          /*IncludeGlobalScope=*/false,
+                          /*IncludeGlobalScope=*/include_global_scope,
                           /*IncludeDependentBases=*/false,
                           /*LoadExternal=*/true);
   return decls;
