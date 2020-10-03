@@ -146,6 +146,16 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
   {
     DiscriminateIdentifiers used_identifiers;
     for (const clang::DeclContext *decl_context : sorted_contexts) {
+      // Since the decls to expose in each context are discovered via the name
+      // lookup mechanism below, it's sufficient to visit every loookup context
+      // once, instead of e.g. visiting transparent/non-lookup contexts or each
+      // re-opened namespace.
+      if (!decl_context->isLookupContext())
+        continue;
+      if (const auto *ns = llvm::dyn_cast<clang::NamespaceDecl>(decl_context))
+        if (!ns->isOriginalNamespace())
+          continue;
+
       llvm::SmallString<128> name("context");
       if (auto const *type_decl =
               llvm::dyn_cast<clang::TypeDecl>(decl_context)) {
@@ -183,8 +193,12 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
     auto parent = parents.find(item.decl_context);
     assert(parent != parents.end() &&
            "context should have an associated ancestor");
+    const auto *parent_decl = parent->getSecond();
+    if (const auto *ns =
+            llvm::dyn_cast_or_null<clang::NamespaceDecl>(parent_decl))
+      parent_decl = ns->getOriginalNamespace();
     auto parent_identifier = context_identifiers.find(
-        llvm::cast_or_null<clang::DeclContext>(parent->getSecond()));
+        llvm::cast_or_null<clang::DeclContext>(parent_decl));
     assert(parent_identifier != context_identifiers.end() &&
            "identifier should have been stored at this point");
 
@@ -209,12 +223,12 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
     item.exposer->emitParameter(os);
     os << ") {\n";
 
-    bool default_visibility = [&] {
-      auto it = visibilities.find(item.decl_context);
-      return it != visibilities.end() ? it->getSecond() : false;
-    }();
-
     auto handle_decl = [&](const clang::NamedDecl *proposed_decl) {
+      // Use default visibility of original (possibly transparent) decl context.
+      bool default_visibility = [&] {
+        auto it = visibilities.find(proposed_decl->getDeclContext());
+        return it != visibilities.end() ? it->getSecond() : false;
+      }();
       const auto *annotation = llvm::dyn_cast<AnnotatedNamedDecl>(
           annotations.getOrInsert(proposed_decl));
       item.exposer->handleDecl(os, proposed_decl, annotation,
@@ -323,7 +337,6 @@ NamespaceExposer::NamespaceExposer(const AnnotatedNamespaceDecl *annotated_decl)
 void NamespaceExposer::emitIntroducer(llvm::raw_ostream &os,
                                       llvm::StringRef parent_identifier) {
   os << parent_identifier;
-  // TODO: Emit only for the _first_ declaration of this namespace.
   if (annotated_decl != nullptr && annotated_decl->module) {
     os << ".def_submodule(";
     emitStringLiteral(os, annotated_decl->getSpelling());

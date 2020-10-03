@@ -46,6 +46,8 @@ EnclosingNamedDeclMap genpybind::findEnclosingScopeIntroducingAncestors(
       if (named_ancestor != nullptr)
         break;
     }
+    assert(named_ancestor == nullptr ||
+           llvm::cast<clang::DeclContext>(named_ancestor)->isLookupContext());
     result[llvm::cast<clang::DeclContext>(it->getDecl())] = named_ancestor;
   }
 
