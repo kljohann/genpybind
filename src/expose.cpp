@@ -301,6 +301,17 @@ static void emitParameters(llvm::raw_ostream &os,
   }
 }
 
+static void emitPolicies(llvm::raw_ostream &os,
+                         const AnnotatedFunctionDecl *annotation) {
+  if (!annotation->return_value_policy.empty())
+    os << ", pybind11::return_value_policy::"
+       << annotation->return_value_policy;
+  for (const auto &item : annotation->keep_alive) {
+    os << ", pybind11::keep_alive<" << item.first << ", " << item.second
+       << ">()";
+  }
+}
+
 static void emitFunctionPointer(llvm::raw_ostream &os,
                                 const clang::FunctionDecl *function) {
   // TODO: All names need to be printed in a fully-qualified way (also nested
@@ -605,7 +616,7 @@ void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &os,
     os << ", ";
     emitStringLiteral(os, getDocstring(function));
     emitParameters(os, annot);
-    // TODO: Emit policies
+    emitPolicies(os, annot);
     os << ");\n";
   }
 }
@@ -789,7 +800,7 @@ void RecordExposer::handleDeclImpl(llvm::raw_ostream &os,
     os << ">(), ";
     emitStringLiteral(os, getDocstring(constructor));
     emitParameters(os, annot);
-    // TODO: Emit policies
+    emitPolicies(os, annot);
     os << ");\n";
     return;
   }

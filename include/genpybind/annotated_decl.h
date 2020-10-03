@@ -141,7 +141,7 @@ public:
   llvm::SmallVector<std::pair<unsigned, unsigned>, 1> keep_alive;
   llvm::SmallSet<unsigned, 1> noconvert;
   llvm::SmallSet<unsigned, 1> required;
-  llvm::Optional<std::string> return_value_policy;
+  std::string return_value_policy;
 
   AnnotatedFunctionDecl(const clang::FunctionDecl *decl);
   llvm::StringRef getFriendlyDeclKindName() const override;
