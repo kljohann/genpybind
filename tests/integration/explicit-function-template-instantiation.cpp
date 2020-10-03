@@ -18,6 +18,11 @@ template <typename T> T Example::plus_one(T value) { return value + 1; }
 template int Example::plus_one(int);
 template double Example::plus_one(double);
 
+template <typename T>
+TemplatedConstructor::TemplatedConstructor(T value) : value(value) {}
+
+template TemplatedConstructor::TemplatedConstructor(int);
+
 template <typename T> template <int N> T Tpl<T>::magic_value() const {
   return N;
 }

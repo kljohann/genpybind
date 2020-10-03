@@ -58,6 +58,15 @@ static llvm::StringRef getBriefText(const clang::Decl *decl) {
   return {};
 }
 
+static llvm::StringRef getDocstring(const clang::FunctionDecl *function) {
+  llvm::StringRef result = getBriefText(function);
+  if (result.empty())
+    if (const clang::FunctionTemplateDecl *primary =
+            function->getPrimaryTemplate())
+      result = getBriefText(primary);
+  return result;
+}
+
 static clang::PrintingPolicy
 getPrintingPolicyForExposedNames(const clang::ASTContext &context) {
   auto policy = context.getPrintingPolicy();
@@ -308,9 +317,8 @@ void DeclContextExposer::handleDecl(llvm::raw_ostream &os,
 void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &os,
                                         const clang::NamedDecl *decl,
                                         const AnnotatedNamedDecl *annotation) {
-  if (llvm::isa<AnnotatedConstructorDecl>(annotation)) {
-    return;
-  }
+  assert(!llvm::isa<AnnotatedConstructorDecl>(annotation) &&
+         "constructors are handled in RecordExposer");
   if (const auto *annot = llvm::dyn_cast<AnnotatedFunctionDecl>(annotation)) {
     const auto *function = llvm::cast<clang::FunctionDecl>(decl);
     const auto *method = llvm::dyn_cast<clang::CXXMethodDecl>(decl);
@@ -319,19 +327,13 @@ void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &os,
     if (function->isOverloadedOperator())
       return;
 
-    llvm::StringRef comment = getBriefText(decl);
-    if (comment.empty())
-      if (const clang::FunctionTemplateDecl *primary =
-              function->getPrimaryTemplate())
-        comment = getBriefText(primary);
-
     os << ((method != nullptr && method->isStatic()) ? "context.def_static("
                                                      : "context.def(");
     emitStringLiteral(os, annot->getSpelling());
     os << ", ";
     emitFunctionPointer(os, function);
     os << ", ";
-    emitStringLiteral(os, comment);
+    emitStringLiteral(os, getDocstring(function));
     // TODO: Emit arguments, policies
     os << ");\n";
   }
@@ -426,8 +428,7 @@ void RecordExposer::emitIntroducer(llvm::raw_ostream &os,
 }
 
 void RecordExposer::finalizeDefinition(llvm::raw_ostream &os) {
-  // As a placeholder always add a constructor for now.
-  os << "context.def(::pybind11::init<>(), \"\");";
+  os << "(void)context;\n";
 }
 
 void RecordExposer::emitType(llvm::raw_ostream &os) {
@@ -451,4 +452,27 @@ void RecordExposer::emitType(llvm::raw_ostream &os) {
   }
 
   os << ">";
+}
+
+void RecordExposer::handleDeclImpl(llvm::raw_ostream &os,
+                                   const clang::NamedDecl *decl,
+                                   const AnnotatedNamedDecl *annotation) {
+  const auto *record_decl =
+      llvm::cast<clang::CXXRecordDecl>(annotated_decl->getDecl());
+  if (llvm::isa<AnnotatedConstructorDecl>(annotation)) {
+    const auto *constructor = llvm::dyn_cast<clang::CXXConstructorDecl>(decl);
+    if (constructor->isMoveConstructor() || record_decl->isAbstract())
+      return;
+
+    os << "context.def(pybind11::init<";
+    emitParameterTypes(os, constructor);
+    os << ">(), ";
+    emitStringLiteral(os, getDocstring(constructor));
+    // TODO: Emit arguments, policies
+    os << ");\n";
+    return;
+  }
+
+  // Fall back to generic implementation.
+  DeclContextExposer::handleDeclImpl(os, decl, annotation);
 }

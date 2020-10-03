@@ -37,6 +37,11 @@ def test_templated_member_function():
     assert inst.plus_one(2.5) == 3.5
 
 
+def test_templated_constructor():
+    inst = m.TemplatedConstructor(3)
+    assert inst.getValue() == 3
+
+
 def test_templated_member_function_of_template_instance():
     inst = m.Tpl_int_()
     assert inst.magic_value() == 42

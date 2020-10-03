@@ -62,7 +62,7 @@ public:
                   bool default_visibility);
   virtual void finalizeDefinition(llvm::raw_ostream &os);
 
-private:
+protected:
   virtual void handleDeclImpl(llvm::raw_ostream &os,
                               const clang::NamedDecl *decl,
                               const AnnotatedNamedDecl *annotation);
@@ -111,6 +111,8 @@ public:
 
 private:
   void emitType(llvm::raw_ostream &os);
+  void handleDeclImpl(llvm::raw_ostream &os, const clang::NamedDecl *decl,
+                      const AnnotatedNamedDecl *annotation) override;
 };
 
 } // namespace genpybind

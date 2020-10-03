@@ -30,6 +30,15 @@ struct GENPYBIND(visible) Example {
 extern template int Example::plus_one(int);
 extern template double Example::plus_one(double);
 
+struct GENPYBIND(visible) TemplatedConstructor {
+  template <typename T> TemplatedConstructor(T value);
+
+  int value = 0;
+  int getValue() { return value; }
+};
+
+extern template TemplatedConstructor::TemplatedConstructor(int);
+
 template <typename T> struct GENPYBIND(visible) Tpl {
   template <int N> T magic_value() const;
 };

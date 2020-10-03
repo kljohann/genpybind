@@ -24,3 +24,18 @@ struct GENPYBIND(visible) DerivedCRTP
     : public deeply::nested::CRTP<DerivedCRTP> {};
 
 struct GENPYBIND(visible) DerivedFromHidden : public deeply::nested::Hidden {};
+
+struct GENPYBIND(visible) Abstract {
+  virtual ~Abstract() = default;
+
+  static bool static_method();
+
+  virtual int abstract() const = 0;
+  virtual int defined_in_base() const;
+  virtual bool overridden() const;
+};
+
+struct GENPYBIND(visible) DerivedFromAbstract : public Abstract {
+  int abstract() const override;
+  bool overridden() const override;
+};
