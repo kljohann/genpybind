@@ -97,7 +97,7 @@ static void emitParameters(llvm::raw_ostream &os,
   unsigned index = 0;
   for (const clang::ParmVarDecl *param : function->parameters()) {
     // TODO: Do not emit `arg()` for `pybind11::{kw,}args`.
-    os << ", pybind11::arg(";
+    os << ", ::pybind11::arg(";
     emitStringLiteral(os, param->getName());
     os << ")";
     if (annotation->noconvert.count(index) != 0)
@@ -113,17 +113,17 @@ static void emitFunctionPointer(llvm::raw_ostream &os,
                                 const clang::FunctionDecl *function) {
   // TODO: All names need to be printed in a fully-qualified way (also nested
   // template arguments)
-  os << "pybind11::overload_cast<";
+  auto policy = getPrintingPolicyForExposedNames(function->getASTContext());
+  os << "::pybind11::overload_cast<";
   emitParameterTypes(os, function);
-  os << ">(&";
-  function->printQualifiedName(os);
+  os << ">(&::";
+  function->printQualifiedName(os, policy);
   if (const clang::TemplateArgumentList *args =
           function->getTemplateSpecializationArgs()) {
-    auto policy = getPrintingPolicyForExposedNames(function->getASTContext());
     clang::printTemplateArgumentList(os, args->asArray(), policy);
   }
   if (function->getType()->castAs<clang::FunctionType>()->isConst())
-    os << ", pybind11::const_";
+    os << ", ::pybind11::const_";
   os << ")";
 }
 
@@ -484,7 +484,7 @@ void RecordExposer::handleDeclImpl(llvm::raw_ostream &os,
     if (constructor->isMoveConstructor() || record_decl->isAbstract())
       return;
 
-    os << "context.def(pybind11::init<";
+    os << "context.def(::pybind11::init<";
     emitParameterTypes(os, constructor);
     os << ">(), ";
     emitStringLiteral(os, getDocstring(constructor));
