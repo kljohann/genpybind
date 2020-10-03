@@ -12,3 +12,15 @@ template int constant<42>();
 template int oops<123>();
 template int oops<321>();
 template int oops<42>();
+
+template <typename T> T Example::plus_one(T value) { return value + 1; }
+
+template int Example::plus_one(int);
+template double Example::plus_one(double);
+
+template <typename T> template <int N> T Tpl<T>::magic_value() const {
+  return N;
+}
+
+template struct Tpl<int>;
+template int Tpl<int>::magic_value<42>() const;

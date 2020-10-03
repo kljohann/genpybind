@@ -22,3 +22,17 @@ extern template int oops<321>();
 
 /// But an instantiation can be given a distinct name.
 extern template GENPYBIND(expose_as(oops_42)) int oops<42>();
+
+struct GENPYBIND(visible) Example {
+  template <typename T> T plus_one(T val);
+};
+
+extern template int Example::plus_one(int);
+extern template double Example::plus_one(double);
+
+template <typename T> struct GENPYBIND(visible) Tpl {
+  template <int N> T magic_value() const;
+};
+
+extern template struct Tpl<int>;
+extern template int Tpl<int>::magic_value<42>() const;

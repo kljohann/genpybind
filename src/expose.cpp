@@ -95,6 +95,8 @@ static void emitFunctionPointer(llvm::raw_ostream &os,
     auto policy = getPrintingPolicyForExposedNames(function->getASTContext());
     clang::printTemplateArgumentList(os, args->asArray(), policy);
   }
+  if (function->getType()->castAs<clang::FunctionType>()->isConst())
+    os << ", pybind11::const_";
   os << ")";
 }
 
@@ -307,16 +309,24 @@ void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &os,
                                         const clang::NamedDecl *decl,
                                         const AnnotatedNamedDecl *annotation) {
   if (llvm::isa<AnnotatedConstructorDecl>(annotation)) {
-  } else if (llvm::isa<AnnotatedMethodDecl>(annotation)) {
-  } else if (const auto *annot =
-                 llvm::dyn_cast<AnnotatedFunctionDecl>(annotation)) {
+    return;
+  }
+  if (const auto *annot = llvm::dyn_cast<AnnotatedFunctionDecl>(annotation)) {
     const auto *function = llvm::cast<clang::FunctionDecl>(decl);
+    const auto *method = llvm::dyn_cast<clang::CXXMethodDecl>(decl);
+
+    // Operators are handled separately in `RecordExposer::finalizeDefinition`.
+    if (function->isOverloadedOperator())
+      return;
+
     llvm::StringRef comment = getBriefText(decl);
     if (comment.empty())
       if (const clang::FunctionTemplateDecl *primary =
               function->getPrimaryTemplate())
         comment = getBriefText(primary);
-    os << "context.def(";
+
+    os << ((method != nullptr && method->isStatic()) ? "context.def_static("
+                                                     : "context.def(");
     emitStringLiteral(os, annot->getSpelling());
     os << ", ";
     emitFunctionPointer(os, function);

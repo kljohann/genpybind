@@ -28,3 +28,15 @@ def test_instantiations_can_be_renamed():
 @pytest.mark.xfail(reason="not available in AST")
 def test_renamed_instantiation_has_proper_docstring():
     assert "distinct name" in m.oops_42.__doc__
+
+
+def test_templated_member_function():
+    inst = m.Example()
+    assert inst.plus_one(2) == 3
+    assert isinstance(inst.plus_one(2), int)
+    assert inst.plus_one(2.5) == 3.5
+
+
+def test_templated_member_function_of_template_instance():
+    inst = m.Tpl_int_()
+    assert inst.magic_value() == 42
