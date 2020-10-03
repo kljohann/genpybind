@@ -222,22 +222,28 @@ std::string AnnotatedNamedDecl::getSpelling() const {
   if (!spelling.empty())
     return spelling;
 
+  llvm::SmallString<128> result;
+  llvm::raw_svector_ostream os(result);
+
   const auto *const decl = llvm::cast<clang::NamedDecl>(getDecl());
+  // TODO: Use same policy as in expose.cpp
   const clang::PrintingPolicy &policy =
       decl->getASTContext().getPrintingPolicy();
 
+  clang::DeclarationName name = decl->getDeclName();
+  name.print(os, policy);
+
+  if (!name.isIdentifier())
+    makeValidIdentifier(result);
+
   if (const auto *tpl_decl =
           llvm::dyn_cast<clang::ClassTemplateSpecializationDecl>(decl)) {
-    llvm::SmallString<128> result;
-    llvm::raw_svector_ostream os(result);
-    os << tpl_decl->getName();
     const clang::TemplateArgumentList &args = tpl_decl->getTemplateArgs();
     clang::printTemplateArgumentList(os, args.asArray(), policy);
     makeValidIdentifier(result);
-    return result.str().str();
   }
 
-  return decl->getName();
+  return result.str();
 }
 
 llvm::StringRef AnnotatedNamespaceDecl::getFriendlyDeclKindName() const {
