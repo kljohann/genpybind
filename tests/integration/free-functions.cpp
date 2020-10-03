@@ -10,3 +10,5 @@ int old_name() { return 123; }
 bool example::visible() { return true; }
 bool example::hidden() { return true; }
 bool not_exposed() { return true; }
+
+int missing_param_names(int lhs, int rhs) { return lhs + rhs; }

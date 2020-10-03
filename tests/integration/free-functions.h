@@ -18,3 +18,5 @@ bool hidden() GENPYBIND(hidden);
 } // namespace example
 
 bool not_exposed();
+
+int missing_param_names(int, int) GENPYBIND(visible);

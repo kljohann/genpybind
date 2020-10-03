@@ -91,6 +91,24 @@ static void emitParameterTypes(llvm::raw_ostream &os,
   }
 }
 
+static void emitParameters(llvm::raw_ostream &os,
+                           const AnnotatedFunctionDecl *annotation) {
+  const auto *function = llvm::cast<clang::FunctionDecl>(annotation->getDecl());
+  unsigned index = 0;
+  for (const clang::ParmVarDecl *param : function->parameters()) {
+    // TODO: Do not emit `arg()` for `pybind11::{kw,}args`.
+    os << ", pybind11::arg(";
+    emitStringLiteral(os, param->getName());
+    os << ")";
+    if (annotation->noconvert.count(index) != 0)
+      os << ".noconvert()";
+    if (annotation->required.count(index) != 0)
+      os << ".none(false)";
+    // TODO: Emit default value.
+    ++index;
+  }
+}
+
 static void emitFunctionPointer(llvm::raw_ostream &os,
                                 const clang::FunctionDecl *function) {
   // TODO: All names need to be printed in a fully-qualified way (also nested
@@ -334,7 +352,8 @@ void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &os,
     emitFunctionPointer(os, function);
     os << ", ";
     emitStringLiteral(os, getDocstring(function));
-    // TODO: Emit arguments, policies
+    emitParameters(os, annot);
+    // TODO: Emit policies
     os << ");\n";
   }
 }
@@ -459,7 +478,8 @@ void RecordExposer::handleDeclImpl(llvm::raw_ostream &os,
                                    const AnnotatedNamedDecl *annotation) {
   const auto *record_decl =
       llvm::cast<clang::CXXRecordDecl>(annotated_decl->getDecl());
-  if (llvm::isa<AnnotatedConstructorDecl>(annotation)) {
+  if (const auto *annot =
+          llvm::dyn_cast<AnnotatedConstructorDecl>(annotation)) {
     const auto *constructor = llvm::dyn_cast<clang::CXXConstructorDecl>(decl);
     if (constructor->isMoveConstructor() || record_decl->isAbstract())
       return;
@@ -468,7 +488,8 @@ void RecordExposer::handleDeclImpl(llvm::raw_ostream &os,
     emitParameterTypes(os, constructor);
     os << ">(), ";
     emitStringLiteral(os, getDocstring(constructor));
-    // TODO: Emit arguments, policies
+    emitParameters(os, annot);
+    // TODO: Emit policies
     os << ");\n";
     return;
   }
