@@ -1,6 +1,11 @@
 import methods as m
 
 
+def test_can_have_docstring():
+    assert "A brief docstring." in m.Example.__doc__
+    assert "Another brief docstring." in m.Example.public_method.__doc__
+
+
 def test_public_methods_are_exposed():
     inst = m.Example()
     assert inst.public_method() == 5

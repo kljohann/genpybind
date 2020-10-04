@@ -447,7 +447,9 @@ void RecordExposer::emitIntroducer(llvm::raw_ostream &os,
 }
 
 void RecordExposer::finalizeDefinition(llvm::raw_ostream &os) {
-  os << "(void)context;\n";
+  os << "context.doc() = ";
+  emitStringLiteral(os, getBriefText(annotated_decl->getDecl()));
+  os << ";\n";
 }
 
 void RecordExposer::emitType(llvm::raw_ostream &os) {

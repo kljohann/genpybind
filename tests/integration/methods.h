@@ -2,7 +2,9 @@
 
 #include "genpybind.h"
 
+/// A brief docstring.
 struct GENPYBIND(visible) Example {
+  /// Another brief docstring.
   int public_method();
   int public_const_method() const;
 
