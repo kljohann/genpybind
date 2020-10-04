@@ -156,6 +156,7 @@ public:
     TranslationUnitExposer exposer(*sema, *graph, visibilities, annotations);
 
     llvm::outs() << "#include \"" << main_file << "\"\n"
+                 << "#include <genpybind/runtime.h>\n"
                  << "#include <pybind11/pybind11.h>\n\n";
 
     exposer.emitModule(llvm::outs(), module_name);

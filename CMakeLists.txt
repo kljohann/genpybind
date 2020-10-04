@@ -70,5 +70,11 @@ target_link_libraries(genpybind-tool PRIVATE genpybind)
 
 add_subdirectory(extern/pybind11)
 
+add_library(genpybind-runtime INTERFACE)
+target_include_directories(genpybind-runtime
+  INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/runtime>
+  # INTERFACE $<INSTALL_INTERFACE:...>
+)
+
 add_custom_target(test)
 add_subdirectory(tests)

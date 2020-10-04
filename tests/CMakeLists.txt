@@ -61,7 +61,7 @@ foreach(test_implementation IN LISTS integration_tests)
     VERBATIM USES_TERMINAL
   )
   pybind11_add_module(${module_name} MODULE ${test_bindings})
-  target_link_libraries(${module_name} PUBLIC ${test_target})
+  target_link_libraries(${module_name} PUBLIC ${test_target} genpybind-runtime)
   add_custom_target(${test_target}-test
     COMMAND Python3::Interpreter -m pytest -q
     ${CMAKE_CURRENT_SOURCE_DIR}/integration/${test_name}_test.py

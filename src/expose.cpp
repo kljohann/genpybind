@@ -337,6 +337,29 @@ void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &os,
                                         const AnnotatedNamedDecl *annotation) {
   assert(!llvm::isa<AnnotatedConstructorDecl>(annotation) &&
          "constructors are handled in RecordExposer");
+
+  if (const auto *annot =
+          llvm::dyn_cast<AnnotatedTypedefNameDecl>(annotation)) {
+    // Type aliases are hidden by default and do not inherit the default
+    // visibility, thus a second check is necessary here.
+    if (!annot->visible.hasValue())
+      return;
+    if (annot->expose_here)
+      return;
+
+    const auto *alias = llvm::cast<clang::TypedefNameDecl>(decl);
+    const clang::TagDecl *target = alias->getUnderlyingType()->getAsTagDecl();
+    if (target == nullptr)
+      return;
+
+    os << "context.attr(";
+    emitStringLiteral(os, annot->getSpelling());
+    os << ") = ::genpybind::getObjectForType<" << getFullyQualifiedName(target)
+       << ">();\n";
+
+    return;
+  }
+
   if (const auto *annot = llvm::dyn_cast<AnnotatedFunctionDecl>(annotation)) {
     const auto *function = llvm::cast<clang::FunctionDecl>(decl);
     const auto *method = llvm::dyn_cast<clang::CXXMethodDecl>(decl);
