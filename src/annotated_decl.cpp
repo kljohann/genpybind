@@ -667,9 +667,15 @@ bool AnnotatedConstructorDecl::processAnnotation(const Annotation &annotation) {
   if (AnnotatedFunctionDecl::processAnnotation(annotation))
     return true;
 
+  const auto* constructor = llvm::cast<clang::CXXConstructorDecl>(getDecl());
   ArgumentsConsumer arguments(annotation.getArguments());
   switch (annotation.getKind().value()) {
   case AnnotationKind::ImplicitConversion: {
+    if (constructor->getNumParams() != 1 ||
+        !constructor->isConvertingConstructor(/*AllowExplicit=*/false))
+      Diagnostics::report(getDecl(),
+                          Diagnostics::Kind::AnnotationInvalidForDeclKindError)
+          << "non-converting constructor" << toString(annotation);
     if (arguments.empty()) {
       implicit_conversion = true;
     } else if (auto value = arguments.take<LiteralValue::Kind::Boolean>()) {

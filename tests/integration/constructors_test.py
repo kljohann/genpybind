@@ -43,3 +43,32 @@ def test_required_arguments_are_supported():
     m.RejectsNone(valid)
     with pytest.raises(TypeError, match="incompatible constructor arguments"):
         m.RejectsNone(None)
+
+
+def test_class_can_be_implicitly_constructible():
+    assert m.accepts_implicit(123) == 123
+    assert m.accepts_implicit(m.Example(5)) == 5
+
+    assert m.AcceptsImplicit(123).value() == 123
+    assert m.AcceptsImplicit(m.Example(4)).value() == 4
+
+    assert m.accepts_implicit_ref(m.Example(3)) == 3
+    assert m.accepts_implicit_ptr(m.Example(2)) == 2
+    with pytest.raises(TypeError, match="incompatible function arguments"):
+        assert m.accepts_implicit_ptr(None)
+
+
+def test_noconvert_prevents_implicit_conversion():
+    with pytest.raises(TypeError, match="incompatible function arguments"):
+        m.noconvert_implicit(123)
+    assert m.noconvert_implicit(m.Implicit(123)) == 123
+    with pytest.raises(TypeError, match="incompatible function arguments"):
+        m.noconvert_implicit(m.Example(5))
+    assert m.noconvert_implicit(m.Implicit(m.Example(5))) == 5
+
+    with pytest.raises(TypeError, match="incompatible constructor arguments"):
+        m.NoconvertImplicit(123)
+    assert m.NoconvertImplicit(m.Implicit(123)).value() == 123
+    with pytest.raises(TypeError, match="incompatible constructor arguments"):
+        m.NoconvertImplicit(m.Example(5))
+    assert m.NoconvertImplicit(m.Implicit(m.Example(5))).value() == 5

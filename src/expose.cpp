@@ -486,6 +486,22 @@ void RecordExposer::handleDeclImpl(llvm::raw_ostream &os,
     if (constructor->isMoveConstructor() || record_decl->isAbstract())
       return;
 
+    if (annot->implicit_conversion) {
+      const clang::ASTContext &context = decl->getASTContext();
+      clang::QualType from_qual_type = constructor->getParamDecl(0)->getType();
+      clang::QualType to_qual_type = context.getTypeDeclType(record_decl);
+      auto policy = getPrintingPolicyForExposedNames(context);
+      os << "::pybind11::implicitly_convertible<"
+         << clang::TypeName::getFullyQualifiedName(from_qual_type, context,
+                                                   policy,
+                                                   /*WithGlobalNsPrefix=*/true)
+         << ", "
+         << clang::TypeName::getFullyQualifiedName(to_qual_type, context,
+                                                   policy,
+                                                   /*WithGlobalNsPrefix=*/true)
+         << ">();\n";
+    }
+
     os << "context.def(::pybind11::init<";
     emitParameterTypes(os, constructor);
     os << ">(), ";
