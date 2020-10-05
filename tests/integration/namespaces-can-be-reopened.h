@@ -22,3 +22,14 @@ bool visible_in_first() GENPYBIND(visible);
 namespace submodule GENPYBIND_MODULE {
 bool visible_in_second() GENPYBIND(visible);
 } // namespace submodule
+
+namespace nothing_exposed_in_original_ns {}
+
+namespace nothing_exposed_in_original_ns {
+struct GENPYBIND(visible) ButOnlyLater {};
+} // namespace nothing_exposed_in_original_ns
+
+namespace nothing_exposed_in_original_ns {
+GENPYBIND(visible)
+bool and_later();
+} // namespace nothing_exposed_in_original_ns

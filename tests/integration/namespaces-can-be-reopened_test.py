@@ -14,3 +14,8 @@ def test_hidden_functions_are_absent():
 def test_submodule_can_be_reopened():
     assert m.submodule.visible_in_first()
     assert m.submodule.visible_in_second()
+
+
+def test_original_namespace_can_be_empty():
+    assert m.ButOnlyLater()
+    assert m.and_later()

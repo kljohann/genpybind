@@ -173,6 +173,8 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
   worklist.reserve(sorted_contexts.size());
 
   {
+    llvm::DenseMap<const clang::NamespaceDecl *, const clang::DeclContext *>
+        covered_namespaces;
     DiscriminateIdentifiers used_identifiers;
     for (const clang::DeclContext *decl_context : sorted_contexts) {
       // Since the decls to expose in each context are discovered via the name
@@ -181,9 +183,20 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
       // re-opened namespace.
       if (!decl_context->isLookupContext())
         continue;
-      if (const auto *ns = llvm::dyn_cast<clang::NamespaceDecl>(decl_context))
-        if (!ns->isOriginalNamespace())
+      if (const auto *ns = llvm::dyn_cast<clang::NamespaceDecl>(decl_context)) {
+        auto inserted = covered_namespaces.try_emplace(
+            ns->getOriginalNamespace(), decl_context);
+        if (!inserted.second) {
+          auto existing_identifier =
+              context_identifiers.find(inserted.first->getSecond());
+          assert(existing_identifier != context_identifiers.end() &&
+                 "identifier should have been stored at this point");
+          auto result = context_identifiers.try_emplace(
+              decl_context, existing_identifier->getSecond());
+          assert(result.second);
           continue;
+        }
+      }
 
       llvm::SmallString<128> name("context");
       if (auto const *type_decl =
@@ -197,6 +210,7 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
       makeValidIdentifier(name);
       auto result = context_identifiers.try_emplace(
           decl_context, used_identifiers.discriminate(name));
+      assert(result.second);
       llvm::StringRef identifier = result.first->getSecond();
       worklist.push_back(
           {decl_context,
@@ -222,12 +236,8 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
     auto parent = parents.find(item.decl_context);
     assert(parent != parents.end() &&
            "context should have an associated ancestor");
-    const auto *parent_decl = parent->getSecond();
-    if (const auto *ns =
-            llvm::dyn_cast_or_null<clang::NamespaceDecl>(parent_decl))
-      parent_decl = ns->getOriginalNamespace();
     auto parent_identifier = context_identifiers.find(
-        llvm::cast_or_null<clang::DeclContext>(parent_decl));
+        llvm::cast_or_null<clang::DeclContext>(parent->getSecond()));
     assert(parent_identifier != context_identifiers.end() &&
            "identifier should have been stored at this point");
 

@@ -27,3 +27,20 @@ using X GENPYBIND(visible) = ::X;
 namespace six GENPYBIND(module(sechs), module(seis)) {
 using X GENPYBIND(visible) = ::X;
 }
+
+namespace reopened GENPYBIND(module) {}
+
+namespace reopened GENPYBIND(module) {
+struct GENPYBIND(visible) Y {};
+using X GENPYBIND(visible) = ::X;
+}
+
+namespace reopened_2 GENPYBIND(module) {
+struct GENPYBIND(visible) Y {};
+using X GENPYBIND(visible) = ::X;
+}
+
+namespace reopened_2 GENPYBIND(module) {
+struct GENPYBIND(visible) Z {};
+using X_2 GENPYBIND(visible) = ::X;
+}
