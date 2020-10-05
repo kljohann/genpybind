@@ -44,7 +44,6 @@ ANNOTATION_KIND(Encourage, encourage) // ()
 
 // FieldDecl or VarDecl
 ANNOTATION_KIND(Readonly, readonly) // (Boolean)?
-ANNOTATION_KIND(Writable, writable) // (Boolean)?
 
 #undef ANNOTATION_KIND
 // Local Variables:

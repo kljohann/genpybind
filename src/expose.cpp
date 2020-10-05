@@ -337,6 +337,8 @@ void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &os,
                                         const AnnotatedNamedDecl *annotation) {
   assert(!llvm::isa<AnnotatedConstructorDecl>(annotation) &&
          "constructors are handled in RecordExposer");
+  const clang::ASTContext &ast_context = decl->getASTContext();
+  auto printing_policy = getPrintingPolicyForExposedNames(ast_context);
 
   if (const auto *annot =
           llvm::dyn_cast<AnnotatedTypedefNameDecl>(annotation)) {
@@ -357,6 +359,18 @@ void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &os,
     os << ") = ::genpybind::getObjectForType<" << getFullyQualifiedName(target)
        << ">();\n";
 
+    return;
+  }
+
+  if (const auto *annot = llvm::dyn_cast<AnnotatedFieldOrVarDecl>(annotation)) {
+    // For fields and static member variables see `RecordExposer`.
+    assert(!llvm::isa<clang::FieldDecl>(decl) &&
+           "should have been processed by RecordExposer");
+    os << "context.attr(";
+    emitStringLiteral(os, annot->getSpelling());
+    os << ") = ::";
+    decl->printQualifiedName(os, printing_policy);
+    os << ";\n";
     return;
   }
 
@@ -503,6 +517,9 @@ void RecordExposer::handleDeclImpl(llvm::raw_ostream &os,
                                    const AnnotatedNamedDecl *annotation) {
   const auto *record_decl =
       llvm::cast<clang::CXXRecordDecl>(annotated_decl->getDecl());
+  const clang::ASTContext &ast_context = decl->getASTContext();
+  const auto printing_policy = getPrintingPolicyForExposedNames(ast_context);
+
   if (const auto *annot =
           llvm::dyn_cast<AnnotatedConstructorDecl>(annotation)) {
     const auto *constructor = llvm::dyn_cast<clang::CXXConstructorDecl>(decl);
@@ -510,17 +527,15 @@ void RecordExposer::handleDeclImpl(llvm::raw_ostream &os,
       return;
 
     if (annot->implicit_conversion) {
-      const clang::ASTContext &context = decl->getASTContext();
       clang::QualType from_qual_type = constructor->getParamDecl(0)->getType();
-      clang::QualType to_qual_type = context.getTypeDeclType(record_decl);
-      auto policy = getPrintingPolicyForExposedNames(context);
+      clang::QualType to_qual_type = ast_context.getTypeDeclType(record_decl);
       os << "::pybind11::implicitly_convertible<"
-         << clang::TypeName::getFullyQualifiedName(from_qual_type, context,
-                                                   policy,
+         << clang::TypeName::getFullyQualifiedName(from_qual_type, ast_context,
+                                                   printing_policy,
                                                    /*WithGlobalNsPrefix=*/true)
          << ", "
-         << clang::TypeName::getFullyQualifiedName(to_qual_type, context,
-                                                   policy,
+         << clang::TypeName::getFullyQualifiedName(to_qual_type, ast_context,
+                                                   printing_policy,
                                                    /*WithGlobalNsPrefix=*/true)
          << ">();\n";
     }
@@ -531,6 +546,18 @@ void RecordExposer::handleDeclImpl(llvm::raw_ostream &os,
     emitStringLiteral(os, getDocstring(constructor));
     emitParameters(os, annot);
     // TODO: Emit policies
+    os << ");\n";
+    return;
+  }
+
+  if (const auto *annot = llvm::dyn_cast<AnnotatedFieldOrVarDecl>(annotation)) {
+    clang::QualType type = llvm::cast<clang::ValueDecl>(decl)->getType();
+    bool readonly = type.isConstQualified() || annot->readonly;
+    os << (readonly ? "context.def_readonly" : "context.def_readwrite");
+    os << (llvm::isa<clang::VarDecl>(decl) ? "_static(" : "(");
+    emitStringLiteral(os, annotation->getSpelling());
+    os << ", &::";
+    decl->printQualifiedName(os, printing_policy);
     os << ");\n";
     return;
   }

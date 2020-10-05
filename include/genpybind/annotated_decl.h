@@ -171,6 +171,22 @@ public:
   static bool classof(const AnnotatedDecl *decl);
 };
 
+class AnnotatedFieldOrVarDecl : public AnnotatedNamedDecl {
+public:
+  bool readonly = false;
+
+  AnnotatedFieldOrVarDecl(const clang::FieldDecl *decl);
+  AnnotatedFieldOrVarDecl(const clang::VarDecl *decl);
+
+  llvm::StringRef getFriendlyDeclKindName() const override;
+  bool processAnnotation(const annotations::Annotation &annotation) override;
+
+  static bool classof(const AnnotatedDecl *decl) {
+    return clang::FieldDecl::classofKind(decl->getKind()) ||
+           clang::VarDecl::classofKind(decl->getKind());
+  }
+};
+
 /// Holds and owns annotations s.t. they do not have to be processed multiple
 /// times.  Currently only named declarations are checked for annotations.
 class AnnotationStorage {

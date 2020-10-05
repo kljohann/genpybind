@@ -131,6 +131,10 @@ AnnotatedDecl::create(const clang::NamedDecl *named_decl) {
     return std::make_unique<AnnotatedEnumDecl>(decl);
   if (const auto *decl = llvm::dyn_cast<clang::RecordDecl>(named_decl))
     return std::make_unique<AnnotatedRecordDecl>(decl);
+  if (const auto *decl = llvm::dyn_cast<clang::FieldDecl>(named_decl))
+    return std::make_unique<AnnotatedFieldOrVarDecl>(decl);
+  if (const auto *decl = llvm::dyn_cast<clang::VarDecl>(named_decl))
+    return std::make_unique<AnnotatedFieldOrVarDecl>(decl);
 
   if (llvm::isa<clang::CXXConversionDecl>(named_decl) ||
       llvm::isa<clang::CXXDeductionGuideDecl>(named_decl) ||
@@ -697,6 +701,41 @@ bool AnnotatedConstructorDecl::processAnnotation(const Annotation &annotation) {
 
 bool AnnotatedConstructorDecl::classof(const AnnotatedDecl *decl) {
   return clang::CXXConstructorDecl::classofKind(decl->getKind());
+}
+
+AnnotatedFieldOrVarDecl::AnnotatedFieldOrVarDecl(const clang::FieldDecl *decl)
+    : AnnotatedNamedDecl(decl) {}
+
+AnnotatedFieldOrVarDecl::AnnotatedFieldOrVarDecl(const clang::VarDecl *decl)
+    : AnnotatedNamedDecl(decl) {}
+
+llvm::StringRef AnnotatedFieldOrVarDecl::getFriendlyDeclKindName() const {
+  return "variable";
+}
+
+bool AnnotatedFieldOrVarDecl::processAnnotation(const Annotation &annotation) {
+  if (AnnotatedNamedDecl::processAnnotation(annotation))
+    return true;
+
+  ArgumentsConsumer arguments(annotation.getArguments());
+  switch (annotation.getKind().value()) {
+  case AnnotationKind::Readonly:
+    // TODO: `readonly` is only supported for fields and static member variables.
+    if (arguments.empty()) {
+      readonly = true;
+    } else if (auto value = arguments.take<LiteralValue::Kind::Boolean>()) {
+      readonly = value->getBoolean();
+    } else if ((value = arguments.take())) {
+      reportWrongArgumentTypeError(getDecl(), annotation.getKind(), *value);
+    }
+    break;
+  default:
+    return false;
+  }
+
+  if (arguments)
+    reportWrongNumberOfArgumentsError(getDecl(), annotation.getKind());
+  return true;
 }
 
 AnnotatedDecl *AnnotationStorage::getOrInsert(const clang::Decl *declaration) {
