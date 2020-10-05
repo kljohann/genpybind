@@ -8,11 +8,8 @@ struct GENPYBIND(visible) Example {
   /// Another brief docstring.  A default flag value is used.
   Example(int value);
 
-  int value() const;
-  bool flag() const;
-
-  int value_;
-  bool flag_;
+  int value;
+  bool flag;
 };
 
 struct GENPYBIND(visible) AcceptsNone {
@@ -25,12 +22,11 @@ struct GENPYBIND(visible) RejectsNone {
 };
 
 struct GENPYBIND(visible) Implicit {
-  Implicit(int value) GENPYBIND(implicit_conversion) : value_(value) {}
+  Implicit(int value) GENPYBIND(implicit_conversion) : value(value) {}
   Implicit(Example example) GENPYBIND(implicit_conversion)
-      : value_(example.value()) {}
+      : value(example.value) {}
 
-  int value() const { return value_; }
-  int value_;
+  int value;
 };
 
 GENPYBIND(visible)
@@ -40,26 +36,23 @@ GENPYBIND(noconvert(value))
 int noconvert_implicit(Implicit value);
 
 struct GENPYBIND(visible) AcceptsImplicit {
-  AcceptsImplicit(Implicit value) : value_(value.value()) {}
+  AcceptsImplicit(Implicit value) : value(value.value) {}
 
-  int value() const { return value_; }
-  int value_;
+  int value;
 };
 
 struct GENPYBIND(visible) NoconvertImplicit {
   GENPYBIND(noconvert(value))
-  NoconvertImplicit(Implicit value) : value_(value.value()) {}
+  NoconvertImplicit(Implicit value) : value(value.value) {}
 
-  int value() const { return value_; }
-  int value_;
+  int value;
 };
 
 struct GENPYBIND(visible) ImplicitRef {
   ImplicitRef(const Example &example) GENPYBIND(implicit_conversion)
-      : value_(example.value()) {}
+      : value(example.value) {}
 
-  int value() const { return value_; }
-  int value_;
+  int value;
 };
 
 GENPYBIND(visible)
@@ -67,10 +60,9 @@ int accepts_implicit_ref(ImplicitRef value);
 
 struct GENPYBIND(visible) ImplicitPtr {
   ImplicitPtr(const Example *example) GENPYBIND(implicit_conversion)
-      : value_(example == nullptr ? -1 : example->value()) {}
+      : value(example == nullptr ? -1 : example->value) {}
 
-  int value() const { return value_; }
-  int value_;
+  int value;
 };
 
 GENPYBIND(visible)
