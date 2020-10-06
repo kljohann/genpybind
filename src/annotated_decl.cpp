@@ -54,6 +54,18 @@ bool genpybind::hasAnnotations(const clang::Decl *decl) {
                       });
 }
 
+llvm::SmallVector<llvm::StringRef, 1>
+genpybind::getAnnotationStrings(const clang::Decl *decl) {
+  llvm::SmallVector<llvm::StringRef, 1> result;
+  for (const auto *attr : decl->specific_attrs<::clang::AnnotateAttr>()) {
+    ::llvm::StringRef annotation_text = attr->getAnnotation();
+    if (!annotation_text.consume_front(kLozenge))
+      continue;
+    result.push_back(annotation_text);
+  }
+  return result;
+}
+
 static Parser::Annotations parseAnnotations(const ::clang::Decl *decl) {
   Parser::Annotations annotations;
 

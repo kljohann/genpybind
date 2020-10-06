@@ -13,10 +13,7 @@ namespace genpybind {
 
 std::string getNameForDisplay(const clang::Decl *decl);
 
-class Diagnostics {
-  clang::DiagnosticsEngine &engine;
-
-public:
+struct Diagnostics {
   enum class Kind {
     AlreadyExposedElsewhereError,
     AnnotationContainsUnknownBaseTypeWarning,
@@ -26,6 +23,7 @@ public:
     AnnotationInvalidSpellingError,
     AnnotationWrongArgumentTypeError,
     AnnotationWrongNumberOfArgumentsError,
+    AnnotationsNeedToMatchCanonicalDeclError,
     ConflictingAnnotationsError,
     ExposeHereCycleError,
     IgnoringQualifiersOnAliasWarning,
@@ -34,10 +32,9 @@ public:
     UnsupportedAliasTargetError,
   };
 
-  Diagnostics(clang::DiagnosticsEngine &engine) : engine(engine) {}
-
   static clang::DiagnosticBuilder report(const clang::Decl *decl, Kind kind);
-  clang::DiagnosticBuilder report(clang::SourceLocation loc, Kind kind);
+  static clang::DiagnosticBuilder report(const clang::Decl *decl,
+                                         unsigned diag_id);
 };
 
 } // namespace genpybind

@@ -56,6 +56,11 @@ static unsigned getCustomDiagID(clang::DiagnosticsEngine &engine,
     return engine.getCustomDiagID(
         clang::DiagnosticsEngine::Error,
         "Wrong number of arguments for '%0' annotation");
+  case Kind::AnnotationsNeedToMatchCanonicalDeclError:
+    return engine.getCustomDiagID(
+        clang::DiagnosticsEngine::Error,
+        "Annotations need to match those of the "
+        "%select{canonical declaration|original namespace}0");
   case Kind::ConflictingAnnotationsError:
     return engine.getCustomDiagID(
         clang::DiagnosticsEngine::Error,
@@ -83,12 +88,12 @@ static unsigned getCustomDiagID(clang::DiagnosticsEngine &engine,
 
 auto Diagnostics::report(const clang::Decl *decl, Kind kind)
     -> clang::DiagnosticBuilder {
-  clang::ASTContext &context = decl->getASTContext();
-  return Diagnostics(context.getDiagnostics()).report(decl->getLocation(), kind)
-         << decl->getSourceRange();
+  clang::DiagnosticsEngine &engine = decl->getASTContext().getDiagnostics();
+  return report(decl, getCustomDiagID(engine, kind));
 }
 
-auto Diagnostics::report(clang::SourceLocation loc, Kind kind)
+auto Diagnostics::report(const clang::Decl *decl, unsigned diag_id)
     -> clang::DiagnosticBuilder {
-  return engine.Report(loc, getCustomDiagID(engine, kind));
+  clang::DiagnosticsEngine &engine = decl->getASTContext().getDiagnostics();
+  return engine.Report(decl->getLocation(), diag_id) << decl->getSourceRange();
 }

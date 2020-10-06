@@ -8,5 +8,5 @@ namespace example GENPYBIND(module("uiae", true)) {} // namespace )
 // CHECK-NEXT: namespace example GENPYBIND(module("uiae", true)) {}
 // CHECK-NEXT: ~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // CHECK: arguments.h:[[# @LINE + 1]]:11: error: Wrong type of argument for 'module' annotation: 123
-namespace example GENPYBIND(module(123)) {} // namespace )
+namespace example_2 GENPYBIND(module(123)) {} // namespace )
 // CHECK: 2 errors generated.

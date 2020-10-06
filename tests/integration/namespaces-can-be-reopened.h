@@ -10,9 +10,9 @@ bool visible_in_first();
 bool hidden_in_first() GENPYBIND(hidden);
 } // namespace example
 
-namespace example {
-bool visible_in_second() GENPYBIND(visible);
-bool hidden_in_second();
+namespace example GENPYBIND_VISIBLE {
+bool visible_in_second();
+bool hidden_in_second() GENPYBIND(hidden);
 } // namespace example
 
 namespace submodule GENPYBIND_MODULE {

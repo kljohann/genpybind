@@ -61,6 +61,8 @@ public:
 
   void warnIfAliasHasQualifiers(const clang::TypedefNameDecl *decl);
 
+  void errorIfAnnotationsDoNotMatchCanonicalDecl(const clang::Decl *decl);
+
   bool VisitTypedefNameDecl(const clang::TypedefNameDecl *decl) {
     // Only typedefs with explicit annotations are considered.
     if (!hasAnnotations(decl) || decl->getDeclContext()->isDependentContext())
@@ -72,6 +74,7 @@ public:
 
   bool VisitNamespaceDecl(const clang::NamespaceDecl *decl) {
     decl_contexts.push_back(decl);
+    errorIfAnnotationsDoNotMatchCanonicalDecl(decl);
     return true;
   }
 
