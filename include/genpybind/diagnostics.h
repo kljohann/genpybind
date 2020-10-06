@@ -28,6 +28,8 @@ struct Diagnostics {
     ExposeHereCycleError,
     IgnoringQualifiersOnAliasWarning,
     PreviouslyExposedHereNote,
+    PropertyAlreadyDefinedError,
+    PropertyHasNoGetterError,
     UnreachableDeclContextWarning,
     UnsupportedAliasTargetError,
   };

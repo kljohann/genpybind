@@ -4,12 +4,14 @@
 #include "genpybind/visible_decls.h"
 
 #include <llvm/ADT/Optional.h>
+#include <llvm/ADT/StringMap.h>
 #include <llvm/ADT/StringRef.h>
 
 #include <memory>
 #include <string>
 
 namespace clang {
+class CXXMethodDecl;
 class DeclContext;
 class EnumDecl;
 class NamespaceDecl;
@@ -98,6 +100,11 @@ private:
 class RecordExposer : public DeclContextExposer {
   const DeclContextGraph &graph;
   const AnnotatedRecordDecl *annotated_decl;
+  struct Property {
+    const clang::CXXMethodDecl *getter = nullptr;
+    const clang::CXXMethodDecl *setter = nullptr;
+  };
+  llvm::StringMap<Property> properties;
 
 public:
   RecordExposer(const DeclContextGraph &graph,
@@ -110,6 +117,7 @@ public:
   void finalizeDefinition(llvm::raw_ostream &os) override;
 
 private:
+  void emitProperties(llvm::raw_ostream &os);
   void emitType(llvm::raw_ostream &os);
   void handleDeclImpl(llvm::raw_ostream &os, const clang::NamedDecl *decl,
                       const AnnotatedNamedDecl *annotation) override;

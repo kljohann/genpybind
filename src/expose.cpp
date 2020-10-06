@@ -23,6 +23,7 @@
 #include <llvm/Support/raw_ostream.h>
 
 #include <cassert>
+#include <utility>
 
 using namespace genpybind;
 
@@ -384,6 +385,12 @@ void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &os,
     return;
   }
 
+  if (const auto *annot = llvm::dyn_cast<AnnotatedMethodDecl>(annotation)) {
+    // Properties are handled separately in `RecordExposer::finalizeDefinition`.
+    if (!annot->getter_for.empty() || !annot->setter_for.empty())
+      return;
+  }
+
   if (const auto *annot = llvm::dyn_cast<AnnotatedFunctionDecl>(annotation)) {
     const auto *function = llvm::cast<clang::FunctionDecl>(decl);
     const auto *method = llvm::dyn_cast<clang::CXXMethodDecl>(decl);
@@ -494,9 +501,37 @@ void RecordExposer::emitIntroducer(llvm::raw_ostream &os,
 }
 
 void RecordExposer::finalizeDefinition(llvm::raw_ostream &os) {
+  emitProperties(os);
   os << "context.doc() = ";
   emitStringLiteral(os, getBriefText(annotated_decl->getDecl()));
   os << ";\n";
+}
+
+void RecordExposer::emitProperties(llvm::raw_ostream &os) {
+  // TODO: Sort / make deterministic
+  for (const auto &entry : properties) {
+    llvm::StringRef name = entry.getKey();
+    const Property &property = entry.getValue();
+    if (property.getter == nullptr) {
+      if (property.setter == nullptr)
+        continue;
+      Diagnostics::report(property.setter,
+                          Diagnostics::Kind::PropertyHasNoGetterError)
+          << name;
+      continue;
+    }
+    bool writable = property.setter != nullptr;
+    os << (writable ? "context.def_property("
+                    : "context.def_property_readonly(");
+    emitStringLiteral(os, name);
+    os << ", ";
+    emitFunctionPointer(os, property.getter);
+    if (writable) {
+      os << ", ";
+      emitFunctionPointer(os, property.setter);
+    }
+    os << ");\n";
+  }
 }
 
 void RecordExposer::emitType(llvm::raw_ostream &os) {
@@ -558,6 +593,34 @@ void RecordExposer::handleDeclImpl(llvm::raw_ostream &os,
     // TODO: Emit policies
     os << ");\n";
     return;
+  }
+
+  // If the method should be turned into a property, remember this for later.
+  if (const auto *annot = llvm::dyn_cast<AnnotatedMethodDecl>(annotation)) {
+    const auto *method = llvm::cast<clang::CXXMethodDecl>(decl);
+    if (!annot->getter_for.empty() || !annot->setter_for.empty()) {
+      for (auto const &name : annot->getter_for) {
+        const clang::CXXMethodDecl *previous =
+            std::exchange(properties[name].getter, method);
+        if (previous != nullptr) {
+          Diagnostics::report(decl,
+                              Diagnostics::Kind::PropertyAlreadyDefinedError)
+              << name << 0U;
+          Diagnostics::report(previous, clang::diag::note_previous_definition);
+        }
+      }
+      for (auto const &name : annot->setter_for) {
+        const clang::CXXMethodDecl *previous =
+            std::exchange(properties[name].setter, method);
+        if (previous != nullptr) {
+          Diagnostics::report(decl,
+                              Diagnostics::Kind::PropertyAlreadyDefinedError)
+              << name << 1U;
+          Diagnostics::report(previous, clang::diag::note_previous_definition);
+        }
+      }
+      return;
+    }
   }
 
   if (const auto *annot = llvm::dyn_cast<AnnotatedFieldOrVarDecl>(annotation)) {

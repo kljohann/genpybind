@@ -74,6 +74,13 @@ static unsigned getCustomDiagID(clang::DiagnosticsEngine &engine,
   case Kind::PreviouslyExposedHereNote:
     return engine.getCustomDiagID(clang::DiagnosticsEngine::Note,
                                   "Previously exposed here");
+  case Kind::PropertyAlreadyDefinedError:
+    return engine.getCustomDiagID(
+        clang::DiagnosticsEngine::Error,
+        "%select{getter|setter}1 already defined for '%0'");
+  case Kind::PropertyHasNoGetterError:
+    return engine.getCustomDiagID(clang::DiagnosticsEngine::Error,
+                                  "No getter for the '%0' property");
   case Kind::UnreachableDeclContextWarning:
     return engine.getCustomDiagID(clang::DiagnosticsEngine::Warning,
                                   "Declaration context '%0' contains 'visible' "
