@@ -263,12 +263,19 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
     item.exposer->emitParameter(os);
     os << ") {\n";
 
+    // TODO: As the declarations possibly come from nested non-lookup contexts,
+    // in principle the default visibility of their original decl context would
+    // need to be considered.  But this is only relevant if the decl is nested
+    // inside an `ExportDecl`, since this is the only non-lookup context that
+    // has an effect on default visibility.  On the other hand, for inlined
+    // decls, the default visibility of the current lookup context should be
+    // considered.  For now, ignore the `ExportDecl` case for simplicity.
+    bool default_visibility = [&] {
+      auto it = visibilities.find(item.decl_context);
+      return it != visibilities.end() ? it->getSecond() : false;
+    }();
+
     auto handle_decl = [&](const clang::NamedDecl *proposed_decl) {
-      // Use default visibility of original (possibly transparent) decl context.
-      bool default_visibility = [&] {
-        auto it = visibilities.find(proposed_decl->getDeclContext());
-        return it != visibilities.end() ? it->getSecond() : false;
-      }();
       const auto *annotation = llvm::dyn_cast<AnnotatedNamedDecl>(
           annotations.getOrInsert(proposed_decl));
       item.exposer->handleDecl(os, proposed_decl, annotation,
