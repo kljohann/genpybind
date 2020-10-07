@@ -13,6 +13,7 @@ struct GENPYBIND(visible) Example {
   int overloaded(int value) const;
   double overloaded(double value) const;
 
+  void deleted_method() = delete;
   void hidden_method() GENPYBIND(hidden);
 
   static Example static_method();

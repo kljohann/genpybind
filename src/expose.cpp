@@ -396,7 +396,7 @@ void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &os,
     const auto *method = llvm::dyn_cast<clang::CXXMethodDecl>(decl);
 
     // Operators are handled separately in `RecordExposer::finalizeDefinition`.
-    if (function->isOverloadedOperator())
+    if (function->isDeleted() || function->isOverloadedOperator())
       return;
 
     os << ((method != nullptr && method->isStatic()) ? "context.def_static("
@@ -568,7 +568,8 @@ void RecordExposer::handleDeclImpl(llvm::raw_ostream &os,
   if (const auto *annot =
           llvm::dyn_cast<AnnotatedConstructorDecl>(annotation)) {
     const auto *constructor = llvm::dyn_cast<clang::CXXConstructorDecl>(decl);
-    if (constructor->isMoveConstructor() || record_decl->isAbstract())
+    if (constructor->isMoveConstructor() || constructor->isDeleted() ||
+        record_decl->isAbstract())
       return;
 
     if (annot->implicit_conversion) {

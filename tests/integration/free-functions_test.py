@@ -26,3 +26,7 @@ def test_can_be_nested_in_nonsubmodule_namespace():
 def test_can_be_hidden_or_not_exposed():
     assert not hasattr(m, "hidden")
     assert not hasattr(m, "not_exposed")
+
+
+def test_deleted_functions_are_not_exposed():
+    assert not hasattr(m, "deleted")

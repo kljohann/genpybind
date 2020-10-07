@@ -15,6 +15,7 @@ int old_name() GENPYBIND(expose_as("new_name"));
 namespace example GENPYBIND_VISIBLE {
 bool visible();
 bool hidden() GENPYBIND(hidden);
+bool deleted() = delete;
 } // namespace example
 
 bool not_exposed();
