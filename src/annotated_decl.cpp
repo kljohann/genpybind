@@ -45,13 +45,18 @@ using annotations::AnnotationKind;
 using annotations::LiteralValue;
 using annotations::Parser;
 
-static const char *kLozenge = "◊";
+static const llvm::StringRef kLozenge = "◊";
 
-bool genpybind::hasAnnotations(const clang::Decl *decl) {
-  return llvm::any_of(decl->specific_attrs<clang::AnnotateAttr>(),
-                      [](const auto *attr) {
-                        return attr->getAnnotation().startswith(kLozenge);
-                      });
+bool genpybind::hasAnnotations(const clang::Decl *decl, bool allow_empty) {
+  return llvm::any_of(
+      decl->specific_attrs<clang::AnnotateAttr>(), [&](const auto *attr) {
+        ::llvm::StringRef annotation_text = attr->getAnnotation();
+        if (!annotation_text.startswith(kLozenge))
+          return false;
+        if (allow_empty)
+          return true;
+        return !annotation_text.drop_front(kLozenge.size()).ltrim().empty();
+      });
 }
 
 llvm::SmallVector<llvm::StringRef, 1>
@@ -183,7 +188,8 @@ AnnotatedNamedDecl::AnnotatedNamedDecl(const clang::NamedDecl *decl)
   // Non-namespace named decls that have at least one annotation
   // are visible by default.  This can be overruled by an explicit
   // `visible(default)`, `visible(false)` or `hidden` annotation.
-  if (!llvm::isa<clang::NamespaceDecl>(decl) && hasAnnotations(decl))
+  if (!llvm::isa<clang::NamespaceDecl>(decl) &&
+      hasAnnotations(decl, /*allow_empty=*/false))
     visible = true;
 }
 

@@ -22,7 +22,7 @@ class CXXConstructorDecl;
 
 namespace genpybind {
 
-bool hasAnnotations(const clang::Decl *decl);
+bool hasAnnotations(const clang::Decl *decl, bool allow_empty = true);
 llvm::SmallVector<llvm::StringRef, 1>
 getAnnotationStrings(const clang::Decl *decl);
 
