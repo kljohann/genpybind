@@ -10,6 +10,8 @@
 #include <clang/AST/Decl.h>
 #include <clang/AST/DeclCXX.h>
 #include <clang/AST/DeclTemplate.h>
+#include <clang/AST/Expr.h>
+#include <clang/AST/ExprCXX.h>
 #include <clang/AST/PrettyPrinter.h>
 #include <clang/AST/QualTypeNames.h>
 #include <clang/AST/Type.h>
@@ -40,6 +42,186 @@ public:
     if (discriminator != 1)
       result += "_" + llvm::utostr(discriminator);
     return result;
+  }
+};
+
+/// A very unprincipled attempt to print a default argument expression in
+/// a fully qualified way by augmenting and replicating the behavior/output of
+/// clang::Stmt::prettyPrint.
+/// Where successful, the global namespace specifier (`::`) is prepended to all
+/// nested name specifiers.
+/// Many useful facilities are not exposed in the clang API, e.g. the helper
+/// functions in `QualTypeNames.cpp` and parts of `TreeTransform.h`.  If they
+/// are at some point, this hack should be replaced altogether.
+struct AttemptFullQualificationPrinter : clang::PrinterHelper {
+  const clang::ASTContext &context;
+  clang::PrintingPolicy printing_policy;
+  bool within_braced_initializer = false;
+
+  AttemptFullQualificationPrinter(const clang::ASTContext &context,
+                                  clang::PrintingPolicy printing_policy)
+      : context(context), printing_policy(printing_policy) {}
+
+  bool handledStmt(clang::Stmt *stmt, llvm::raw_ostream &os) override {
+    const auto *expr = llvm::dyn_cast<clang::Expr>(stmt);
+    if (expr == nullptr)
+      return false;
+
+    auto printRecursively = [&](const clang::Expr *expr) {
+      expr->printPretty(os, this, printing_policy, /*Indentation=*/0,
+                        /*NewlineSymbol=*/"\n", &context);
+    };
+
+    // Prepend the outermost braced initializer with its fully qualified type.
+    bool should_prepend_qualified_type_to_braced_initializer = [&] {
+      if (within_braced_initializer)
+        return false;
+      if (llvm::isa<clang::InitListExpr>(expr))
+        return true;
+      if (llvm::isa<clang::CXXTemporaryObjectExpr>(expr))
+        return false;
+      if (const auto *constr = llvm::dyn_cast<clang::CXXConstructExpr>(expr))
+        return constr->isListInitialization();
+      return false;
+    }();
+
+    if (should_prepend_qualified_type_to_braced_initializer) {
+      os << clang::TypeName::getFullyQualifiedName(expr->getType(), context,
+                                                   printing_policy,
+                                                   /*WithGlobalNsPrefix=*/true);
+      within_braced_initializer = true;
+      printRecursively(expr);
+      within_braced_initializer = false;
+      return true;
+    }
+
+    // Fully qualify all printed types.  Effectively all instances of
+    // `getType().print(...)` in `StmtPrinter` have to be re-defined.
+    // TODO: It seems the existing implementation mostly does the right thing
+    // already, but does not insert global namespace specifiers.  As the
+    // bindings live at the global namespace this should not be a problem,
+    // though.  Investigate and consider removing this code.
+    // TODO: Extend to remaining cases, or replace by more scalable solution.
+    // - OffsetOfExpr
+    // - CompoundLiteralExpr
+    // - ConvertVectorExpr
+    // - ImplicitValueInitExpr
+    // - VAArgExpr
+    // - BuiltinBitCastExpr
+    // - CXXTypeidExpr
+    // - CXXUuidofExpr
+    // - CXXScalarValueInitExpr
+    // - CXXUnresolvedConstructExpr
+    // - TypeTraitExpr
+    // - RequiresExpr
+    // - ObjCBridgedCastExpr
+    // - BlockExpr
+    // - AsTypeExpr
+
+    auto printFullyQualifiedName = [&](clang::QualType qual_type) {
+      os << clang::TypeName::getFullyQualifiedName(qual_type, context,
+                                                   printing_policy,
+                                                   /*WithGlobalNsPrefix=*/true);
+    };
+
+    if (const auto *cast = llvm::dyn_cast<clang::CStyleCastExpr>(expr)) {
+      os << '(';
+      printFullyQualifiedName(cast->getType());
+      os << ')';
+      printRecursively(cast->getSubExpr());
+      return true;
+    }
+
+    if (const auto *cast = llvm::dyn_cast<clang::CXXNamedCastExpr>(expr)) {
+      os << cast->getCastName() << '<';
+      printFullyQualifiedName(cast->getType());
+      os << ">(";
+      printRecursively(cast->getSubExpr());
+      os << ')';
+      return true;
+    }
+
+    if (const auto *cast = llvm::dyn_cast<clang::CXXFunctionalCastExpr>(expr)) {
+      printFullyQualifiedName(cast->getType());
+      if (cast->getLParenLoc().isValid())
+        os << '(';
+      printRecursively(cast->getSubExpr());
+      if (cast->getLParenLoc().isValid())
+        os << ')';
+      return true;
+    }
+
+    if (const auto *temporary =
+            llvm::dyn_cast<clang::CXXTemporaryObjectExpr>(expr)) {
+      printFullyQualifiedName(temporary->getType());
+
+      if (temporary->isStdInitListInitialization())
+        /* do nothing; braces are printed by containing expression */;
+      else
+        os << (temporary->isListInitialization() ? '{' : '(');
+
+      bool comma = false;
+      for (const clang::Expr *argument : temporary->arguments()) {
+        if (argument->isDefaultArgument())
+          break;
+        if (comma)
+          os << ", ";
+        printRecursively(argument);
+        comma = true;
+      }
+
+      if (temporary->isStdInitListInitialization())
+        /* do nothing */;
+      else
+        os << (temporary->isListInitialization() ? '}' : ')');
+
+      return true;
+    }
+
+    // Fully qualify nested name specifiers.  This corresponds to calls to
+    // `getQualifier()` in `StmtPrinter`, which have to be re-defined.
+
+    if (const auto *decl_ref = llvm::dyn_cast<clang::DeclRefExpr>(expr)) {
+      os << "::";
+      decl_ref->getFoundDecl()->printNestedNameSpecifier(os, printing_policy);
+      if (decl_ref->hasTemplateKeyword())
+        os << "template ";
+      os << decl_ref->getNameInfo();
+      if (decl_ref->hasExplicitTemplateArgs())
+        clang::printTemplateArgumentList(os, decl_ref->template_arguments(),
+                                         printing_policy);
+      return true;
+    }
+
+    if (const auto *member = llvm::dyn_cast<clang::MemberExpr>(expr)) {
+      assert(!printing_policy.SuppressImplicitBase &&
+             "suppressing implicit 'this' not implemented");
+      const clang::Expr *base = member->getBase();
+      printRecursively(base);
+
+      bool suppress_member_access_operator = [&] {
+        if (const auto *parent_member = llvm::dyn_cast<clang::MemberExpr>(base))
+          if (const auto *field = llvm::dyn_cast<clang::FieldDecl>(
+                  parent_member->getMemberDecl()))
+            return field->isAnonymousStructOrUnion();
+        return false;
+      }();
+
+      if (!suppress_member_access_operator)
+        os << (member->isArrow() ? "->" : ".");
+
+      os << "::";
+      member->getFoundDecl()->printNestedNameSpecifier(os, printing_policy);
+      if (member->hasTemplateKeyword())
+        os << "template ";
+      os << member->getMemberNameInfo();
+      if (member->hasExplicitTemplateArgs())
+        clang::printTemplateArgumentList(os, member->template_arguments(),
+                                         printing_policy);
+      return true;
+    }
+
+    return false;
   }
 };
 
@@ -95,6 +277,9 @@ static void emitParameterTypes(llvm::raw_ostream &os,
 static void emitParameters(llvm::raw_ostream &os,
                            const AnnotatedFunctionDecl *annotation) {
   const auto *function = llvm::cast<clang::FunctionDecl>(annotation->getDecl());
+  const clang::ASTContext &context = function->getASTContext();
+  auto printing_policy = getPrintingPolicyForExposedNames(context);
+  AttemptFullQualificationPrinter printer_helper{context, printing_policy};
   unsigned index = 0;
   for (const clang::ParmVarDecl *param : function->parameters()) {
     // TODO: Do not emit `arg()` for `pybind11::{kw,}args`.
@@ -105,7 +290,13 @@ static void emitParameters(llvm::raw_ostream &os,
       os << ".noconvert()";
     if (annotation->required.count(index) != 0)
       os << ".none(false)";
-    // TODO: Emit default value.
+    if (const clang::Expr *expr = param->getDefaultArg()) {
+      // os << "/* = ";
+      os << " = ";
+      expr->printPretty(os, &printer_helper, printing_policy, /*Indentation=*/0,
+                        /*NewlineSymbol=*/"\n", &context);
+      // os << " */";
+    }
     ++index;
   }
 }
