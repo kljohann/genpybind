@@ -748,6 +748,45 @@ bool AnnotatedFieldOrVarDecl::processAnnotation(const Annotation &annotation) {
       reportWrongArgumentTypeError(getDecl(), annotation.getKind(), *value);
     }
     break;
+  case AnnotationKind::Postamble:
+    postamble = true;
+    // as `postamble` implies `manual`:
+    // fallthrough
+  case AnnotationKind::Manual: {
+    // Check whether the initializer contains the expected lambda expression.
+    manual_bindings = [&]() -> const clang::LambdaExpr * {
+      const auto *var = llvm::dyn_cast<clang::VarDecl>(getDecl());
+      if (var == nullptr || !var->hasInit())
+        return nullptr;
+
+      const clang::Expr *init = var->getInit()->IgnoreImpCasts();
+      const auto *lambda = llvm::dyn_cast<clang::LambdaExpr>(init);
+
+      if (lambda == nullptr || !lambda->hasExplicitParameters())
+        return nullptr;
+
+      const clang::CXXMethodDecl *method = lambda->getCallOperator();
+      if (method->getNumParams() != 1)
+        return nullptr;
+      const clang::ParmVarDecl *param = method->getParamDecl(0);
+      clang::QualType param_type = param->getType();
+      if (!param_type->isLValueReferenceType() ||
+          param_type.getNonReferenceType()->isUndeducedAutoType())
+        return nullptr;
+
+      return lambda;
+    }();
+    if (manual_bindings == nullptr)
+      return false;
+    if (annotation.getKind() == AnnotationKind::Postamble &&
+        !llvm::isa<clang::TranslationUnitDecl>(getDecl()->getDeclContext())) {
+      Diagnostics::report(getDecl(),
+                          Diagnostics::Kind::OnlyGlobalScopeAllowedError)
+          << toString(annotation.getKind());
+      return true;
+    }
+    break;
+  }
   default:
     return false;
   }

@@ -27,6 +27,7 @@ struct Diagnostics {
     ConflictingAnnotationsError,
     ExposeHereCycleError,
     IgnoringQualifiersOnAliasWarning,
+    OnlyGlobalScopeAllowedError,
     PreviouslyExposedHereNote,
     PropertyAlreadyDefinedError,
     PropertyHasNoGetterError,

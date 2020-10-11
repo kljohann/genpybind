@@ -330,6 +330,31 @@ static void emitFunctionPointer(llvm::raw_ostream &os,
   os << ")";
 }
 
+static void emitManualBindings(llvm::raw_ostream &os,
+                               const clang::ASTContext &context,
+                               const clang::LambdaExpr *manual_bindings) {
+  assert(manual_bindings != nullptr);
+  auto printing_policy = getPrintingPolicyForExposedNames(context);
+  // Print and immediately invoke manual bindings lambda(IIFE).
+  // TODO: This requires all referenced types and declarations in the manual
+  // binding code to be fully qualified.  It would be useful to atleast warn if
+  // this is not the case.  Unfortunately, automatically qualifying these
+  // references is not straight forward.  See `AttemptFullQualificationPrinter`,
+  // which could be a starting point except for the fact that it has no
+  // influence on the printing of decls within the lambda expression.
+  const clang::CXXMethodDecl *method = manual_bindings->getCallOperator();
+  assert(method->getNumParams() == 1);
+  const clang::ParmVarDecl *param = method->getParamDecl(0);
+  bool needs_context = param->isUsed() || param->isReferenced();
+  if (needs_context)
+    os << "[](auto &" << param->getName() << ") ";
+  manual_bindings->getBody()->printPretty(os, nullptr, printing_policy,
+                                          /*Indentation=*/0,
+                                          /*NewlineSymbol=*/"\n", &context);
+  if (needs_context)
+    os << "(context);\n";
+}
+
 std::string genpybind::getFullyQualifiedName(const clang::TypeDecl *decl) {
   const clang::ASTContext &context = decl->getASTContext();
   const clang::QualType qual_type = context.getTypeDeclType(decl);
@@ -583,6 +608,10 @@ void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &os,
   }
 
   if (const auto *annot = llvm::dyn_cast<AnnotatedFieldOrVarDecl>(annotation)) {
+    if (annot->manual_bindings != nullptr) {
+      emitManualBindings(os, ast_context, annot->manual_bindings);
+      return;
+    }
     // For fields and static member variables see `RecordExposer`.
     assert(!llvm::isa<clang::FieldDecl>(decl) &&
            "should have been processed by RecordExposer");
@@ -834,6 +863,10 @@ void RecordExposer::handleDeclImpl(llvm::raw_ostream &os,
   }
 
   if (const auto *annot = llvm::dyn_cast<AnnotatedFieldOrVarDecl>(annotation)) {
+    if (annot->manual_bindings != nullptr) {
+      emitManualBindings(os, ast_context, annot->manual_bindings);
+      return;
+    }
     clang::QualType type = llvm::cast<clang::ValueDecl>(decl)->getType();
     bool readonly = type.isConstQualified() || annot->readonly;
     os << (readonly ? "context.def_readonly" : "context.def_readwrite");

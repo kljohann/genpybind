@@ -18,6 +18,7 @@
 namespace clang {
 class CXXMethodDecl;
 class CXXConstructorDecl;
+class LambdaExpr;
 }  // namespace clang
 
 namespace genpybind {
@@ -176,6 +177,8 @@ public:
 class AnnotatedFieldOrVarDecl : public AnnotatedNamedDecl {
 public:
   bool readonly = false;
+  const clang::LambdaExpr *manual_bindings = nullptr;
+  bool postamble = false;
 
   AnnotatedFieldOrVarDecl(const clang::FieldDecl *decl);
   AnnotatedFieldOrVarDecl(const clang::VarDecl *decl);

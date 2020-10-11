@@ -71,6 +71,9 @@ static unsigned getCustomDiagID(clang::DiagnosticsEngine &engine,
   case Kind::IgnoringQualifiersOnAliasWarning:
     return engine.getCustomDiagID(clang::DiagnosticsEngine::Warning,
                                   "Ignoring qualifiers on alias");
+  case Kind::OnlyGlobalScopeAllowedError:
+    return engine.getCustomDiagID(clang::DiagnosticsEngine::Error,
+                                  "'%0' can only be used in global scope");
   case Kind::PreviouslyExposedHereNote:
     return engine.getCustomDiagID(clang::DiagnosticsEngine::Note,
                                   "Previously exposed here");
