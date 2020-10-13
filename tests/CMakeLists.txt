@@ -50,7 +50,10 @@ foreach(test_implementation IN LISTS integration_tests)
   string(MAKE_C_IDENTIFIER ${test_name} module_name)
 
   add_library(${test_target} SHARED ${test_implementation})
-  target_include_directories(${test_target} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+  target_include_directories(${test_target}
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
+    PUBLIC $<TARGET_PROPERTY:pybind11::module,INTERFACE_INCLUDE_DIRECTORIES>
+  )
   add_custom_command(
     OUTPUT ${test_bindings}
     MAIN_DEPENDENCY ${test_header}

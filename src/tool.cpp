@@ -6,6 +6,7 @@
 #include "genpybind/inspect_graph.h"
 #include "genpybind/instantiate_annotated_templates.h"
 #include "genpybind/instantiate_default_arguments.h"
+#include "genpybind/pragmas.h"
 #include "genpybind/string_utils.h"
 
 #include <clang/AST/ASTConsumer.h>
@@ -15,6 +16,7 @@
 #include <clang/Basic/SourceManager.h>
 #include <clang/Basic/Version.inc> // IWYU pragma: keep
 #include <clang/Driver/Driver.h>
+#include <clang/Frontend/CompilerInstance.h>
 #include <clang/Frontend/FrontendAction.h>
 #include <clang/Frontend/MultiplexConsumer.h>
 #include <clang/Sema/SemaConsumer.h>
@@ -41,10 +43,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-
-namespace clang {
-class CompilerInstance;
-} // namespace clang
 
 using namespace genpybind;
 
@@ -106,8 +104,12 @@ static void inspectGraph(const DeclContextGraph &graph,
 class GenpybindASTConsumer : public clang::SemaConsumer {
   AnnotationStorage annotations;
   clang::Sema *sema = nullptr;
+  const genpybind::PragmaGenpybindHandler *pragma_handler;
 
 public:
+  GenpybindASTConsumer(const genpybind::PragmaGenpybindHandler *pragma_handler)
+      : pragma_handler(pragma_handler) {}
+
   void InitializeSema(clang::Sema &sema_) override { sema = &sema_; }
   void ForgetSema() override { sema = nullptr; }
 
@@ -158,7 +160,14 @@ public:
 
     llvm::outs() << "#include \"" << main_file << "\"\n"
                  << "#include <genpybind/runtime.h>\n"
-                 << "#include <pybind11/pybind11.h>\n\n";
+                 << "#include <pybind11/pybind11.h>\n";
+
+    if (pragma_handler != nullptr) {
+      for (const std::string &include : pragma_handler->getIncludes()) {
+        llvm::outs() << "#include " << include << '\n';
+      }
+    }
+    llvm::outs() << '\n';
 
     exposer.emitModule(llvm::outs(), module_name);
 
@@ -167,7 +176,23 @@ public:
 };
 
 class GenpybindAction : public clang::ASTFrontendAction {
+  std::unique_ptr<genpybind::PragmaGenpybindHandler> pragma_genpybind_handler;
+
 public:
+  bool BeginSourceFileAction(clang::CompilerInstance &compiler) override {
+    pragma_genpybind_handler =
+        std::make_unique<genpybind::PragmaGenpybindHandler>();
+    clang::Preprocessor &preproc = compiler.getPreprocessor();
+    preproc.AddPragmaHandler(pragma_genpybind_handler.get());
+    return true;
+  }
+
+  void EndSourceFileAction() override {
+    clang::Preprocessor &preproc = getCompilerInstance().getPreprocessor();
+    preproc.RemovePragmaHandler(pragma_genpybind_handler.get());
+    pragma_genpybind_handler.reset();
+  }
+
   virtual std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance & /*compiler*/,
                     llvm::StringRef /*in_file*/) {
@@ -176,7 +201,8 @@ public:
         std::make_unique<InstantiateAnnotatedTemplatesASTConsumer>());
     consumers.push_back(
         std::make_unique<InstantiateDefaultArgumentsASTConsumer>());
-    consumers.push_back(std::make_unique<GenpybindASTConsumer>());
+    consumers.push_back(
+        std::make_unique<GenpybindASTConsumer>(pragma_genpybind_handler.get()));
     return std::make_unique<clang::MultiplexConsumer>(std::move(consumers));
   }
 };

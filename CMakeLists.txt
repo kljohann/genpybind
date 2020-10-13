@@ -47,6 +47,7 @@ add_library(genpybind SHARED
   src/inspect_graph.cpp
   src/instantiate_annotated_templates.cpp
   src/instantiate_default_arguments.cpp
+  src/pragmas.cpp
   src/string_utils.cpp
   src/visible_decls.cpp
 )
