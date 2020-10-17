@@ -1,5 +1,7 @@
 import methods as m
 
+import pytest
+
 
 def test_can_have_docstring():
     assert "A brief docstring." in m.Example.__doc__
@@ -47,3 +49,30 @@ def test_deleted_methods_are_not_exposed():
 def test_using_typedefs_for_member_functions_works():
     assert m.ExoticMemberFunctions().function() == 42
     assert m.ExoticMemberFunctions().other_function() == 123
+
+
+def test_conversion_functions_are_exposed():
+    inst = m.Example()
+    assert isinstance(inst.operator_bool(), bool)
+    assert hasattr(inst, "__int__")
+    assert not hasattr(inst, "operator_int")
+    assert int(inst) == 123
+    assert isinstance(inst.operator_Other(), m.Other)
+
+    other = m.Other()
+    assert not hasattr(inst, "operator_Example")
+    assert isinstance(other.toExample(), m.Example)
+
+
+def test_conversion_function_does_not_imply_implicit_conversion():
+    inst = m.Example()
+    with pytest.raises(TypeError, match="incompatible constructor arguments"):
+        m.Other(inst)
+
+    other = m.Other()
+    with pytest.raises(TypeError, match="incompatible constructor arguments"):
+        m.Example(other)
+
+    m.consumes_other(other)
+    with pytest.raises(TypeError, match="incompatible function arguments"):
+        m.consumes_other(inst)

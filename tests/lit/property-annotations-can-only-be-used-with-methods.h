@@ -24,8 +24,8 @@ struct Something {
   GENPYBIND(setter_for("property"))
   Something(double);
 
-  // CHECK: methods.h:[[# @LINE + 3]]:3: error: Invalid annotation for named declaration: getter_for("property")
-  // CHECK: methods.h:[[# @LINE + 2]]:3: error: Invalid annotation for named declaration: setter_for("property")
+  // CHECK: methods.h:[[# @LINE + 3]]:3: error: Invalid annotation for conversion function: getter_for("property")
+  // CHECK: methods.h:[[# @LINE + 2]]:3: error: Invalid annotation for conversion function: setter_for("property")
   GENPYBIND(getter_for("property"), setter_for("property"))
   operator bool() const;
 

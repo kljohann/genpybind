@@ -154,10 +154,14 @@ AnnotatedDecl::create(const clang::NamedDecl *named_decl) {
   if (const auto *decl = llvm::dyn_cast<clang::VarDecl>(named_decl))
     return std::make_unique<AnnotatedFieldOrVarDecl>(decl);
 
-  if (llvm::isa<clang::CXXConversionDecl>(named_decl) ||
-      llvm::isa<clang::CXXDeductionGuideDecl>(named_decl) ||
+  if (llvm::isa<clang::CXXDeductionGuideDecl>(named_decl) ||
       llvm::isa<clang::CXXDestructorDecl>(named_decl)) {
     // Fall through to generic AnnotatedNamedDecl case.
+  } else if (const auto *decl =
+                 llvm::dyn_cast<clang::CXXConversionDecl>(named_decl)) {
+    // Conversion decls are treated as functions, since they do not
+    // support the extra property annotations available for methods.
+    return std::make_unique<AnnotatedFunctionDecl>(decl);
   } else if (const auto *decl =
                  llvm::dyn_cast<clang::CXXConstructorDecl>(named_decl)) {
     return std::make_unique<AnnotatedConstructorDecl>(decl);
@@ -505,6 +509,8 @@ AnnotatedFunctionDecl::AnnotatedFunctionDecl(const clang::FunctionDecl *decl)
     : AnnotatedNamedDecl(decl) {}
 
 llvm::StringRef AnnotatedFunctionDecl::getFriendlyDeclKindName() const {
+  if (llvm::isa<clang::CXXConversionDecl>(getDecl()))
+    return "conversion function";
   return "free function";
 }
 
@@ -596,8 +602,7 @@ bool AnnotatedFunctionDecl::processAnnotation(const Annotation &annotation) {
 
 bool AnnotatedFunctionDecl::classof(const AnnotatedDecl *decl) {
   return clang::FunctionDecl::classofKind(decl->getKind()) &&
-         !(clang::CXXConversionDecl::classofKind(decl->getKind()) ||
-           clang::CXXDeductionGuideDecl::classofKind(decl->getKind()) ||
+         !(clang::CXXDeductionGuideDecl::classofKind(decl->getKind()) ||
            clang::CXXDestructorDecl::classofKind(decl->getKind()));
 }
 

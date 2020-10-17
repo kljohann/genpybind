@@ -2,6 +2,15 @@
 
 #include "genpybind.h"
 
+struct Example;
+
+struct GENPYBIND(visible) Other {
+  GENPYBIND(expose_as(toExample))
+  operator Example() const;
+};
+
+void consumes_other(Other) GENPYBIND(visible);
+
 /// A brief docstring.
 struct GENPYBIND(visible) Example {
   /// Another brief docstring.
@@ -17,6 +26,13 @@ struct GENPYBIND(visible) Example {
   void hidden_method() GENPYBIND(hidden);
 
   static Example static_method();
+
+  GENPYBIND(expose_as(__int__))
+  operator int() const;
+
+  operator bool() const;
+
+  operator Other() const;
 
 private:
   void private_method();
