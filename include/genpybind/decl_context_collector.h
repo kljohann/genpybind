@@ -72,7 +72,21 @@ public:
     return true;
   }
 
+  bool shouldSkipNamespace(const clang::NamespaceDecl *decl) {
+    // Skip implementation namespaces like `std` and `__gnu_cxx`, as these
+    // cannot have annotations in any case.
+    return decl->isStdNamespace() || decl->getName().startswith("__");
+  }
+
+  bool TraverseNamespaceDecl(clang::NamespaceDecl *decl) {
+    if (shouldSkipNamespace(decl))
+      return true;
+    return RecursiveASTVisitor::TraverseNamespaceDecl(decl);
+  }
+
   bool VisitNamespaceDecl(const clang::NamespaceDecl *decl) {
+    if (shouldSkipNamespace(decl))
+      return true;
     decl_contexts.push_back(decl);
     errorIfAnnotationsDoNotMatchCanonicalDecl(decl);
     return true;
