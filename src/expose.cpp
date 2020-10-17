@@ -481,6 +481,22 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
     os << "expose_" << item.identifier << "(" << item.identifier << ");\n";
   }
 
+  { // Emit 'postamble' manual bindings.
+    const clang::DeclContext *decl_context = graph.getRoot()->getDeclContext();
+    for (clang::DeclContext::specific_decl_iterator<clang::VarDecl>
+             it(decl_context->decls_begin()),
+         end_it(decl_context->decls_end());
+         it != end_it; ++it) {
+      const auto *annotation =
+          llvm::cast<AnnotatedFieldOrVarDecl>(annotations.getOrInsert(*it));
+      if (!annotation->postamble || annotation->manual_bindings == nullptr)
+        continue;
+      const clang::ASTContext &ast_context = it->getASTContext();
+      os << "\n";
+      emitManualBindings(os, ast_context, annotation->manual_bindings);
+    }
+  }
+
   os << "}\n\n";
 
   // Emit definitions for `expose_` functions
@@ -609,7 +625,8 @@ void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &os,
 
   if (const auto *annot = llvm::dyn_cast<AnnotatedFieldOrVarDecl>(annotation)) {
     if (annot->manual_bindings != nullptr) {
-      emitManualBindings(os, ast_context, annot->manual_bindings);
+      if (!annot->postamble)
+        emitManualBindings(os, ast_context, annot->manual_bindings);
       return;
     }
     // For fields and static member variables see `RecordExposer`.
@@ -864,6 +881,7 @@ void RecordExposer::handleDeclImpl(llvm::raw_ostream &os,
 
   if (const auto *annot = llvm::dyn_cast<AnnotatedFieldOrVarDecl>(annotation)) {
     if (annot->manual_bindings != nullptr) {
+      assert(!annot->postamble && "postamble only allowed in global scope");
       emitManualBindings(os, ast_context, annot->manual_bindings);
       return;
     }

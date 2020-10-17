@@ -1,7 +1,5 @@
 import os
 
-import pytest
-
 import manual as m
 
 
@@ -18,7 +16,6 @@ def test_manual_method():
     m.Hidden()
 
 
-@pytest.mark.xfail(reason="not implemented")
 def test_order_of_execution_matches_context_graph_hierarchy():
     order_of_execution = os.environ.get("order_of_execution", "")
     assert order_of_execution == "preamble,namespace,class,postamble"
