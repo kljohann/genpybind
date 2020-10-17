@@ -388,8 +388,8 @@ bool AnnotatedRecordDecl::processAnnotation(const Annotation &annotation) {
     break;
   }
   case AnnotationKind::HolderType:
-    // Annotation value isn't stored / made use of yet.
     if (auto value = arguments.take<LiteralValue::Kind::String>()) {
+      holder_type = value->getString();
     } else if ((value = arguments.take())) {
       reportWrongArgumentTypeError(getDecl(), annotation.getKind(), *value);
     }

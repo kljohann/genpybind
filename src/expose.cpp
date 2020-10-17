@@ -809,6 +809,10 @@ void RecordExposer::emitType(llvm::raw_ostream &os) {
     }
   }
 
+  if (!annotated_decl->holder_type.empty()) {
+    os << ", " << annotated_decl->holder_type;
+  }
+
   os << ">";
 }
 
