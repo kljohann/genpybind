@@ -340,8 +340,11 @@ genpybind::declContextsSortedByDependencies(
     worklist.push_back({decl_context, true});
     auto parent = parents.find(decl_context);
     // Add parent context as dependency.
-    if (parent != parents.end() && parent->getSecond() != nullptr) {
-      const DeclContextNode *parent_node = graph.getNode(parent->getSecond());
+    if (parent != parents.end() &&
+        !llvm::isa<clang::TranslationUnitDecl>(decl_context)) {
+      const clang::NamedDecl *parent_decl = parent->getSecond();
+      const DeclContextNode *parent_node =
+          parent_decl != nullptr ? graph.getNode(parent_decl) : graph.getRoot();
       assert(parent_node != nullptr && "parent should be in graph");
       worklist.push_back({parent_node->getDeclContext(), false});
     }
