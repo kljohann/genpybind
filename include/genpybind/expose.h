@@ -118,6 +118,12 @@ public:
 
 private:
   void emitProperties(llvm::raw_ostream &os);
+  void emitOperator(llvm::raw_ostream &os, const clang::FunctionDecl *function);
+  void emitOperatorDefinition(
+      llvm::raw_ostream &os, const clang::ASTContext &ast_context,
+      clang::OverloadedOperatorKind kind,
+      const llvm::SmallVectorImpl<clang::QualType> &parameter_types,
+      bool reverse_parameters);
   void emitType(llvm::raw_ostream &os);
   void handleDeclImpl(llvm::raw_ostream &os, const clang::NamedDecl *decl,
                       const AnnotatedNamedDecl *annotation) override;

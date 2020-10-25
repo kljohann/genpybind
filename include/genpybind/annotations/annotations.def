@@ -11,7 +11,7 @@ ANNOTATION_KIND(Visible, visible)    // (Boolean|Default)?
 ANNOTATION_KIND(Arithmetic, arithmetic)      // (Boolean)?
 ANNOTATION_KIND(ExportValues, export_values) // (Boolean|Default)?
 
-// CXXMethodDecl only (but not CXXConstructorDecl, CXXConversionDecl, CXXDestructorDecl)
+// CXXMethodDecl only (but not CXXConstructorDecl, CXXConversionDecl, CXXDestructorDecl, and operators)
 ANNOTATION_KIND(GetterFor, getter_for) // (String)+
 ANNOTATION_KIND(SetterFor, setter_for) // (String)+
 

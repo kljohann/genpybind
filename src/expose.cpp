@@ -16,9 +16,14 @@
 #include <clang/AST/QualTypeNames.h>
 #include <clang/AST/Type.h>
 #include <clang/Basic/Specifiers.h>
+#include <clang/Sema/Lookup.h>
+#include <clang/Sema/Overload.h>
 #include <clang/Sema/Sema.h>
 #include <llvm/ADT/DenseMap.h>
+#include <llvm/ADT/STLExtras.h>
+#include <llvm/ADT/Sequence.h>
 #include <llvm/ADT/SmallString.h>
+#include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringExtras.h>
 #include <llvm/ADT/StringMap.h>
 #include <llvm/Support/Casting.h>
@@ -26,6 +31,7 @@
 #include <llvm/Support/raw_ostream.h>
 
 #include <cassert>
+#include <iterator>
 #include <utility>
 
 using namespace genpybind;
@@ -373,6 +379,201 @@ static void emitManualBindings(llvm::raw_ostream &os,
     os << "(context);\n";
 }
 
+static std::vector<const clang::NamedDecl *>
+collectOperatorDeclsViaArgumentDependentLookup(
+    clang::Sema &sema, const clang::CXXRecordDecl *record) {
+  std::vector<const clang::NamedDecl *> result;
+  const clang::ASTContext &ast_context = sema.getASTContext();
+  clang::SourceLocation op_loc;
+
+  // Use argument dependent lookup to find operators in a record's associated
+  // namespace.  To this end, a fake argument list with an emulated
+  // declval<T>() expression is used.  Inside `ArgumentDependentLookup` the
+  // arguments are only used for this purpose and are not checked against the
+  // function signatures, so a single entry is sufficient.
+  const clang::QualType record_type = ast_context.getTypeDeclType(record);
+  assert(record_type->isObjectType());
+  clang::QualType expr_type = ast_context.getRValueReferenceType(record_type)
+                                  .getNonLValueExprType(ast_context);
+  clang::OpaqueValueExpr declval_expr(
+      op_loc, expr_type, clang::Expr::getValueKindForType(expr_type));
+  clang::Expr *args_for_adl[1] = {&declval_expr};
+
+  // At least one parameter has to accept the record type, without
+  // implicit conversions.
+  auto has_type_of_record = [&](const clang::ParmVarDecl *param) -> bool {
+    clang::QualType param_type = param->getType();
+    if (param_type->isReferenceType())
+      param_type = param_type->getPointeeType();
+    return ast_context.hasSameUnqualifiedType(param_type, record_type);
+  };
+  auto handle_decl = [&](clang::NamedDecl *decl) {
+    const auto *function = llvm::cast<clang::FunctionDecl>(decl);
+    if (llvm::any_of(function->parameters(), has_type_of_record))
+      result.push_back(decl);
+  };
+
+  clang::ADLResult operator_decls;
+  for (clang::OverloadedOperatorKind op_kind : {
+           clang::OO_Plus,
+           clang::OO_Minus,
+           clang::OO_Star,
+           clang::OO_Slash,
+           clang::OO_Percent,
+           clang::OO_Caret,
+           clang::OO_Amp,
+           clang::OO_Pipe,
+           clang::OO_Tilde,
+           clang::OO_Less,
+           clang::OO_Greater,
+           clang::OO_PlusEqual,
+           clang::OO_MinusEqual,
+           clang::OO_StarEqual,
+           clang::OO_SlashEqual,
+           clang::OO_PercentEqual,
+           clang::OO_CaretEqual,
+           clang::OO_AmpEqual,
+           clang::OO_PipeEqual,
+           clang::OO_LessLess,
+           clang::OO_GreaterGreater,
+           clang::OO_LessLessEqual,
+           clang::OO_GreaterGreaterEqual,
+           clang::OO_EqualEqual,
+           clang::OO_ExclaimEqual,
+           clang::OO_LessEqual,
+           clang::OO_GreaterEqual,
+           clang::OO_Spaceship,
+       }) {
+    // Rewritten candidates are not considered here; they are taken into
+    // account when deciding what operators to emit in `RecordExposer`.
+    clang::DeclarationName op_name =
+        ast_context.DeclarationNames.getCXXOperatorName(op_kind);
+    sema.ArgumentDependentLookup(op_name, op_loc, args_for_adl, operator_decls);
+  }
+
+  for (clang::NamedDecl *decl : operator_decls) {
+    if (const auto *tpl = llvm::dyn_cast<clang::FunctionTemplateDecl>(decl)) {
+      llvm::for_each(tpl->specializations(), handle_decl);
+    } else {
+      handle_decl(decl);
+    }
+  }
+
+  return result;
+}
+
+static llvm::StringRef
+pythonUnaryOperatorName(clang::OverloadedOperatorKind kind) {
+  switch (kind) {
+  case clang::OO_Plus:
+    return "__pos__";
+  case clang::OO_Minus:
+    return "__neg__";
+  case clang::OO_Tilde:
+    return "__invert__";
+  default:
+    return {};
+  }
+}
+
+static llvm::StringRef
+pythonBinaryOperatorName(clang::OverloadedOperatorKind kind, bool reverse) {
+  if (reverse) {
+    switch (kind) {
+    case clang::OO_Plus:
+      return "__radd__";
+    case clang::OO_Minus:
+      return "__rsub__";
+    case clang::OO_Star:
+      return "__rmul__";
+    case clang::OO_Slash:
+      return "__rtruediv__";
+    case clang::OO_Percent:
+      return "__rmod__";
+    case clang::OO_Caret:
+      return "__rxor__";
+    case clang::OO_Amp:
+      return "__rand__";
+    case clang::OO_Pipe:
+      return "__ror__";
+    case clang::OO_Less:
+      return "__gt__";
+    case clang::OO_Greater:
+      return "__lt__";
+    case clang::OO_LessLess:
+      return "__rlshift__";
+    case clang::OO_GreaterGreater:
+      return "__rrshift__";
+    case clang::OO_EqualEqual:
+      return "__eq__";
+    case clang::OO_ExclaimEqual:
+      return "__ne__";
+    case clang::OO_LessEqual:
+      return "__ge__";
+    case clang::OO_GreaterEqual:
+      return "__le__";
+    default:
+      return {};
+    }
+  }
+  switch (kind) {
+  case clang::OO_Plus:
+    return "__add__";
+  case clang::OO_Minus:
+    return "__sub__";
+  case clang::OO_Star:
+    return "__mul__";
+  case clang::OO_Slash:
+    return "__truediv__";
+  case clang::OO_Percent:
+    return "__mod__";
+  case clang::OO_Caret:
+    return "__xor__";
+  case clang::OO_Amp:
+    return "__and__";
+  case clang::OO_Pipe:
+    return "__or__";
+  case clang::OO_Less:
+    return "__lt__";
+  case clang::OO_Greater:
+    return "__gt__";
+  case clang::OO_PlusEqual:
+    return "__iadd__";
+  case clang::OO_MinusEqual:
+    return "__isub__";
+  case clang::OO_StarEqual:
+    return "__imul__";
+  case clang::OO_SlashEqual:
+    return "__itruediv__";
+  case clang::OO_PercentEqual:
+    return "__imod__";
+  case clang::OO_CaretEqual:
+    return "__ixor__";
+  case clang::OO_AmpEqual:
+    return "__iand__";
+  case clang::OO_PipeEqual:
+    return "__ior__";
+  case clang::OO_LessLess:
+    return "__lshift__";
+  case clang::OO_GreaterGreater:
+    return "__rshift__";
+  case clang::OO_LessLessEqual:
+    return "__ilshift__";
+  case clang::OO_GreaterGreaterEqual:
+    return "__irshift__";
+  case clang::OO_EqualEqual:
+    return "__eq__";
+  case clang::OO_ExclaimEqual:
+    return "__ne__";
+  case clang::OO_LessEqual:
+    return "__le__";
+  case clang::OO_GreaterEqual:
+    return "__ge__";
+  default:
+    return {};
+  }
+}
+
 std::string genpybind::getFullyQualifiedName(const clang::TypeDecl *decl) {
   const clang::ASTContext &context = decl->getASTContext();
   const clang::QualType qual_type = context.getTypeDeclType(decl);
@@ -548,6 +749,16 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
                                            item.exposer->inliningPolicy());
     llvm::sort(decls, IsBeforeInTranslationUnit(sema.getSourceManager()));
 
+    // Inject operators from a record's associated namespace (found via ADL),
+    // as these need to be exposed as methods of the record.  Only user-defined
+    // operators that can be called without conversions are considered.
+    if (const auto *record =
+            llvm::dyn_cast<clang::CXXRecordDecl>(item.decl_context)) {
+      std::vector<const clang::NamedDecl *> associated_decls =
+          collectOperatorDeclsViaArgumentDependentLookup(sema, record);
+      llvm::copy(associated_decls, std::back_inserter(decls));
+    }
+
     for (const clang::NamedDecl *proposed_decl : decls) {
       // If there are several declarations of a function template,
       // only one is picked up here.  Thus all specializations can be
@@ -668,8 +879,14 @@ void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &os,
     const auto *function = llvm::cast<clang::FunctionDecl>(decl);
     const auto *method = llvm::dyn_cast<clang::CXXMethodDecl>(decl);
 
-    // Operators are handled separately in `RecordExposer::finalizeDefinition`.
-    if (function->isDeleted() || function->isOverloadedOperator())
+    if (function->isDeleted())
+      return;
+
+    // Both operators defined as member functions and operators in a record's
+    // associated namespace are handled by `RecordExposer`, thus all operators
+    // are ignored here.
+    if (function->isOverloadedOperator() &&
+        function->getOverloadedOperator() != clang::OO_Call)
       return;
 
     os << ((method != nullptr && method->isStatic()) ? "context.def_static("
@@ -807,6 +1024,130 @@ void RecordExposer::emitProperties(llvm::raw_ostream &os) {
   }
 }
 
+void RecordExposer::emitOperator(llvm::raw_ostream &os,
+                                 const clang::FunctionDecl *function) {
+  const auto *record_decl =
+      llvm::cast<clang::CXXRecordDecl>(annotated_decl->getDecl());
+  const clang::ASTContext &ast_context = record_decl->getASTContext();
+  const auto *method = llvm::dyn_cast<clang::CXXMethodDecl>(function);
+
+  clang::OverloadedOperatorKind kind = function->getOverloadedOperator();
+
+  switch (kind) {
+  default:
+    break;
+  case clang::OO_New:
+  case clang::OO_Delete:
+  case clang::OO_Array_New:
+  case clang::OO_Array_Delete:
+  case clang::OO_Equal:
+  case clang::OO_Spaceship: // TODO: not implemented yet
+  case clang::OO_AmpAmp:
+  case clang::OO_PipePipe:
+  case clang::OO_PlusPlus:
+  case clang::OO_MinusMinus:
+  case clang::OO_Comma:
+  case clang::OO_ArrowStar:
+  case clang::OO_Arrow:
+  case clang::OO_Call:
+  case clang::OO_Subscript:
+    return;
+  }
+
+  // For each operator, emit all viable rewritten candidates.
+  // Note that this would expose e.g. `__eq__` twice for records that have
+  // both `==` and `<=>`, but exposing the same operator multiple times
+  // should be benign: pybind11 will just pick one definition when it
+  // resolves the call.
+  bool allow_rewritten_candidates = ast_context.getLangOpts().CPlusPlus2a;
+  // TODO: implement this...
+  (void)allow_rewritten_candidates;
+
+  llvm::SmallVector<clang::QualType, 2> parameter_types;
+  clang::QualType record_type = ast_context.getTypeDeclType(record_decl);
+  if (method != nullptr) {
+    // TODO: Consider ref qualifiers.
+    if (method->isConst())
+      record_type = record_type.withConst();
+    parameter_types.push_back(ast_context.getLValueReferenceType(record_type));
+  }
+  for (const clang::ParmVarDecl *param : function->parameters()) {
+    parameter_types.push_back(param->getType());
+  }
+
+  bool unary = parameter_types.size() == 1;
+
+  // Do not expose address-of and indirection/dereference operators.
+  if (unary && (kind == clang::OO_Star || kind == clang::OO_Amp))
+    return;
+
+  // Reversing the parameters can also lead to duplicate definitions of
+  // relational operators.  E.g., `operator<(int, T)` and `operator>(T, int)`
+  // are both exposed as `T.__gt__`.
+  // This is considered acceptable for the same reasons as stated above.
+  // TODO: This might lead to confusion if the different underlying operators
+  // are not compatible (e.g., due to a bug).  Reconsider the trade-off.
+  bool reverse_parameters = [&] {
+    clang::QualType lhs_param_type = parameter_types.front();
+    if (lhs_param_type->isReferenceType())
+      lhs_param_type = lhs_param_type->getPointeeType();
+    return !ast_context.hasSameUnqualifiedType(lhs_param_type, record_type);
+  }();
+  os << "context.def(";
+  emitStringLiteral(os,
+                    unary ? pythonUnaryOperatorName(kind)
+                          : pythonBinaryOperatorName(kind, reverse_parameters));
+  os << ", ";
+  emitOperatorDefinition(os, ast_context, kind, parameter_types,
+                         reverse_parameters);
+  os << ", ";
+  emitStringLiteral(os, getDocstring(function));
+  os << ", ::pybind11::is_operator());\n";
+}
+
+void RecordExposer::emitOperatorDefinition(
+    llvm::raw_ostream &os, const clang::ASTContext &ast_context,
+    clang::OverloadedOperatorKind kind,
+    const llvm::SmallVectorImpl<clang::QualType> &parameter_types,
+    bool reverse_parameters) {
+  assert(parameter_types.size() <= 2);
+  bool unary = parameter_types.size() == 1;
+  llvm::StringRef parameter_names[2] = {"lhs", "rhs"};
+  auto printing_policy = getPrintingPolicyForExposedNames(ast_context);
+  // NOTE: Because the return type of the lambda is deduced, the operator always
+  // returns by value.  In most cases where this is relevant (e.g., assignment
+  // operators like `T& operrator+=(...)`) this would only be visible on the
+  // Python side if the exposed function is called instead of using the natural
+  // syntax (e.g. calling `x.__iadd__(5)` instead of using the statement form
+  // `x += 5`).
+  // TODO: Use the actual return type of the operator function instead, and add
+  // support for return value policies, if supported by pybind11.
+  os << "[](";
+  bool comma = false;
+  int parameter_count = static_cast<int>(parameter_types.size());
+  for (int index : llvm::seq(0, parameter_count)) {
+    if (reverse_parameters)
+      index = parameter_count - 1 - index;
+    if (comma)
+      os << ", ";
+    // TODO: If the operator decl takes a parameter by value, this wrapper
+    // does so, too.  This might not always work or be optimal?
+    os << clang::TypeName::getFullyQualifiedName(parameter_types[index],
+                                                 ast_context, printing_policy,
+                                                 /*WithGlobalNsPrefix=*/true);
+    os << ' ' << parameter_names[index];
+    comma = true;
+  }
+  os << ") { return ";
+  if (unary) {
+    os << getOperatorSpelling(kind) << parameter_names[0];
+  } else {
+    os << parameter_names[0] << ' ' << getOperatorSpelling(kind) << ' '
+       << parameter_names[1];
+  }
+  os << "; }";
+}
+
 void RecordExposer::emitType(llvm::raw_ostream &os) {
   os << "::pybind11::class_<"
      << getFullyQualifiedName(
@@ -871,6 +1212,18 @@ void RecordExposer::handleDeclImpl(llvm::raw_ostream &os,
     emitPolicies(os, annot);
     os << ");\n";
     return;
+  }
+
+  // Operators can be either member functions or free functions in the record's
+  // associated namespace (found via ADL).
+  if (llvm::isa<AnnotatedFunctionDecl>(annotation)) {
+    const auto *function = llvm::cast<clang::FunctionDecl>(decl);
+    if (function->isOverloadedOperator() &&
+        function->getOverloadedOperator() != clang::OO_Call &&
+        !function->isDeleted()) {
+      emitOperator(os, function);
+      return;
+    }
   }
 
   // If the method should be turned into a property, remember this for later.

@@ -509,7 +509,10 @@ AnnotatedFunctionDecl::AnnotatedFunctionDecl(const clang::FunctionDecl *decl)
     : AnnotatedNamedDecl(decl) {}
 
 llvm::StringRef AnnotatedFunctionDecl::getFriendlyDeclKindName() const {
-  if (llvm::isa<clang::CXXConversionDecl>(getDecl()))
+  const auto *decl = llvm::cast<clang::FunctionDecl>(getDecl());
+  if (decl->isOverloadedOperator())
+    return "operator";
+  if (llvm::isa<clang::CXXConversionDecl>(decl))
     return "conversion function";
   return "free function";
 }
@@ -612,6 +615,9 @@ AnnotatedMethodDecl::AnnotatedMethodDecl(const clang::CXXMethodDecl *decl)
 }
 
 llvm::StringRef AnnotatedMethodDecl::getFriendlyDeclKindName() const {
+  const auto *decl = llvm::cast<clang::FunctionDecl>(getDecl());
+  if (decl->isOverloadedOperator())
+    return "operator";
   return "method";
 }
 
@@ -626,6 +632,11 @@ bool AnnotatedMethodDecl::processAnnotation(const Annotation &annotation) {
   };
 
   const auto *decl = llvm::cast<clang::FunctionDecl>(getDecl());
+
+  // Property-annotations are not valid for overloaded operators.
+  if (decl->isOverloadedOperator())
+    return false;
+
   clang::QualType return_type = decl->getReturnType();
   switch (annotation.getKind().value()) {
   case AnnotationKind::GetterFor:

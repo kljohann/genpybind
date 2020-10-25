@@ -29,6 +29,14 @@ struct Something {
   GENPYBIND(getter_for("property"), setter_for("property"))
   operator bool() const;
 
+  // CHECK: methods.h:[[# @LINE + 2]]:13: error: Invalid annotation for operator: getter_for("property")
+  GENPYBIND(getter_for("property"))
+  Something operator+() const;
+
+  // CHECK: methods.h:[[# @LINE + 2]]:13: error: Invalid annotation for operator: setter_for("property")
+  GENPYBIND(setter_for("property"))
+  Something operator<(double) const;
+
   // CHECK: methods.h:[[# @LINE + 3]]:3: error: Invalid annotation for named declaration: getter_for("property")
   // CHECK: methods.h:[[# @LINE + 2]]:3: error: Invalid annotation for named declaration: setter_for("property")
   GENPYBIND(getter_for("property"), setter_for("property"))
@@ -43,4 +51,4 @@ struct Example {};
 GENPYBIND(getter_for("property"), setter_for("property"))
 Example(float) -> Example<double>;
 
-// CHECK: 10 errors generated.
+// CHECK: 12 errors generated.
