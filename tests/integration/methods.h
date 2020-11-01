@@ -34,6 +34,14 @@ struct GENPYBIND(visible) Example {
 
   operator Other() const;
 
+  int operator()() const {
+    return 123;
+  }
+
+  int operator()(int value) const {
+    return value;
+  }
+
 private:
   void private_method();
 };

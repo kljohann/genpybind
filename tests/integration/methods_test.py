@@ -76,3 +76,10 @@ def test_conversion_function_does_not_imply_implicit_conversion():
     m.consumes_other(other)
     with pytest.raises(TypeError, match="incompatible function arguments"):
         m.consumes_other(inst)
+
+
+def test_call_operator_is_exposed():
+    inst = m.Example()
+    assert hasattr(inst, "__call__")
+    assert inst() == 123
+    assert inst(321) == 321

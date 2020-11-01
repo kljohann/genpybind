@@ -882,16 +882,21 @@ void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &os,
     if (function->isDeleted())
       return;
 
+    bool is_call_operator = function->getOverloadedOperator() == clang::OO_Call;
+
     // Both operators defined as member functions and operators in a record's
-    // associated namespace are handled by `RecordExposer`, thus all operators
+    // associated namespace are handled by `RecordExposer`, thus most operators
     // are ignored here.
-    if (function->isOverloadedOperator() &&
-        function->getOverloadedOperator() != clang::OO_Call)
+    if (function->isOverloadedOperator() && !is_call_operator)
       return;
+
+    std::string spelling = (!is_call_operator || !annot->spelling.empty())
+                               ? annot->getSpelling()
+                               : "__call__";
 
     os << ((method != nullptr && method->isStatic()) ? "context.def_static("
                                                      : "context.def(");
-    emitStringLiteral(os, annot->getSpelling());
+    emitStringLiteral(os, spelling);
     os << ", ";
     emitFunctionPointer(os, function);
     os << ", ";
