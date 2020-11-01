@@ -1,6 +1,9 @@
 import operators as m
 
 import inspect
+import operator
+
+import pytest
 
 
 assert (not NotImplemented) is False
@@ -115,3 +118,86 @@ def test_instantiated_template_operators():
     assert not inst == 123
     assert inst == m.Templated(321)
     assert not inst == m.Templated(123)
+
+
+BINARY_OPERATORS = (
+    "add sub mul truediv mod xor and or lt gt lshift rshift eq ne le ge".split()
+)
+BINARY_INPLACE_OPERATORS = (
+    "iadd isub imul itruediv imod ixor iand ior ilshift irshift".split()
+)
+UNARY_OPERATORS = "pos neg invert".split()
+
+IS_UNSUPPORTED_RX = r"unsupported operand type\(s\)|not supported between instances of"
+
+
+def get_operator(name):
+    if name in ["and", "or"]:
+        name = f"{name}_"
+    return getattr(operator, name)
+
+
+@pytest.mark.parametrize("name", BINARY_OPERATORS + BINARY_INPLACE_OPERATORS)
+@pytest.mark.parametrize("kind", ["member", "nonconst_member", "friend", "associated"])
+def test_exhaustive_has_binary_operator(name, kind):
+    cls = getattr(m, f"has_{kind}_{name}")
+    assert sorted(get_proper_members(cls, callable).keys()) == sorted(
+        ["__init__", f"__{name}__"]
+    )
+    lhs = cls(123)
+    rhs = cls(321)
+    for result in [get_operator(name)(lhs, rhs), getattr(lhs, f"__{name}__")(rhs)]:
+        assert result.lhs == 123
+        assert result.rhs == 321
+
+
+@pytest.mark.parametrize("name", BINARY_OPERATORS + BINARY_INPLACE_OPERATORS)
+@pytest.mark.parametrize(
+    "kind", ["hidden_member", "hidden_friend", "hidden_associated"]
+)
+def test_exhaustive_hidden_binary_operator(name, kind):
+    cls = getattr(m, f"has_{kind}_{name}")
+    assert sorted(get_proper_members(cls, callable).keys()) == [
+        "__init__",
+    ]
+
+    if name in ["eq", "ne"]:
+        # Python always synthesizes a default function in this case.
+        return
+
+    lhs = cls(123)
+    rhs = cls(321)
+    with pytest.raises(TypeError, match=IS_UNSUPPORTED_RX):
+        get_operator(name)(lhs, rhs)
+
+
+@pytest.mark.parametrize("name", UNARY_OPERATORS)
+@pytest.mark.parametrize("kind", ["member", "nonconst_member", "friend", "associated"])
+def test_exhaustive_has_unary_operator(name, kind):
+    cls = getattr(m, f"has_{kind}_{name}")
+    assert sorted(get_proper_members(cls, callable).keys()) == sorted(
+        ["__init__", f"__{name}__"]
+    )
+    oper = get_operator(name)
+    inst = cls(123)
+    for result in [oper(inst), getattr(inst, f"__{name}__")()]:
+        assert result.value == oper(123)
+
+
+@pytest.mark.parametrize("name", UNARY_OPERATORS)
+@pytest.mark.parametrize(
+    "kind", ["hidden_member", "hidden_friend", "hidden_associated"]
+)
+def test_exhaustive_hidden_unary_operator(name, kind):
+    cls = getattr(m, f"has_{kind}_{name}")
+    assert sorted(get_proper_members(cls, callable).keys()) == [
+        "__init__",
+    ]
+
+    if name in ["eq", "ne"]:
+        # Python always synthesizes a default function in this case.
+        return
+
+    inst = cls(123)
+    with pytest.raises(TypeError, match="bad operand type for unary"):
+        get_operator(name)(inst)
