@@ -78,3 +78,7 @@ foreach(test_implementation IN LISTS integration_tests)
   set_target_properties(${test_target} ${module_name}
     PROPERTIES CXX_INCLUDE_WHAT_YOU_USE "")
 endforeach()
+
+target_link_libraries(integration-typedefs-across-modules
+  PUBLIC integration-typedefs-across-modules-definition)
+add_dependencies(typedefs_across_modules typedefs_across_modules_definition)

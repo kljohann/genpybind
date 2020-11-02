@@ -294,6 +294,13 @@ bool AnnotatedNamespaceDecl::processAnnotation(const Annotation &annotation) {
       reportWrongArgumentTypeError(getDecl(), annotation.getKind(), *value);
     }
     break;
+  case AnnotationKind::OnlyExposeIn:
+    if (auto value = arguments.take<LiteralValue::Kind::String>()) {
+      only_expose_in = value->getString();
+    } else if ((value = arguments.take())) {
+      reportWrongArgumentTypeError(getDecl(), annotation.getKind(), *value);
+    }
+    break;
   default:
     return false;
   }

@@ -136,7 +136,7 @@ public:
     if (!graph.hasValue())
       return;
 
-    const auto visibilities = deriveEffectiveVisibility(*graph, annotations);
+    auto visibilities = deriveEffectiveVisibility(*graph, annotations);
 
     if (reportExposeHereCycles(*graph, reachableDeclContexts(visibilities),
                                builder.getRelocatedDecls()))
@@ -145,8 +145,12 @@ public:
     inspectGraph(*graph, annotations, visibilities, module_name,
                  InspectGraphStage::Visibility);
 
-    const auto contexts_with_visible_decls =
+    auto contexts_with_visible_decls =
         declContextsWithVisibleNamedDecls(&*graph, annotations, visibilities);
+
+    hideNamespacesBasedOnExposeInAnnotation(*graph, annotations,
+                                            contexts_with_visible_decls,
+                                            visibilities, module_name);
 
     graph = pruneGraph(*graph, contexts_with_visible_decls, visibilities);
 

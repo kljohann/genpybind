@@ -67,6 +67,14 @@ declContextsWithVisibleNamedDecls(const DeclContextGraph *graph,
                                   const AnnotationStorage &annotations,
                                   const EffectiveVisibilityMap &visibilities);
 
+/// Change visibility of namespaces, s.t. namespaces with an `expose_in`
+/// annotation are only included, if it matches the `module_name`.
+/// This also affects the visibility of nested declarations.
+void hideNamespacesBasedOnExposeInAnnotation(
+    const DeclContextGraph &graph, const AnnotationStorage &annotations,
+    ConstDeclContextSet &contexts_with_visible_decls,
+    EffectiveVisibilityMap &visibilities, llvm::StringRef module_name);
+
 /// Returns a pruned copy of `graph`, where hidden and unreachable nodes are
 /// omitted based on the passed effective node `visibilities`.
 /// Hidden records and their nested contexts are omitted unconditionally.

@@ -233,6 +233,62 @@ ConstDeclContextSet genpybind::declContextsWithVisibleNamedDecls(
   return result;
 }
 
+void genpybind::hideNamespacesBasedOnExposeInAnnotation(
+    const DeclContextGraph &graph, const AnnotationStorage &annotations,
+    ConstDeclContextSet &contexts_with_visible_decls,
+    EffectiveVisibilityMap &visibilities,
+    llvm::StringRef module_name) {
+  /// Keep track which nodes were already visited in a depth-first traversal
+  /// of the visibility tree and whether the current node is dominated by a
+  /// one specific node. (This could be more easily implemented using pre-
+  /// and post-order actions.)
+  struct TrackVisitedAndDominator {
+    using NodeRef = const ::genpybind::DeclContextNode *;
+    llvm::SmallPtrSet<NodeRef, 8> visited;
+    NodeRef dominator = nullptr;
+
+    bool isDominated() const { return dominator != nullptr; }
+    void setDominator(NodeRef node) {
+      assert(dominator == nullptr);
+      dominator = node;
+    }
+
+    auto insert(NodeRef node) -> decltype(visited.insert(node)) {
+      return visited.insert(node);
+    }
+
+    void completed(NodeRef node) {
+      if (node == dominator)
+        dominator = nullptr;
+    }
+  };
+
+  /// Traverse the decl context graph and mark all nodes below a namespace as
+  /// hidden, if the namespace belongs to a different module.
+  TrackVisitedAndDominator visited;
+
+  for (auto it = llvm::df_ext_begin(&graph, visited),
+            end_it = llvm::df_ext_end(&graph, visited);
+       it != end_it; ++it) {
+    auto is_namespace_for_different_module = [&] {
+      const auto *namespace_decl =
+          llvm::dyn_cast<clang::NamespaceDecl>(it->getDecl());
+      const auto *annotation = llvm::cast_or_null<AnnotatedNamespaceDecl>(
+          annotations.get(namespace_decl));
+      return annotation != nullptr && !annotation->only_expose_in.empty() &&
+             annotation->only_expose_in != module_name;
+    };
+    if (!visited.isDominated()) {
+      if (!is_namespace_for_different_module())
+        continue;
+      visited.setDominator(*it);
+    }
+    const clang::DeclContext* decl_context = it->getDeclContext();
+    contexts_with_visible_decls.erase(decl_context);
+    visibilities[decl_context] = false;
+  }
+}
+
 DeclContextGraph
 genpybind::pruneGraph(const DeclContextGraph &graph,
                       const ConstDeclContextSet &contexts_with_visible_decls,

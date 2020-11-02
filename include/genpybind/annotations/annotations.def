@@ -36,7 +36,7 @@ ANNOTATION_KIND(Postamble, postamble) // ()
 
 // NamespaceDecl
 ANNOTATION_KIND(Module, module) // (String)?
-ANNOTATION_KIND(Tag, tag)       // (String)
+ANNOTATION_KIND(OnlyExposeIn, only_expose_in) // (String)
 
 // TypedefNameDecl
 ANNOTATION_KIND(ExposeHere, expose_here) // ()
