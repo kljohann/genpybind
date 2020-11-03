@@ -16,6 +16,7 @@
 #include <clang/AST/QualTypeNames.h>
 #include <clang/AST/Type.h>
 #include <clang/Basic/Specifiers.h>
+#include <clang/Sema/Sema.h>
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/ADT/StringExtras.h>
@@ -42,6 +43,23 @@ public:
     if (discriminator != 1)
       result += "_" + llvm::utostr(discriminator);
     return result;
+  }
+};
+
+class IsBeforeInTranslationUnit {
+  clang::SourceManager &source_manager;
+
+public:
+  explicit IsBeforeInTranslationUnit(clang::SourceManager &source_manager)
+      : source_manager(source_manager) {}
+
+  bool operator()(clang::SourceLocation lhs, clang::SourceLocation rhs) const {
+    return source_manager.isBeforeInTranslationUnit(lhs, rhs);
+  }
+
+  bool operator()(const clang::Decl *lhs, const clang::Decl *rhs) const {
+    // TODO: getBeginLoc? Macros?
+    return operator()(lhs->getLocation(), rhs->getLocation());
   }
 };
 
@@ -525,10 +543,10 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
                                default_visibility);
     };
 
-    // TODO: Sort / make deterministic
     std::vector<const clang::NamedDecl *> decls =
         collectVisibleDeclsFromDeclContext(sema, item.decl_context,
                                            item.exposer->inliningPolicy());
+    llvm::sort(decls, IsBeforeInTranslationUnit(sema.getSourceManager()));
 
     for (const clang::NamedDecl *proposed_decl : decls) {
       // If there are several declarations of a function template,
