@@ -123,6 +123,7 @@ private:
       llvm::raw_ostream &os, const clang::ASTContext &ast_context,
       clang::OverloadedOperatorKind kind,
       const llvm::SmallVectorImpl<clang::QualType> &parameter_types,
+      clang::QualType return_type,
       bool reverse_parameters);
   void emitType(llvm::raw_ostream &os);
   void handleDeclImpl(llvm::raw_ostream &os, const clang::NamedDecl *decl,

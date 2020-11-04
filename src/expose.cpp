@@ -1104,8 +1104,9 @@ void RecordExposer::emitOperator(llvm::raw_ostream &os,
                           : pythonBinaryOperatorName(kind, reverse_parameters));
   os << ", ";
   emitOperatorDefinition(os, ast_context, kind, parameter_types,
-                         reverse_parameters);
+                         function->getReturnType(), reverse_parameters);
   os << ", ";
+  // TODO: Add support for return value policies, if supported by pybind11.
   emitStringLiteral(os, getDocstring(function));
   os << ", ::pybind11::is_operator());\n";
 }
@@ -1114,19 +1115,12 @@ void RecordExposer::emitOperatorDefinition(
     llvm::raw_ostream &os, const clang::ASTContext &ast_context,
     clang::OverloadedOperatorKind kind,
     const llvm::SmallVectorImpl<clang::QualType> &parameter_types,
+    clang::QualType return_type,
     bool reverse_parameters) {
   assert(parameter_types.size() <= 2);
   bool unary = parameter_types.size() == 1;
   llvm::StringRef parameter_names[2] = {"lhs", "rhs"};
   auto printing_policy = getPrintingPolicyForExposedNames(ast_context);
-  // NOTE: Because the return type of the lambda is deduced, the operator always
-  // returns by value.  In most cases where this is relevant (e.g., assignment
-  // operators like `T& operrator+=(...)`) this would only be visible on the
-  // Python side if the exposed function is called instead of using the natural
-  // syntax (e.g. calling `x.__iadd__(5)` instead of using the statement form
-  // `x += 5`).
-  // TODO: Use the actual return type of the operator function instead, and add
-  // support for return value policies, if supported by pybind11.
   os << "[](";
   bool comma = false;
   int parameter_count = static_cast<int>(parameter_types.size());
@@ -1143,7 +1137,11 @@ void RecordExposer::emitOperatorDefinition(
     os << ' ' << parameter_names[index];
     comma = true;
   }
-  os << ") { return ";
+  os << ") -> "
+     << clang::TypeName::getFullyQualifiedName(return_type, ast_context,
+                                               printing_policy,
+                                               /*WithGlobalNsPrefix=*/true)
+     << " { return ";
   if (unary) {
     os << getOperatorSpelling(kind) << parameter_names[0];
   } else {
