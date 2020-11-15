@@ -58,6 +58,10 @@ def test_class_can_be_implicitly_constructible():
         assert m.accepts_implicit_ptr(None)
 
 
+def test_implicit_conversion_annotation_can_be_added_to_explicit_constructor():
+    assert m.accepts_implicit(m.Onetwothree()) == 123
+
+
 def test_noconvert_prevents_implicit_conversion():
     with pytest.raises(TypeError, match="incompatible function arguments"):
         m.noconvert_implicit(123)

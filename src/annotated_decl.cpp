@@ -718,7 +718,7 @@ bool AnnotatedConstructorDecl::processAnnotation(const Annotation &annotation) {
   switch (annotation.getKind().value()) {
   case AnnotationKind::ImplicitConversion: {
     if (constructor->getNumParams() != 1 ||
-        !constructor->isConvertingConstructor(/*AllowExplicit=*/false))
+        !constructor->isConvertingConstructor(/*AllowExplicit=*/true))
       Diagnostics::report(getDecl(),
                           Diagnostics::Kind::AnnotationInvalidForDeclKindError)
           << "non-converting constructor" << toString(annotation);

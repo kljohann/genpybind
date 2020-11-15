@@ -21,10 +21,13 @@ struct GENPYBIND(visible) RejectsNone {
   RejectsNone(const Example *example);
 };
 
+struct GENPYBIND(visible) Onetwothree {};
+
 struct GENPYBIND(visible) Implicit {
   Implicit(int value) GENPYBIND(implicit_conversion) : value(value) {}
   Implicit(Example example) GENPYBIND(implicit_conversion)
       : value(example.value) {}
+  explicit Implicit(Onetwothree) GENPYBIND(implicit_conversion) : value(123) {}
 
   int value;
 };
