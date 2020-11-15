@@ -2,6 +2,7 @@
 
 #include <clang/Basic/CharInfo.h>
 #include <clang/Basic/SourceLocation.h>
+#include <llvm/ADT/Optional.h>
 #include <llvm/ADT/Sequence.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringSwitch.h>
@@ -158,11 +159,14 @@ auto Parser::parseAnnotations(Annotations &annotations) -> llvm::Error {
 auto Parser::parseAnnotationKind() -> llvm::Expected<AnnotationKind> {
   Token token = tokenizer->consumeToken();
   assert(token.kind == Token::Kind::Identifier);
-  return llvm::StringSwitch<llvm::Expected<AnnotationKind>>(token.text)
-#define ANNOTATION_KIND(Enum, Spelling) .Case(#Spelling, AnnotationKind::Enum)
+  auto kind = llvm::StringSwitch<llvm::Optional<AnnotationKind>>(token.text)
+#define ANNOTATION_KIND(Enum, Spelling)                                        \
+  .Case(#Spelling, llvm::Optional<AnnotationKind>(AnnotationKind::Enum))
 #include "genpybind/annotations/annotations.def"
-      .Default(
-          llvm::make_error<Error>(Error::Kind::InvalidAnnotation, token.text));
+                  .Default(llvm::None);
+  if (kind.hasValue())
+    return *kind;
+  return llvm::make_error<Error>(Error::Kind::InvalidAnnotation, token.text);
 }
 
 auto Parser::parseAnnotationArguments()
