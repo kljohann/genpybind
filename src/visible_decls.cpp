@@ -66,6 +66,10 @@ public:
             llvm::dyn_cast<clang::UsingShadowDecl>(proposed_decl)) {
       proposed_decl = using_decl->getTargetDecl();
     }
+
+    if (!proposed_decl->getLocation().isValid())
+      return;
+
     decls.push_back(proposed_decl);
   }
 };
