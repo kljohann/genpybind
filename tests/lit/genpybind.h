@@ -10,8 +10,10 @@
   GENPYBIND__PRIVATE_CONCAT_EXPANDED__(x, y)
 #define GENPYBIND__PRIVATE_UNIQUE__(x)                                         \
   GENPYBIND__PRIVATE_CONCAT__(x, __COUNTER__)
+#define GENPYBIND__PRIVATE_STRINGIZE__(...) #__VA_ARGS__
 
-#define GENPYBIND(...) __attribute__((annotate("◊" #__VA_ARGS__)))
+#define GENPYBIND(...)                                                         \
+  __attribute__((annotate("◊" GENPYBIND__PRIVATE_STRINGIZE__(__VA_ARGS__))))
 #define GENPYBIND_MANUAL(...)                                                  \
   static constexpr auto __attribute__((unused)) GENPYBIND(manual)              \
       GENPYBIND__PRIVATE_UNIQUE__(genpybind_) = [](auto &parent) __VA_ARGS__;
