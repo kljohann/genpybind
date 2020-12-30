@@ -22,6 +22,7 @@
 #include <clang/Sema/SemaConsumer.h>
 #include <clang/Tooling/ArgumentsAdjusters.h>
 #include <clang/Tooling/CommonOptionsParser.h>
+#include <clang/Tooling/CompilationDatabase.h>
 #include <clang/Tooling/Tooling.h>
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/ADT/Optional.h>
@@ -99,6 +100,25 @@ static void inspectGraph(const DeclContextGraph &graph,
   if (llvm::is_contained(g_dump_graph, stage))
     printGraph(llvm::errs(), &graph, visibilities, annotations,
                graphTitle(stage));
+}
+
+static void emitQuotedArguments(llvm::raw_ostream &os,
+                                llvm::ArrayRef<std::string> arguments) {
+  bool first = true;
+  for (llvm::StringRef arg : arguments) {
+    if (!first) {
+      os << ' ';
+    } else {
+      first = false;
+    }
+    if (arg.contains(' ')) {
+      os << '"';
+      os.write_escaped(arg);
+      os << '"';
+    } else {
+      os << arg;
+    }
+  }
 }
 
 class GenpybindASTConsumer : public clang::SemaConsumer {
@@ -251,14 +271,37 @@ int main(int argc, const char **argv) {
   llvm::cl::extrahelp common_help(CommonOptionsParser::HelpMessage);
 
   llvm::cl::opt<bool> expect_failure("xfail",
-                                    llvm::cl::cat(g_genpybind_category),
-                                    llvm::cl::desc("Reverse the exit status."),
-                                    llvm::cl::init(false), llvm::cl::Hidden);
+                                     llvm::cl::cat(g_genpybind_category),
+                                     llvm::cl::desc("Reverse the exit status."),
+                                     llvm::cl::init(false), llvm::cl::Hidden);
+
+  llvm::cl::opt<bool> verbose("verbose", llvm::cl::cat(g_genpybind_category),
+                              llvm::cl::desc("Use verbose output"),
+                              llvm::cl::init(false));
 
   CommonOptionsParser options_parser(argc, argv, g_genpybind_category);
 
-  ClangTool tool(options_parser.getCompilations(),
-                 options_parser.getSourcePathList());
+  const CompilationDatabase &compilations = options_parser.getCompilations();
+  const std::vector<std::string> &source_paths =
+      options_parser.getSourcePathList();
+
+  if (verbose) {
+    for (const auto &source_path : source_paths) {
+      std::string abs_path = getAbsolutePath(source_path);
+      std::vector<CompileCommand> compile_commands =
+          compilations.getCompileCommands(abs_path);
+
+      for (const CompileCommand &command : compile_commands) {
+        llvm::errs() << "Analyzing file " << command.Filename
+                     << " from within directory " << command.Directory
+                     << " using command " << command.Heuristic << "\n  ";
+        emitQuotedArguments(llvm::errs(), command.CommandLine);
+        llvm::errs() << "\n";
+      }
+    }
+  }
+
+  ClangTool tool(compilations, source_paths);
 
   tool.appendArgumentsAdjuster(getClangStripOutputAdjuster());
   tool.appendArgumentsAdjuster(getClangStripDependencyFileAdjuster());
@@ -279,6 +322,17 @@ int main(int argc, const char **argv) {
   });
   // TODO: Also append -xc++, -std=c++17, -D__GENPYBIND__?
   tool.appendArgumentsAdjuster(getInsertArgumentAdjuster("-Wno-everything"));
+
+  if (verbose) {
+    tool.appendArgumentsAdjuster(
+        [](const CommandLineArguments &arguments,
+           llvm::StringRef filename) -> CommandLineArguments {
+          llvm::errs() << "Adjusting command for file " << filename << " to\n  ";
+          emitQuotedArguments(llvm::errs(), arguments);
+          llvm::errs() << "\n";
+          return arguments;
+        });
+  }
 
   auto factory = newFrontendActionFactory<GenpybindAction>();
 
