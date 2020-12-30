@@ -8,14 +8,24 @@ def test_classes_are_present():
         "Derived",
         "DerivedCRTP",
         "DerivedFromHidden",
+        "DerivedPrivate",
+        "DerivedProtected",
     ]:
         assert hasattr(m, name)
     assert not hasattr(m, "Hidden")
 
 
+def get_user_mro(cls):
+    mro = cls.mro()
+    assert mro[-2].__class__.__name__ == "pybind11_type"
+    return mro[:-2]
+
+
 def test_mro():
-    assert m.Derived.mro()[:2] == [m.Derived, m.Base]
-    assert m.DerivedCRTP.mro()[:2] == [m.DerivedCRTP, m.CRTP_DerivedCRTP_]
+    assert get_user_mro(m.Derived) == [m.Derived, m.Base]
+    assert get_user_mro(m.DerivedCRTP) == [m.DerivedCRTP, m.CRTP_DerivedCRTP_]
+    assert get_user_mro(m.DerivedPrivate) == [m.DerivedPrivate]
+    assert get_user_mro(m.DerivedProtected) == [m.DerivedProtected]
 
 
 def test_isinstance():
@@ -30,6 +40,14 @@ def test_isinstance():
     assert not isinstance(derived_crtp, m.Base)
     assert isinstance(derived_crtp, m.DerivedCRTP)
     assert isinstance(derived_crtp, m.CRTP_DerivedCRTP_)
+
+    derived_private = m.DerivedPrivate()
+    assert not isinstance(derived_private, m.Base)
+    assert isinstance(derived_private, m.DerivedPrivate)
+
+    derived_protected = m.DerivedProtected()
+    assert not isinstance(derived_protected, m.Base)
+    assert isinstance(derived_protected, m.DerivedProtected)
 
 
 def test_can_be_derived_from_abstract_base():

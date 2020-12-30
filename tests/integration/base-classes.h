@@ -23,6 +23,10 @@ struct GENPYBIND(visible) Derived : public deeply::nested::Base {};
 struct GENPYBIND(visible) DerivedCRTP
     : public deeply::nested::CRTP<DerivedCRTP> {};
 
+struct GENPYBIND(visible) DerivedPrivate : private deeply::nested::Base {};
+
+struct GENPYBIND(visible) DerivedProtected : protected deeply::nested::Base {};
+
 struct GENPYBIND(visible) DerivedFromHidden : public deeply::nested::Hidden {};
 
 struct GENPYBIND(visible) Abstract {
