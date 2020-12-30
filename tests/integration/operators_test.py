@@ -132,9 +132,7 @@ IS_UNSUPPORTED_RX = r"unsupported operand type\(s\)|not supported between instan
 
 
 def get_operator(name):
-    if name in ["and", "or"]:
-        name = f"{name}_"
-    return getattr(operator, name)
+    return getattr(operator, f"__{name}__")
 
 
 @pytest.mark.parametrize("name", BINARY_OPERATORS + BINARY_INPLACE_OPERATORS)
