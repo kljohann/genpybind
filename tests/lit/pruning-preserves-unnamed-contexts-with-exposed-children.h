@@ -35,13 +35,21 @@ extern "C" {
 GENPYBIND(visible(default)) void visible_default_function();
 }
 
-namespace hidden_but_should_not_be_pruned GENPYBIND_HIDDEN {
+namespace hidden_but_should_not_be_pruned_1 GENPYBIND_HIDDEN {
 
 extern const int some_constant GENPYBIND(visible);
+
+} // namespace GENPYBIND_HIDDEN
+
+namespace hidden_but_should_not_be_pruned_2 GENPYBIND_HIDDEN {
 
 extern "C" {
 GENPYBIND(visible) void lexically_nested_visible_function();
 }
+
+} // namespace GENPYBIND_HIDDEN
+
+namespace hidden_but_should_not_be_pruned_3 GENPYBIND_HIDDEN {
 
 extern "C" {
 extern "C" {
@@ -68,8 +76,10 @@ GENPYBIND(visible) void visible_function();
 // CHECK-NEXT: |-Namespace 'also_not_pruned': hidden
 // CHECK-NEXT: | `-Namespace 'also_not_pruned::visible': visible
 // CHECK-NEXT: |   |-LinkageSpec:
-// CHECK-NEXT: |   `-Namespace 'also_not_pruned::visible::hidden_but_should_not_be_pruned': hidden
-// CHECK-NEXT: |     |-LinkageSpec:
+// CHECK-NEXT: |   |-Namespace 'also_not_pruned::visible::hidden_but_should_not_be_pruned_1': hidden
+// CHECK-NEXT: |   |-Namespace 'also_not_pruned::visible::hidden_but_should_not_be_pruned_2': hidden
+// CHECK-NEXT: |   | `-LinkageSpec:
+// CHECK-NEXT: |   `-Namespace 'also_not_pruned::visible::hidden_but_should_not_be_pruned_3': hidden
 // CHECK-NEXT: |     `-LinkageSpec:
 // CHECK-NEXT: |       `-LinkageSpec:
 // CHECK-NEXT: `-LinkageSpec:
