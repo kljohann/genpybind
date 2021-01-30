@@ -1,4 +1,4 @@
-// RUN: genpybind-tool -dump-graph=visibility %s -- -std=c++17 -xc++ -D__GENPYBIND__ 2>&1 | FileCheck %s --strict-whitespace
+// RUN: genpybind-tool --dump-graph=visibility %s -- -std=c++17 -xc++ -D__GENPYBIND__ 2>&1 | FileCheck %s --strict-whitespace
 #pragma once
 
 #include "genpybind.h"
@@ -22,7 +22,7 @@ void visible() GENPYBIND(visible);
 void defaulted() GENPYBIND(visible(default));
 void hidden() GENPYBIND(hidden);
 
-// CHECK-NEXT: |-LinkageSpec: hidden
+// CHECK-NOT: LinkageSpec
 extern "C" {
 void with_linkage();
 }
@@ -43,9 +43,9 @@ void visible_in_ns() GENPYBIND(visible);
 void defaulted_in_ns() GENPYBIND(visible(default));
 void hidden_in_ns() GENPYBIND(hidden);
 
-// CHECK-NEXT: | `-LinkageSpec: hidden
+// CHECK-NOT: LinkageSpec
 extern "C" {
-// CHECK-NEXT: |   `-CXXRecord 'in_unannotated_namespace::WithLinkageInNs': hidden
+// CHECK-NEXT: | `-CXXRecord 'in_unannotated_namespace::WithLinkageInNs': hidden
 class WithLinkageInNs {};
 void with_linkage_in_ns();
 }
@@ -67,9 +67,9 @@ void visible_in_visible() GENPYBIND(visible);
 void defaulted_in_visible() GENPYBIND(visible(default));
 void hidden_in_visible() GENPYBIND(hidden);
 
-// CHECK-NEXT: | |-LinkageSpec: visible
+// CHECK-NOT: LinkageSpec
 extern "C" {
-// CHECK-NEXT: | | `-CXXRecord 'in_visible_namespace::WithLinkageInVisible': visible
+// CHECK-NEXT: | |-CXXRecord 'in_visible_namespace::WithLinkageInVisible': visible
 class WithLinkageInVisible {};
 void with_linkage_in_visible();
 }
@@ -90,9 +90,9 @@ void visible_in_hidden_in_visible() GENPYBIND(visible);
 void defaulted_in_hidden_in_visible() GENPYBIND(visible(default));
 void hidden_in_hidden_in_visible() GENPYBIND(hidden);
 
-// CHECK-NEXT: | | `-LinkageSpec: hidden
+// CHECK-NOT: LinkageSpec
 extern "C" {
-// CHECK-NEXT: | |   `-CXXRecord 'in_visible_namespace::in_nested_hidden_namespace::WithLinkageInHiddenInVisible': hidden
+// CHECK-NEXT: | | `-CXXRecord 'in_visible_namespace::in_nested_hidden_namespace::WithLinkageInHiddenInVisible': hidden
 class WithLinkageInHiddenInVisible {};
 void with_linkage_in_hidden_in_visible();
 }
@@ -114,9 +114,9 @@ void visible_in_ns_in_visible() GENPYBIND(visible);
 void defaulted_in_ns_in_visible() GENPYBIND(visible(default));
 void hidden_in_ns_in_visible() GENPYBIND(hidden);
 
-// CHECK-NEXT: |   `-LinkageSpec: visible
+// CHECK-NOT: LinkageSpec
 extern "C" {
-// CHECK-NEXT: |     `-CXXRecord 'in_visible_namespace::in_nested_unannotated_namespace::WithLinkageInNsInVisible': visible
+// CHECK-NEXT: |   `-CXXRecord 'in_visible_namespace::in_nested_unannotated_namespace::WithLinkageInNsInVisible': visible
 class WithLinkageInNsInVisible {};
 void with_linkage_in_ns_in_visible();
 }
@@ -139,9 +139,9 @@ void visible_in_hidden() GENPYBIND(visible);
 void defaulted_in_hidden() GENPYBIND(visible(default));
 void hidden_in_hidden() GENPYBIND(hidden);
 
-// CHECK-NEXT:   `-LinkageSpec: hidden
+// CHECK-NOT: LinkageSpec
 extern "C" {
-// CHECK-NEXT:     `-CXXRecord 'in_hidden_namespace::WithLinkageInHidden': hidden
+// CHECK-NEXT:   `-CXXRecord 'in_hidden_namespace::WithLinkageInHidden': hidden
 class WithLinkageInHidden {};
 void with_linkage_in_hidden();
 }

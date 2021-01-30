@@ -1,4 +1,4 @@
-#include "genpybind/decl_context_collector.h"
+#include "genpybind/lookup_context_collector.h"
 
 #include "genpybind/annotated_decl.h"
 #include "genpybind/diagnostics.h"
@@ -7,7 +7,7 @@
 
 using namespace genpybind;
 
-void DeclContextCollector::warnIfAliasHasQualifiers(
+void LookupContextCollector::warnIfAliasHasQualifiers(
     const clang::TypedefNameDecl *decl) {
   clang::QualType qual_type = decl->getUnderlyingType();
   if (qual_type.hasQualifiers())
@@ -15,7 +15,7 @@ void DeclContextCollector::warnIfAliasHasQualifiers(
                         Diagnostics::Kind::IgnoringQualifiersOnAliasWarning);
 }
 
-void DeclContextCollector::errorIfAnnotationsDoNotMatchCanonicalDecl(
+void LookupContextCollector::errorIfAnnotationsDoNotMatchCanonicalDecl(
     const clang::Decl *decl) {
   if (decl->isCanonicalDecl())
     return;

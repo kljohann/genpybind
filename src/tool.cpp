@@ -165,8 +165,8 @@ public:
     inspectGraph(*graph, annotations, visibilities, module_name,
                  InspectGraphStage::Visibility);
 
-    auto contexts_with_visible_decls =
-        declContextsWithVisibleNamedDecls(&*graph, annotations, visibilities);
+    auto contexts_with_visible_decls = declContextsWithVisibleNamedDecls(
+        *sema, &*graph, annotations, visibilities);
 
     hideNamespacesBasedOnExposeInAnnotation(*graph, annotations,
                                             contexts_with_visible_decls,

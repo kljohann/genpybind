@@ -2,8 +2,8 @@
 
 #include "genpybind/annotated_decl.h"
 #include "genpybind/annotations/annotation.h"
-#include "genpybind/decl_context_collector.h"
 #include "genpybind/diagnostics.h"
+#include "genpybind/lookup_context_collector.h"
 
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/Decl.h>
@@ -22,6 +22,13 @@ using namespace genpybind;
 using annotations::Annotation;
 using annotations::AnnotationKind;
 
+static const clang::Decl *
+findLexicalLookupContextDecl(const clang::DeclContext *decl_context) {
+  while (decl_context != nullptr && !decl_context->isLookupContext())
+    decl_context = decl_context->getLexicalParent();
+  return llvm::dyn_cast_or_null<clang::Decl>(decl_context);
+}
+
 auto DeclContextGraphBuilder::aliasTarget(const clang::TypedefNameDecl *decl)
     -> const clang::TagDecl * {
   const clang::TagDecl *target_decl = decl->getUnderlyingType()->getAsTagDecl();
@@ -32,8 +39,8 @@ auto DeclContextGraphBuilder::aliasTarget(const clang::TypedefNameDecl *decl)
 
 bool DeclContextGraphBuilder::addEdgeForExposeHereAlias(
     const clang::TypedefNameDecl *decl) {
-  const auto *parent_context = decl->getLexicalDeclContext();
-  const auto *parent = llvm::dyn_cast<clang::Decl>(parent_context);
+  const clang::Decl *parent =
+      findLexicalLookupContextDecl(decl->getLexicalDeclContext());
   const clang::TagDecl *target_decl = aliasTarget(decl);
 
   auto inserted = relocated_decls.try_emplace(target_decl, decl);
@@ -53,7 +60,7 @@ bool DeclContextGraphBuilder::addEdgeForExposeHereAlias(
 llvm::Optional<DeclContextGraph> DeclContextGraphBuilder::buildGraph() {
   clang::DiagnosticErrorTrap trap{
       translation_unit->getASTContext().getDiagnostics()};
-  DeclContextCollector visitor(annotations);
+  LookupContextCollector visitor(annotations);
   visitor.TraverseDecl(translation_unit);
 
   // Bail out if there were errors during the first traversal of the AST,
@@ -82,15 +89,17 @@ llvm::Optional<DeclContextGraph> DeclContextGraphBuilder::buildGraph() {
   if (trap.hasErrorOccurred())
     return llvm::None;
 
-  for (const clang::DeclContext *decl_context : visitor.decl_contexts) {
+  for (const clang::DeclContext *decl_context : visitor.lookup_contexts) {
     const auto *decl = llvm::dyn_cast<clang::Decl>(decl_context);
     // Do not add original parent-child-edge to graph if decl has been moved.
     if (relocated_decls.count(decl))
       continue;
-    const auto *parent =
-        llvm::dyn_cast<clang::Decl>(decl->getLexicalDeclContext());
-    if (llvm::isa<clang::ClassTemplateSpecializationDecl>(decl))
-      parent = llvm::dyn_cast<clang::Decl>(decl->getDeclContext());
+    // Expose explicit class template instantiations below their
+    // semantic parent.
+    const clang::Decl *parent = findLexicalLookupContextDecl(
+        llvm::isa<clang::ClassTemplateSpecializationDecl>(decl)
+            ? decl->getDeclContext()
+            : decl->getLexicalDeclContext());
     graph.getOrInsertNode(parent)->addChild(graph.getOrInsertNode(decl));
   }
 

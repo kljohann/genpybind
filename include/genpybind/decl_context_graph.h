@@ -17,9 +17,10 @@ namespace genpybind {
 
 class DeclContextNode;
 
-/// A graph of lexically nested declaration contexts that is used to calculate
-/// where and if each contained context is exposed.  Only contexts that can
-/// contain a completely defined `TagDecl` with external linkage are considered.
+/// A graph of lexically nested lookup contexts that is used to calculate
+/// where and if each contained context is exposed.
+/// The parent of each node is its closest lexical parent that is also a lookup
+/// context; other itermediate declaration contexts are omitted.
 /// The root of the graph is formed by a `TranslationUnitDecl`.
 class DeclContextGraph {
   using NodeStorage =

@@ -23,10 +23,6 @@ DeclContextNode *DeclContextGraph::getOrInsertNode(const clang::Decl *decl) {
 }
 
 bool DeclContextGraph::accepts(const clang::Decl *declaration) {
-  return declaration != nullptr && llvm::isa<clang::DeclContext>(declaration) &&
-         (llvm::isa<clang::TagDecl>(declaration) ||
-          llvm::isa<clang::NamespaceDecl>(declaration) ||
-          llvm::isa<clang::LinkageSpecDecl>(declaration) ||
-          llvm::isa<clang::ExportDecl>(declaration) ||
-          llvm::isa<clang::TranslationUnitDecl>(declaration));
+  const auto *ctx = llvm::dyn_cast_or_null<clang::DeclContext>(declaration);
+  return ctx != nullptr && ctx->isLookupContext();
 }

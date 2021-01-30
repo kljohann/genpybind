@@ -1,4 +1,4 @@
-// RUN: genpybind-tool -dump-graph=pruned %s -- -std=c++17 -xc++ -D__GENPYBIND__ 2>&1 | FileCheck %s --strict-whitespace
+// RUN: genpybind-tool --dump-graph=pruned %s -- -std=c++17 -xc++ -D__GENPYBIND__ 2>&1 | FileCheck %s --strict-whitespace
 #pragma once
 
 #include "genpybind.h"
@@ -61,10 +61,6 @@ using Alias GENPYBIND(visible) = not_pruned::visible::hidden::Exposed;
 } // namespace GENPYBIND_VISIBLE
 } // namespace also_not_pruned
 
-extern "C" {
-GENPYBIND(visible) void visible_function();
-}
-
 // CHECK:      Declaration context graph after pruning:
 // CHECK-NOT: prune_me
 // CHECK-NOT: Unused
@@ -73,13 +69,8 @@ GENPYBIND(visible) void visible_function();
 // CHECK-NEXT: | `-Namespace 'not_pruned::visible': visible
 // CHECK-NEXT: |   `-Namespace 'not_pruned::visible::hidden': hidden
 // CHECK-NEXT: |     `-CXXRecord 'not_pruned::visible::hidden::Exposed': visible
-// CHECK-NEXT: |-Namespace 'also_not_pruned': hidden
-// CHECK-NEXT: | `-Namespace 'also_not_pruned::visible': visible
-// CHECK-NEXT: |   |-LinkageSpec:
-// CHECK-NEXT: |   |-Namespace 'also_not_pruned::visible::hidden_but_should_not_be_pruned_1': hidden
-// CHECK-NEXT: |   |-Namespace 'also_not_pruned::visible::hidden_but_should_not_be_pruned_2': hidden
-// CHECK-NEXT: |   | `-LinkageSpec:
-// CHECK-NEXT: |   `-Namespace 'also_not_pruned::visible::hidden_but_should_not_be_pruned_3': hidden
-// CHECK-NEXT: |     `-LinkageSpec:
-// CHECK-NEXT: |       `-LinkageSpec:
-// CHECK-NEXT: `-LinkageSpec:
+// CHECK-NEXT: `-Namespace 'also_not_pruned': hidden
+// CHECK-NEXT:   `-Namespace 'also_not_pruned::visible': visible
+// CHECK-NEXT:     |-Namespace 'also_not_pruned::visible::hidden_but_should_not_be_pruned_1': hidden
+// CHECK-NEXT:     |-Namespace 'also_not_pruned::visible::hidden_but_should_not_be_pruned_2': hidden
+// CHECK-NEXT:     `-Namespace 'also_not_pruned::visible::hidden_but_should_not_be_pruned_3': hidden

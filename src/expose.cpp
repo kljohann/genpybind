@@ -626,10 +626,7 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
     for (const clang::DeclContext *decl_context : sorted_contexts) {
       // Since the decls to expose in each context are discovered via the name
       // lookup mechanism below, it's sufficient to visit every loookup context
-      // once, instead of e.g. visiting transparent/non-lookup contexts or each
-      // re-opened namespace.
-      if (!decl_context->isLookupContext())
-        continue;
+      // once, instead of e.g. visiting each re-opened namespace.
       if (const auto *ns = llvm::dyn_cast<clang::NamespaceDecl>(decl_context)) {
         auto inserted = covered_namespaces.try_emplace(
             ns->getOriginalNamespace(), decl_context);
@@ -725,13 +722,8 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
     item.exposer->emitParameter(os);
     os << ") {\n";
 
-    // TODO: As the declarations possibly come from nested non-lookup contexts,
-    // in principle the default visibility of their original decl context would
-    // need to be considered.  But this is only relevant if the decl is nested
-    // inside an `ExportDecl`, since this is the only non-lookup context that
-    // has an effect on default visibility.  On the other hand, for inlined
-    // decls, the default visibility of the current lookup context should be
-    // considered.  For now, ignore the `ExportDecl` case for simplicity.
+    // For inlined decls use the default visibility of the current
+    // lookup context.
     bool default_visibility = [&] {
       auto it = visibilities.find(item.decl_context);
       return it != visibilities.end() ? it->getSecond() : false;

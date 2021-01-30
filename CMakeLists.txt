@@ -38,7 +38,6 @@ add_library(genpybind SHARED
   src/annotations/annotation.cpp
   src/annotations/literal_value.cpp
   src/annotations/parser.cpp
-  src/decl_context_collector.cpp
   src/decl_context_graph.cpp
   src/decl_context_graph_builder.cpp
   src/decl_context_graph_processing.cpp
@@ -47,6 +46,7 @@ add_library(genpybind SHARED
   src/inspect_graph.cpp
   src/instantiate_annotated_templates.cpp
   src/instantiate_default_arguments.cpp
+  src/lookup_context_collector.cpp
   src/pragmas.cpp
   src/string_utils.cpp
   src/visible_decls.cpp

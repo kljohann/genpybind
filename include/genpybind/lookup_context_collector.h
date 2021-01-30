@@ -14,8 +14,8 @@ class Stmt;
 
 namespace genpybind {
 
-/// Recursive AST visitor that collects all declaration contexts that could
-/// possibly contain completely defined `TagDecl`s with external linkage.
+/// Recursive AST visitor that collects all lookup contexts.
+///
 /// Also collects annotated `TypedefNameDecl`s, since those could be annotated
 /// with `expose_here` annotations that are relevant for the proper nesting of
 /// the declaration contexts.
@@ -30,15 +30,15 @@ namespace genpybind {
 /// should have been run, s.t. there is a complete record declaration
 /// (`ClassTemplateSpecializationDecl`) for each referenced template
 /// instantiation.
-class DeclContextCollector
-    : public clang::RecursiveASTVisitor<DeclContextCollector> {
+class LookupContextCollector
+    : public clang::RecursiveASTVisitor<LookupContextCollector> {
   AnnotationStorage &annotations;
 
 public:
-  std::vector<const clang::DeclContext *> decl_contexts;
+  std::vector<const clang::DeclContext *> lookup_contexts;
   std::vector<const clang::TypedefNameDecl *> aliases;
 
-  DeclContextCollector(AnnotationStorage &annotations)
+  LookupContextCollector(AnnotationStorage &annotations)
       : annotations(annotations) {}
 
   bool shouldWalkTypesOfTypeLocs() const { return false; }
@@ -87,7 +87,7 @@ public:
   bool VisitNamespaceDecl(const clang::NamespaceDecl *decl) {
     if (shouldSkipNamespace(decl))
       return true;
-    decl_contexts.push_back(decl);
+    lookup_contexts.push_back(decl);
     errorIfAnnotationsDoNotMatchCanonicalDecl(decl);
     return true;
   }
@@ -95,17 +95,7 @@ public:
   bool VisitTagDecl(const clang::TagDecl *decl) {
     if (!decl->isCompleteDefinition() || decl->isDependentType())
       return true;
-    decl_contexts.push_back(decl);
-    return true;
-  }
-
-  bool VisitExportDecl(const clang::ExportDecl *decl) {
-    decl_contexts.push_back(decl);
-    return true;
-  }
-
-  bool VisitLinkageSpecDecl(const clang::LinkageSpecDecl *decl) {
-    decl_contexts.push_back(decl);
+    lookup_contexts.push_back(decl);
     return true;
   }
 };

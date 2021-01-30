@@ -2,6 +2,7 @@
 
 #include "genpybind/annotated_decl.h"
 #include "genpybind/diagnostics.h"
+#include "genpybind/visible_decls.h"
 
 #include <clang/AST/Decl.h>
 #include <clang/AST/DeclCXX.h>
@@ -65,12 +66,6 @@ genpybind::deriveEffectiveVisibility(const DeclContextGraph &graph,
        it != end_it; ++it) {
     const clang::Decl *const decl = it->getDecl();
     const clang::DeclContext *const decl_context = it->getDeclContext();
-
-    // Export declarations (and nested declarations) are visible by default.
-    if (llvm::isa<clang::ExportDecl>(decl)) {
-      result[decl_context] = true;
-      continue;
-    }
 
     // The visibility of the parent context is used as the default visibility.
     // The root node (`TranslationUnitDecl`) is implicitly hidden.
@@ -141,7 +136,8 @@ bool genpybind::reportExposeHereCycles(
 }
 
 ConstDeclContextSet genpybind::declContextsWithVisibleNamedDecls(
-    const DeclContextGraph *graph, const AnnotationStorage &annotations,
+    clang::Sema &sema, const DeclContextGraph *graph,
+    const AnnotationStorage &annotations,
     const EffectiveVisibilityMap &visibilities) {
   ConstDeclContextSet result;
 
@@ -167,14 +163,15 @@ ConstDeclContextSet genpybind::declContextsWithVisibleNamedDecls(
   };
 
   auto containsVisibleNamedDecls =
-      [&annotations, &visibilities](const DeclContextNode *const node) -> bool {
+      [&](const DeclContextNode *const node) -> bool {
     const clang::DeclContext *const context = node->getDeclContext();
 
-    // Check if there are any visible nested tag declarations.  Namespaces and
-    // unnamed nested declaration contexts do not need to be considered here, as
-    // these only serve to provide a default visibility (see predicate above).
-    // As tag declarations could have been moved using `expose_here`, the graph
-    // is used instead of iterating the declarations stored in `context`.
+    // Check if there are any visible nested tag declarations.
+    // As tag declarations could have been moved here using `expose_here`, the
+    // graph is used instead of iterating the declarations stored in `context`.
+    // Namespaces do not need to be considered here, as these only serve to
+    // provide a default visibility.  Named decls not represented in the graph
+    // are handled below.
     for (const DeclContextNode *child : *node) {
       const auto visible = visibilities.find(child->getDeclContext());
       assert(visible != visibilities.end() &&
@@ -198,25 +195,22 @@ ConstDeclContextSet genpybind::declContextsWithVisibleNamedDecls(
       return *annotated->visible;
     };
 
-    for (clang::DeclContext::specific_decl_iterator<clang::NamedDecl>
-             it(context->decls_begin()),
-         end_it(context->decls_end());
-         it != end_it; ++it) {
+    std::vector<const clang::NamedDecl *> decls =
+        collectVisibleDeclsFromDeclContext(sema, context);
+    for (const clang::NamedDecl *decl : decls) {
       // Nested declaration contexts that are represented in the graph are taken
       // into account above.
-      // NOTE: Since e.g. `FunctionDecl`s are also `DeclContext`s, it's not
-      // correct to check for `isa<DeclContext>` here.
-      if (DeclContextGraph::accepts(*it))
-        continue;
+      assert(!DeclContextGraph::accepts(decl));
+
       // Do not visit implicit declarations, as these cannot have been annotated
-      // explicitly by the user.  This avoids false positives on the implicit
-      // `CXXRecordDecl` nested inside C++ records to represent the
-      // injected-class-name.
-      if (it->isImplicit())
+      // explicitly by the user.
+      if (decl->isImplicit())
         continue;
-      if (isVisibleGivenDefaultVisibility(*it))
+
+      if (isVisibleGivenDefaultVisibility(decl))
         return true;
     }
+
     return false;
   };
 
