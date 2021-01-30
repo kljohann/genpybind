@@ -1131,9 +1131,10 @@ void RecordExposer::emitOperatorDefinition(
       os << ", ";
     // TODO: If the operator decl takes a parameter by value, this wrapper
     // does so, too.  This might not always work or be optimal?
-    os << clang::TypeName::getFullyQualifiedName(parameter_types[index],
-                                                 ast_context, printing_policy,
-                                                 /*WithGlobalNsPrefix=*/true);
+    os << clang::TypeName::getFullyQualifiedName(
+        parameter_types[static_cast<std::size_t>(index)], ast_context,
+        printing_policy,
+        /*WithGlobalNsPrefix=*/true);
     os << ' ' << parameter_names[index];
     comma = true;
   }

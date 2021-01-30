@@ -10,8 +10,12 @@ void genpybind::makeValidIdentifier(llvm::SmallVectorImpl<char> &name) {
   char *last_valid = name.begin();
   char *output = name.begin();
 
-  const auto is_valid_head = [](char c) { return clang::isIdentifierHead(c); };
-  const auto is_valid_body = [](char c) { return clang::isIdentifierBody(c); };
+  const auto is_valid_head = [](unsigned char c) {
+    return clang::isIdentifierHead(c);
+  };
+  const auto is_valid_body = [](unsigned char c) {
+    return clang::isIdentifierBody(c);
+  };
 
   // Skip invalid characters at the start.
   char *input = std::find_if(last_valid, end, is_valid_head);

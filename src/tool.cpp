@@ -217,9 +217,9 @@ public:
     pragma_genpybind_handler.reset();
   }
 
-  virtual std::unique_ptr<clang::ASTConsumer>
+  std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance & /*compiler*/,
-                    llvm::StringRef /*in_file*/) {
+                    llvm::StringRef /*in_file*/) override {
     std::vector<std::unique_ptr<clang::ASTConsumer>> consumers;
     consumers.push_back(
         std::make_unique<InstantiateAnnotatedTemplatesASTConsumer>());

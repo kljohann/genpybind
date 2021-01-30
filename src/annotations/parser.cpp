@@ -58,7 +58,7 @@ auto Parser::Tokenizer::tokenize() -> Token {
     tokenizeStringLiteral(result);
     break;
   default:
-    if (clang::isIdentifierHead(text.front())) {
+    if (clang::isIdentifierHead(static_cast<unsigned char>(text.front()))) {
       tokenizeIdentifier(result);
     } else {
       tokenizeChar(Token::Kind::Invalid);
@@ -70,7 +70,7 @@ auto Parser::Tokenizer::tokenize() -> Token {
 }
 
 void Parser::Tokenizer::tokenizeNumberLiteral(Token &result) {
-  assert(clang::isDigit(text.front()));
+  assert(clang::isDigit(static_cast<unsigned char>(text.front())));
 
   result.kind = Token::Kind::Literal;
   // Only unsigned integers (without sign char) are supported.
@@ -107,7 +107,7 @@ void Parser::Tokenizer::tokenizeStringLiteral(Token &result) {
 }
 
 void Parser::Tokenizer::tokenizeIdentifier(Token &result) {
-  assert(clang::isIdentifierHead(text.front()));
+  assert(clang::isIdentifierHead(static_cast<unsigned char>(text.front())));
 
   result.kind = Token::Kind::Identifier;
   result.text = text.take_while(
