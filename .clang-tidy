@@ -7,11 +7,11 @@ CheckOptions:
   - key:             readability-identifier-naming.FunctionCase
     value:           camelBack
   - key:             readability-identifier-naming.MemberCase
-    value:           snake_case
+    value:           lower_case
   - key:             readability-identifier-naming.ParameterCase
-    value:           snake_case
+    value:           lower_case
   - key:             readability-identifier-naming.UnionCase
-    value:           snake_case
+    value:           lower_case
   - key:             readability-identifier-naming.VariableCase
-    value:           snake_case
+    value:           lower_case
 
