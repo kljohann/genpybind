@@ -21,35 +21,44 @@
 
 using namespace genpybind;
 
-EnclosingNamedDeclMap genpybind::findEnclosingScopeIntroducingAncestors(
-    const DeclContextGraph &graph, const AnnotationStorage &annotations) {
-  EnclosingNamedDeclMap result;
+EnclosingScopeMap
+genpybind::findEnclosingScopes(const DeclContextGraph &graph,
+                               const AnnotationStorage &annotations) {
+  EnclosingScopeMap result;
 
-  // Visit the nodes in a depth-first pre-order traversal; any other traversal
-  // would also do, but `DepthFirstIterator` allows convenient access to
-  // the traversed path and thus the node's ancestors.
+  // Visit the nodes in a depth-first pre-order traversal, s.t. if a node is
+  // visited, the enclosing scope is already known for the parent.
   for (auto it = llvm::df_begin(&graph), end_it = llvm::df_end(&graph);
        it != end_it; ++it) {
-    const clang::NamedDecl *named_ancestor = nullptr;
     assert(it.getPathLength() > 0 && "path should always contain decl itself");
-    for (unsigned index = it.getPathLength() - 1; index > 0; --index) {
-      const clang::Decl *ancestor = it.getPath(index - 1)->getDecl();
 
-      // Namespaces are transparent unless they define a submodule.
+    // The root node has no parent.
+    if (it.getPathLength() < 2) {
+      result[it->getDeclContext()] = nullptr;
+      continue;
+    }
+
+    const DeclContextNode *parent = it.getPath(it.getPathLength() - 2);
+    const clang::DeclContext *parent_context = parent->getDeclContext();
+
+    // Namespaces are transparent unless they define a submodule.
+    // Otherwise the parent itself is the first enclosing lookup context.
+
+    auto is_transparent = [&](const clang::Decl *decl) -> bool {
       if (const auto *annotated_ns =
               llvm::dyn_cast_or_null<AnnotatedNamespaceDecl>(
-                  annotations.get(ancestor)))
-        if (!annotated_ns->module)
-          continue;
+                  annotations.get(decl)))
+        return !annotated_ns->module;
+      return false;
+    };
 
-      // Otherwise use the first enclosing named ancestor.
-      named_ancestor = llvm::dyn_cast<clang::NamedDecl>(ancestor);
-      if (named_ancestor != nullptr)
-        break;
+    if (is_transparent(parent->getDecl())) {
+      parent_context = result.lookup(parent_context);
+      assert(parent_context != nullptr &&
+             "parent should have already been processed");
     }
-    assert(named_ancestor == nullptr ||
-           llvm::cast<clang::DeclContext>(named_ancestor)->isLookupContext());
-    result[llvm::cast<clang::DeclContext>(it->getDecl())] = named_ancestor;
+
+    result[it->getDeclContext()] = parent_context;
   }
 
   return result;
@@ -346,9 +355,9 @@ void genpybind::reportUnreachableVisibleDeclContexts(
 }
 
 llvm::SmallVector<const clang::DeclContext *, 0>
-genpybind::declContextsSortedByDependencies(
-    const DeclContextGraph &graph, const EnclosingNamedDeclMap &parents,
-    const clang::DeclContext **cycle) {
+genpybind::declContextsSortedByDependencies(const DeclContextGraph &graph,
+                                            const EnclosingScopeMap &parents,
+                                            const clang::DeclContext **cycle) {
   llvm::SmallVector<const clang::DeclContext *, 0> result;
   llvm::DenseSet<const clang::DeclContext *> started, finished;
   // Boolean encodes whether all dependencies have been visited.
@@ -388,15 +397,11 @@ genpybind::declContextsSortedByDependencies(
 
     // Re-visit this node after all its dependencies.
     worklist.push_back({decl_context, true});
-    auto parent = parents.find(decl_context);
     // Add parent context as dependency.
-    if (parent != parents.end() &&
-        !llvm::isa<clang::TranslationUnitDecl>(decl_context)) {
-      const clang::NamedDecl *parent_decl = parent->getSecond();
-      const DeclContextNode *parent_node =
-          parent_decl != nullptr ? graph.getNode(parent_decl) : graph.getRoot();
-      assert(parent_node != nullptr && "parent should be in graph");
-      worklist.push_back({parent_node->getDeclContext(), false});
+    if (const clang::DeclContext *parent = parents.lookup(decl_context)) {
+      assert(graph.getNode(llvm::cast<clang::Decl>(parent)) != nullptr &&
+             "parent should be in graph");
+      worklist.push_back({parent, false});
     }
     // Add all exposed (i.e. part of graph) public bases as dependencies.
     if (const auto *decl = llvm::dyn_cast<clang::CXXRecordDecl>(decl_context)) {

@@ -17,19 +17,15 @@ namespace genpybind {
 
 class AnnotationStorage;
 
-using EnclosingNamedDeclMap =
-    llvm::DenseMap<const clang::DeclContext *, const clang::NamedDecl *>;
+using EnclosingScopeMap =
+    llvm::DenseMap<const clang::DeclContext *, const clang::DeclContext *>;
 
-/// Determine the first enclosing non-transparent `NamedDecl` for each reachable
-/// node of `graph`.  A declaration context is considered "transparent" if
-/// contained declarations are not exposed in a nested scope, but in the same
-/// scope as the context itself.  This is the case for unnamed declaration
-/// contexts and namespaces that do not introduce a submodule (`module`
-/// annotation).  A `nullptr` value is associated with all nodes that have no
-/// such ancestor (e.g. nodes directly below the `TranslationUnitDecl`).
-EnclosingNamedDeclMap
-findEnclosingScopeIntroducingAncestors(const DeclContextGraph &graph,
-                                       const AnnotationStorage &annotations);
+/// Determine the parent context where each graph node should be exposed.
+/// With one exception this equivalent to the parent node in the tree:
+/// Namespaces only introduce a scope if they have a "module" annotation, else
+/// they are skipped over when determining the enclosing scope.
+EnclosingScopeMap findEnclosingScopes(const DeclContextGraph &graph,
+                                      const AnnotationStorage &annotations);
 
 using EffectiveVisibilityMap = llvm::DenseMap<const clang::DeclContext *, bool>;
 
@@ -109,7 +105,7 @@ void reportUnreachableVisibleDeclContexts(
 /// `cycle` is set to one declaration context on this cycle.
 llvm::SmallVector<const clang::DeclContext *, 0>
 declContextsSortedByDependencies(const DeclContextGraph &graph,
-                                 const EnclosingNamedDeclMap &parents,
+                                 const EnclosingScopeMap &parents,
                                  const clang::DeclContext **cycle);
 
 } // namespace genpybind

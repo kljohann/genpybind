@@ -590,8 +590,7 @@ TranslationUnitExposer::TranslationUnitExposer(
 
 void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
                                         llvm::StringRef name) {
-  const EnclosingNamedDeclMap parents =
-      findEnclosingScopeIntroducingAncestors(graph, annotations);
+  const EnclosingScopeMap parents = findEnclosingScopes(graph, annotations);
 
   const clang::DeclContext *cycle = nullptr;
   const auto sorted_contexts =
@@ -606,8 +605,9 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
 
   llvm::DenseMap<const clang::DeclContext *, std::string> context_identifiers(
       static_cast<unsigned>(sorted_contexts.size() + 1));
-  // `nullptr` is used in the parent map to indicate the absence of a named
-  // ancestor.  Consequently treat `nullptr` as the module root.
+  // `nullptr` is used in the enclosing scope map to indicate the absence of an
+  // enclosing scope (which should only happen for the TU / root node).
+  // Consequently, treat `nullptr` as the module root.
   context_identifiers[nullptr] = "root";
 
   struct WorklistItem {
@@ -677,11 +677,11 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
 
   // Emit context introducers
   for (const auto &item : worklist) {
-    auto parent = parents.find(item.decl_context);
-    assert(parent != parents.end() &&
-           "context should have an associated ancestor");
-    auto parent_identifier = context_identifiers.find(
-        llvm::cast_or_null<clang::DeclContext>(parent->getSecond()));
+    const clang::DeclContext *parent = parents.lookup(item.decl_context);
+    assert((parent != nullptr) ^
+               llvm::isa<clang::TranslationUnitDecl>(item.decl_context) &&
+           "(only) non-TU contexts should have a parent scope");
+    auto parent_identifier = context_identifiers.find(parent);
     assert(parent_identifier != context_identifiers.end() &&
            "identifier should have been stored at this point");
 
