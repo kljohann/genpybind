@@ -241,15 +241,20 @@ void genpybind::hideNamespacesBasedOnExposeInAnnotation(
     ConstDeclContextSet &contexts_with_visible_decls,
     EffectiveVisibilityMap &visibilities,
     llvm::StringRef module_name) {
-  /// Keep track which nodes were already visited in a depth-first traversal
-  /// of the visibility tree and whether the current node is dominated by a
-  /// one specific node. (This could be more easily implemented using pre-
-  /// and post-order actions.)
+  /// Allows to find all nodes dominated by a specific parent node marked
+  /// during depth-first traversal.
+  ///
+  /// `llvm::df_iterator` does not allow arbitrary pre- and post-order actions,
+  /// but calls a "completed" action on a custom "visited" set type, when all
+  /// children of a node have been processed.  This is used here to clear the
+  /// dominator node.
   struct TrackVisitedAndDominator {
     using NodeRef = const ::genpybind::DeclContextNode *;
     llvm::SmallPtrSet<NodeRef, 8> visited;
     NodeRef dominator = nullptr;
 
+    /// Returns whether the current node is dominated by a previously
+    /// marked node.
     bool isDominated() const { return dominator != nullptr; }
     void setDominator(NodeRef node) {
       assert(dominator == nullptr);
