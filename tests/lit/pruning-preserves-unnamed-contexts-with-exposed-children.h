@@ -44,7 +44,7 @@ extern const int some_constant GENPYBIND(visible);
 namespace hidden_but_should_not_be_pruned_2 GENPYBIND_HIDDEN {
 
 extern "C" {
-GENPYBIND(visible) void lexically_nested_visible_function();
+GENPYBIND(visible) void nested_visible_function();
 }
 
 } // namespace GENPYBIND_HIDDEN

@@ -20,16 +20,16 @@ class AnnotationStorage;
 /// to expose the different declaration contexts.
 ///
 /// A `TagDecl` can only be exposed at a single location.  By default, the
-/// parent node of a `TagDecl` corresponds to the node of the lexical
-/// declaration context, where it was declared and defined.  However, it can
-/// also be exposed at a different location by moving the corresponding
-/// sub-graph to a new parent.  This is effected by typedef or type alias
-/// declarations that have an `expose_here` annotation.  Their underlying type
-/// indicates the `TagDecl` to be moved and their lexical declaration context
-/// indicates the new parent node.  Incorrect use of this feature can lead to
-/// loops of nodes that are no longer attached to the main tree.  This is
-/// detected and reported to the user.  There can only be a single `expose_here`
-/// annotation for each `TagDecl`.
+/// parent node of a `TagDecl` corresponds to the closest semantic parent
+/// context that is also a lookup context and contains the definition of the
+/// type.  However, it can also be exposed at a different location by moving the
+/// corresponding sub-graph to a new parent.  This is effected by typedef or
+/// type alias declarations that have an `expose_here` annotation.
+/// Their underlying type indicates the `TagDecl` to be moved and their semantic
+/// declaration context indicates the new parent node.  Incorrect use of this
+/// feature can lead to loops of nodes that are no longer attached to the main
+/// tree.  This is detected and reported to the user.  There can only be
+/// a single `expose_here` annotation for each `TagDecl`.
 ///
 /// Relocation of nodes via these aliases is implemented by processing the
 /// aliases before the declaration contexts themselves and later ignoring

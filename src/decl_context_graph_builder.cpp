@@ -23,9 +23,9 @@ using annotations::Annotation;
 using annotations::AnnotationKind;
 
 static const clang::Decl *
-findLexicalLookupContextDecl(const clang::DeclContext *decl_context) {
+findLookupContextDecl(const clang::DeclContext *decl_context) {
   while (decl_context != nullptr && !decl_context->isLookupContext())
-    decl_context = decl_context->getLexicalParent();
+    decl_context = decl_context->getParent();
   return llvm::dyn_cast_or_null<clang::Decl>(decl_context);
 }
 
@@ -39,8 +39,7 @@ auto DeclContextGraphBuilder::aliasTarget(const clang::TypedefNameDecl *decl)
 
 bool DeclContextGraphBuilder::addEdgeForExposeHereAlias(
     const clang::TypedefNameDecl *decl) {
-  const clang::Decl *parent =
-      findLexicalLookupContextDecl(decl->getLexicalDeclContext());
+  const clang::Decl *parent = findLookupContextDecl(decl->getDeclContext());
   const clang::TagDecl *target_decl = aliasTarget(decl);
 
   auto inserted = relocated_decls.try_emplace(target_decl, decl);
@@ -94,12 +93,8 @@ llvm::Optional<DeclContextGraph> DeclContextGraphBuilder::buildGraph() {
     // Do not add original parent-child-edge to graph if decl has been moved.
     if (relocated_decls.count(decl))
       continue;
-    // Expose explicit class template instantiations below their
-    // semantic parent.
-    const clang::Decl *parent = findLexicalLookupContextDecl(
-        llvm::isa<clang::ClassTemplateSpecializationDecl>(decl)
-            ? decl->getDeclContext()
-            : decl->getLexicalDeclContext());
+    // Expose declarations below their semantic parent.
+    const clang::Decl *parent = findLookupContextDecl(decl->getDeclContext());
     graph.getOrInsertNode(parent)->addChild(graph.getOrInsertNode(decl));
   }
 
