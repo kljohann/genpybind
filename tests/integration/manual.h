@@ -22,13 +22,6 @@ struct GENPYBIND(visible) Example {
       self.values[key] = value;
     });
   })
-
-  GENPYBIND_MANUAL({
-    ::pybind11::exec(R"(
-      from os import environ
-      environ["order_of_execution"] = environ.get("order_of_execution", "") + ",class"
-    )");
-  })
 };
 
 struct Hidden {};
@@ -38,24 +31,4 @@ GENPYBIND_MANUAL({
   context.def(::pybind11::init<>());
 })
 
-GENPYBIND_MANUAL({
-  ::pybind11::exec(R"(
-    from os import environ
-    environ["order_of_execution"] = environ.get("order_of_execution", "") + ",namespace"
-  )");
-})
-
 } // namespace nested
-
-GENPYBIND(postamble)
-GENPYBIND_MANUAL({
-  ::pybind11::exec(R"(
-    from os import environ
-    environ["order_of_execution"] = environ.get("order_of_execution", "") + ",postamble"
-  )");
-})
-
-GENPYBIND_MANUAL({
-  auto environ = ::pybind11::module::import("os").attr("environ");
-  environ.attr("setdefault")("order_of_execution", "preamble");
-})
