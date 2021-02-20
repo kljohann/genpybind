@@ -1107,8 +1107,7 @@ void RecordExposer::emitOperatorDefinition(
     llvm::raw_ostream &os, const clang::ASTContext &ast_context,
     clang::OverloadedOperatorKind kind,
     const llvm::SmallVectorImpl<clang::QualType> &parameter_types,
-    clang::QualType return_type,
-    bool reverse_parameters) {
+    clang::QualType return_type, bool reverse_parameters) {
   assert(parameter_types.size() <= 2);
   bool unary = parameter_types.size() == 1;
   llvm::StringRef parameter_names[2] = {"lhs", "rhs"};
@@ -1117,16 +1116,15 @@ void RecordExposer::emitOperatorDefinition(
   bool comma = false;
   int parameter_count = static_cast<int>(parameter_types.size());
   for (int index : llvm::seq(0, parameter_count)) {
-    if (reverse_parameters)
-      index = parameter_count - 1 - index;
+    std::size_t type_index =
+        reverse_parameters ? (parameter_count - 1 - index) : index;
     if (comma)
       os << ", ";
     // TODO: If the operator decl takes a parameter by value, this wrapper
     // does so, too.  This might not always work or be optimal?
-    os << clang::TypeName::getFullyQualifiedName(
-        parameter_types[static_cast<std::size_t>(index)], ast_context,
-        printing_policy,
-        /*WithGlobalNsPrefix=*/true);
+    os << clang::TypeName::getFullyQualifiedName(parameter_types[type_index],
+                                                 ast_context, printing_policy,
+                                                 /*WithGlobalNsPrefix=*/true);
     os << ' ' << parameter_names[index];
     comma = true;
   }
@@ -1138,8 +1136,9 @@ void RecordExposer::emitOperatorDefinition(
   if (unary) {
     os << getOperatorSpelling(kind) << parameter_names[0];
   } else {
-    os << parameter_names[0] << ' ' << getOperatorSpelling(kind) << ' '
-       << parameter_names[1];
+    int offset = reverse_parameters;
+    os << parameter_names[0 + offset] << ' ' << getOperatorSpelling(kind) << ' '
+       << parameter_names[1 - offset];
   }
   os << "; }";
 }
