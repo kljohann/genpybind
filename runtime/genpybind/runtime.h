@@ -2,6 +2,7 @@
 
 #include <pybind11/pybind11.h>
 
+#include <sstream>
 #include <string>
 #include <typeinfo>
 
@@ -21,6 +22,12 @@ template <typename T> auto getObjectForType() -> ::pybind11::object {
   }
   return ::pybind11::reinterpret_borrow<::pybind11::object>(
       (PyObject *)pybind_info->type);
+}
+
+template <typename T> std::string string_from_lshift(const T &obj) {
+  std::ostringstream os;
+  os << obj;
+  return os.str();
 }
 
 } // namespace genpybind

@@ -15,6 +15,7 @@
 #include <clang/AST/PrettyPrinter.h>
 #include <clang/AST/QualTypeNames.h>
 #include <clang/AST/Type.h>
+#include <clang/ASTMatchers/ASTMatchersInternal.h>
 #include <clang/Basic/Specifiers.h>
 #include <clang/Sema/Lookup.h>
 #include <clang/Sema/Overload.h>
@@ -255,6 +256,16 @@ static void emitStringLiteral(llvm::raw_ostream &os, llvm::StringRef text) {
   os << '"';
   os.write_escaped(text);
   os << '"';
+}
+
+static void emitSpelling(llvm::raw_ostream &os,
+                         const AnnotatedNamedDecl *annotation,
+                         llvm::StringRef fallback = {}) {
+  if (!annotation->spelling.empty() || fallback.empty()) {
+    emitStringLiteral(os, annotation->getSpelling());
+  } else {
+    emitStringLiteral(os, fallback);
+  }
 }
 
 static llvm::StringRef getBriefText(const clang::Decl *decl) {
@@ -574,6 +585,22 @@ pythonBinaryOperatorName(clang::OverloadedOperatorKind kind, bool reverse) {
   }
 }
 
+static bool isOstreamOperator(const clang::FunctionDecl *function) {
+  if (llvm::isa<clang::CXXMethodDecl>(function) ||
+      function->getOverloadedOperator() != clang::OO_LessLess)
+    return false;
+  assert(function->getNumParams() >= 1);
+  if (const clang::CXXRecordDecl *record =
+          function->getParamDecl(0)->getType()->getPointeeCXXRecordDecl()) {
+    if (!record->getIdentifier()->isStr("basic_ostream"))
+      return false;
+    clang::ast_matchers::internal::HasNameMatcher matcher(
+        {"::std::basic_ostream"});
+    return matcher.matchesNode(*record);
+  }
+  return false;
+}
+
 std::string genpybind::getFullyQualifiedName(const clang::TypeDecl *decl) {
   const clang::ASTContext &context = decl->getASTContext();
   const clang::QualType qual_type = context.getTypeDeclType(decl);
@@ -837,7 +864,7 @@ void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &os,
       return;
 
     os << "context.attr(";
-    emitStringLiteral(os, annot->getSpelling());
+    emitSpelling(os, annot);
     os << ") = ::genpybind::getObjectForType<" << getFullyQualifiedName(target)
        << ">();\n";
 
@@ -854,7 +881,7 @@ void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &os,
     assert(!llvm::isa<clang::FieldDecl>(decl) &&
            "should have been processed by RecordExposer");
     os << "context.attr(";
-    emitStringLiteral(os, annot->getSpelling());
+    emitSpelling(os, annot);
     os << ") = ::";
     decl->printQualifiedName(os, printing_policy);
     os << ";\n";
@@ -882,13 +909,9 @@ void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &os,
     if (function->isOverloadedOperator() && !is_call_operator)
       return;
 
-    std::string spelling = (!is_call_operator || !annot->spelling.empty())
-                               ? annot->getSpelling()
-                               : "__call__";
-
     os << ((method != nullptr && method->isStatic()) ? "context.def_static("
                                                      : "context.def(");
-    emitStringLiteral(os, spelling);
+    emitSpelling(os, annot, is_call_operator ? "__call__" : "");
     os << ", ";
     emitFunctionPointer(os, function);
     os << ", ";
@@ -911,7 +934,7 @@ void NamespaceExposer::emitIntroducer(llvm::raw_ostream &os,
   os << parent_identifier;
   if (annotated_decl != nullptr && annotated_decl->module) {
     os << ".def_submodule(";
-    emitStringLiteral(os, annotated_decl->getSpelling());
+    emitSpelling(os, annotated_decl);
     os << ")";
   }
 }
@@ -930,7 +953,7 @@ void EnumExposer::emitIntroducer(llvm::raw_ostream &os,
                                  llvm::StringRef parent_identifier) {
   emitType(os);
   os << "(" << parent_identifier << ", ";
-  emitStringLiteral(os, annotated_decl->getSpelling());
+  emitSpelling(os, annotated_decl);
   if (annotated_decl->arithmetic)
     os << ", ::pybind11::arithmetic()";
   os << ")";
@@ -957,7 +980,7 @@ void EnumExposer::handleDeclImpl(llvm::raw_ostream &os,
         llvm::cast<clang::EnumDecl>(annotated_decl->getDecl());
     const std::string scope = getFullyQualifiedName(enum_decl);
     os << "context.value(";
-    emitStringLiteral(os, annotation->getSpelling());
+    emitSpelling(os, annotation);
     os << ", " << scope << "::" << enumerator->getName() << ");\n";
   }
 }
@@ -981,7 +1004,7 @@ void RecordExposer::emitIntroducer(llvm::raw_ostream &os,
                                    llvm::StringRef parent_identifier) {
   emitType(os);
   os << "(" << parent_identifier << ", ";
-  emitStringLiteral(os, annotated_decl->getSpelling());
+  emitSpelling(os, annotated_decl);
   if (annotated_decl->dynamic_attr)
     os << ", ::pybind11::dynamic_attr()";
   os << ")";
@@ -1210,14 +1233,29 @@ void RecordExposer::handleDeclImpl(llvm::raw_ostream &os,
   }
 
   // Operators can be either member functions or free functions in the record's
-  // associated namespace (found via ADL).
+  // associated namespace (found via ADL).  Both cases are handled here.
   if (llvm::isa<AnnotatedFunctionDecl>(annotation)) {
     const auto *function = llvm::cast<clang::FunctionDecl>(decl);
-    if (function->isOverloadedOperator() &&
-        function->getOverloadedOperator() != clang::OO_Call &&
-        !function->isDeleted()) {
-      emitOperator(os, function);
-      return;
+    if (function->isOverloadedOperator() && !function->isDeleted()) {
+      switch (function->getOverloadedOperator()) {
+      case clang::OO_Call:
+        // Handled by `DeclContextExposer`.
+        break;
+      case clang::OO_LessLess:
+        if (isOstreamOperator(function)) {
+          os << "context.def(";
+          emitSpelling(os, annotation, "__repr__");
+          os << ", ::genpybind::string_from_lshift<"
+             << getFullyQualifiedName(
+                    llvm::cast<clang::TypeDecl>(annotated_decl->getDecl()))
+             << ">);\n";
+          break;
+        }
+        [[gnu::fallthrough]];
+      default:
+        emitOperator(os, function);
+        return;
+      }
     }
   }
 
@@ -1259,7 +1297,7 @@ void RecordExposer::handleDeclImpl(llvm::raw_ostream &os,
     bool readonly = type.isConstQualified() || annot->readonly;
     os << (readonly ? "context.def_readonly" : "context.def_readwrite");
     os << (llvm::isa<clang::VarDecl>(decl) ? "_static(" : "(");
-    emitStringLiteral(os, annotation->getSpelling());
+    emitSpelling(os, annotation);
     os << ", &::";
     decl->printQualifiedName(os, printing_policy);
     os << ");\n";
