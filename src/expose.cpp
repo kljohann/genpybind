@@ -1243,12 +1243,16 @@ void RecordExposer::handleDeclImpl(llvm::raw_ostream &os,
         break;
       case clang::OO_LessLess:
         if (isOstreamOperator(function)) {
-          os << "context.def(";
-          emitSpelling(os, annotation, "__repr__");
-          os << ", ::genpybind::string_from_lshift<"
-             << getFullyQualifiedName(
-                    llvm::cast<clang::TypeDecl>(annotated_decl->getDecl()))
-             << ">);\n";
+          // ostream operators are only exposed when opted in via
+          // `expose_as(__str__)` or similar.
+          if (!annotation->spelling.empty()) {
+            os << "context.def(";
+            emitStringLiteral(os, annotation->spelling);
+            os << ", ::genpybind::string_from_lshift<"
+               << getFullyQualifiedName(
+                   llvm::cast<clang::TypeDecl>(annotated_decl->getDecl()))
+               << ">);\n";
+          }
           break;
         }
         [[gnu::fallthrough]];
