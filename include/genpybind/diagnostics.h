@@ -31,6 +31,7 @@ struct Diagnostics {
     PreviouslyExposedHereNote,
     PropertyAlreadyDefinedError,
     PropertyHasNoGetterError,
+    TrailingParametersError,
     UnreachableDeclContextWarning,
     UnsupportedAliasTargetError,
   };

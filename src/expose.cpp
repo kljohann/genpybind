@@ -309,6 +309,18 @@ static void emitParameterTypes(llvm::raw_ostream &os,
   }
 }
 
+static bool isPybind11ArgsType(clang::QualType parameter_type) {
+  const clang::CXXRecordDecl *record = nullptr;
+  if (!(record = parameter_type->getAsCXXRecordDecl()) &&
+      !(record = parameter_type->getPointeeCXXRecordDecl())) {
+    return false;
+  }
+  assert(record != nullptr);
+  clang::ast_matchers::internal::HasNameMatcher matcher(
+      {"::pybind11::args", "::pybind11::kwargs"});
+  return matcher.matchesNode(*record);
+}
+
 static void emitParameters(llvm::raw_ostream &os,
                            const AnnotatedFunctionDecl *annotation) {
   const auto *function = llvm::cast<clang::FunctionDecl>(annotation->getDecl());
@@ -316,8 +328,18 @@ static void emitParameters(llvm::raw_ostream &os,
   auto printing_policy = getPrintingPolicyForExposedNames(context);
   AttemptFullQualificationPrinter printer_helper{context, printing_policy};
   unsigned index = 0;
+  const clang::ParmVarDecl *last_args_or_kwargs_param_decl = nullptr;
   for (const clang::ParmVarDecl *param : function->parameters()) {
-    // TODO: Do not emit `arg()` for `pybind11::{kw,}args`.
+    // `arg()` should not be emitted for `pybind11:args` or `pybind11::kwargs`
+    // parameters and they need to be the last parameters of the function.
+    if (isPybind11ArgsType(param->getType())) {
+      last_args_or_kwargs_param_decl = param;
+      continue;
+    } else if (last_args_or_kwargs_param_decl != nullptr) {
+      Diagnostics::report(last_args_or_kwargs_param_decl,
+                          Diagnostics::Kind::TrailingParametersError);
+      break;
+    }
     os << ", ::pybind11::arg(";
     emitStringLiteral(os, param->getName());
     os << ")";

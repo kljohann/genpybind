@@ -84,6 +84,9 @@ static unsigned getCustomDiagID(clang::DiagnosticsEngine &engine,
   case Kind::PropertyHasNoGetterError:
     return engine.getCustomDiagID(clang::DiagnosticsEngine::Error,
                                   "No getter for the '%0' property");
+  case Kind::TrailingParametersError:
+    return engine.getCustomDiagID(clang::DiagnosticsEngine::Error,
+                                  "cannot be followed by other parameters");
   case Kind::UnreachableDeclContextWarning:
     return engine.getCustomDiagID(clang::DiagnosticsEngine::Warning,
                                   "Declaration context '%0' contains 'visible' "
