@@ -11,6 +11,7 @@ namespace clang {
 class DeclContext;
 class NamedDecl;
 class Sema;
+class SourceManager;
 } // namespace clang
 
 namespace genpybind {
@@ -52,7 +53,8 @@ reachableDeclContexts(const EffectiveVisibilityMap &visibilities);
 bool reportExposeHereCycles(
     const DeclContextGraph &graph,
     const ConstDeclContextSet &reachable_contexts,
-    const DeclContextGraphBuilder::RelocatedDeclsMap &relocated_decls);
+    const DeclContextGraphBuilder::RelocatedDeclsMap &relocated_decls,
+    const clang::SourceManager &source_manager);
 
 /// Returns the set of reachable declaration contexts, which are ancestors to at
 /// least one visible, named declaration that is not a namespace.

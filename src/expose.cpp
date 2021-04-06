@@ -4,6 +4,7 @@
 #include "genpybind/decl_context_graph.h"
 #include "genpybind/decl_context_graph_processing.h"
 #include "genpybind/diagnostics.h"
+#include "genpybind/sort_decls.h"
 #include "genpybind/string_utils.h"
 
 #include <clang/AST/ASTContext.h>
@@ -50,23 +51,6 @@ public:
     if (discriminator != 1)
       result += "_" + llvm::utostr(discriminator);
     return result;
-  }
-};
-
-class IsBeforeInTranslationUnit {
-  clang::SourceManager &source_manager;
-
-public:
-  explicit IsBeforeInTranslationUnit(clang::SourceManager &source_manager)
-      : source_manager(source_manager) {}
-
-  bool operator()(clang::SourceLocation lhs, clang::SourceLocation rhs) const {
-    return source_manager.isBeforeInTranslationUnit(lhs, rhs);
-  }
-
-  bool operator()(const clang::Decl *lhs, const clang::Decl *rhs) const {
-    // TODO: getBeginLoc? Macros?
-    return operator()(lhs->getLocation(), rhs->getLocation());
   }
 };
 

@@ -2,6 +2,7 @@
 
 #include "genpybind/annotated_decl.h"
 #include "genpybind/diagnostics.h"
+#include "genpybind/sort_decls.h"
 #include "genpybind/visible_decls.h"
 
 #include <clang/AST/Decl.h>
@@ -14,10 +15,12 @@
 #include <llvm/ADT/Optional.h>
 #include <llvm/ADT/PointerIntPair.h>
 #include <llvm/ADT/PostOrderIterator.h>
+#include <llvm/ADT/STLExtras.h>
 #include <llvm/Support/Casting.h>
 
 #include <cassert>
 #include <memory>
+#include <vector>
 
 using namespace genpybind;
 
@@ -123,10 +126,9 @@ genpybind::reachableDeclContexts(const EffectiveVisibilityMap &visibilities) {
 bool genpybind::reportExposeHereCycles(
     const DeclContextGraph &graph,
     const ConstDeclContextSet &reachable_contexts,
-    const DeclContextGraphBuilder::RelocatedDeclsMap &relocated_decls) {
-  bool has_cycles = false;
-  // TODO: Change to a sensible/stable iteration order.  Ideally this
-  // would correspond to file order.
+    const DeclContextGraphBuilder::RelocatedDeclsMap &relocated_decls,
+    const clang::SourceManager &source_manager) {
+  std::vector<const clang::TypedefNameDecl *> cycle_introducing_alias_decls;
   for (const auto &pair : graph) {
     const DeclContextNode *node = pair.getSecond().get();
     const clang::Decl *decl = node->getDecl();
@@ -137,11 +139,14 @@ bool genpybind::reportExposeHereCycles(
     auto it = relocated_decls.find(decl);
     if (it == relocated_decls.end())
       continue;
-    const clang::TypedefNameDecl *alias_decl = it->getSecond();
-    Diagnostics::report(alias_decl, Diagnostics::Kind::ExposeHereCycleError);
-    has_cycles = true;
+    cycle_introducing_alias_decls.push_back(it->getSecond());
   }
-  return has_cycles;
+
+  llvm::sort(cycle_introducing_alias_decls, IsBeforeInTranslationUnit(source_manager));
+  for (const auto *alias_decl : cycle_introducing_alias_decls)
+    Diagnostics::report(alias_decl, Diagnostics::Kind::ExposeHereCycleError);
+
+  return !cycle_introducing_alias_decls.empty();
 }
 
 ConstDeclContextSet genpybind::declContextsWithVisibleNamedDecls(

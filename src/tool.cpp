@@ -137,8 +137,8 @@ public:
     if (g_dump_ast)
       context.getTranslationUnitDecl()->dump();
 
+    const auto &source_manager = context.getSourceManager();
     llvm::StringRef main_file = [&] {
-      const auto &source_manager = context.getSourceManager();
       const auto *main_file =
           source_manager.getFileEntryForID(source_manager.getMainFileID());
       assert(main_file != nullptr);
@@ -159,7 +159,7 @@ public:
     auto visibilities = deriveEffectiveVisibility(*graph, annotations);
 
     if (reportExposeHereCycles(*graph, reachableDeclContexts(visibilities),
-                               builder.getRelocatedDecls()))
+                               builder.getRelocatedDecls(), source_manager))
       return;
 
     inspectGraph(*graph, annotations, visibilities, module_name,
