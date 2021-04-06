@@ -83,3 +83,10 @@ def test_call_operator_is_exposed():
     assert hasattr(inst, "__call__")
     assert inst() == 123
     assert inst(321) == 321
+
+
+def test_call_operator_can_be_renamed():
+    inst = m.Example()
+    assert inst.call(0.5) == 0.5
+    with pytest.raises(TypeError, match="incompatible function arguments"):
+        inst(333.0)

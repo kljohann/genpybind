@@ -42,6 +42,11 @@ struct GENPYBIND(visible) Example {
     return value;
   }
 
+  GENPYBIND(expose_as(call))
+  float operator()(float value) const {
+    return value;
+  }
+
 private:
   void private_method();
 };
