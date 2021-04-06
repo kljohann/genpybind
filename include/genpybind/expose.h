@@ -4,9 +4,9 @@
 #include "genpybind/visible_decls.h"
 
 #include <llvm/ADT/Optional.h>
-#include <llvm/ADT/StringMap.h>
 #include <llvm/ADT/StringRef.h>
 
+#include <map>
 #include <memory>
 #include <string>
 
@@ -104,7 +104,7 @@ class RecordExposer : public DeclContextExposer {
     const clang::CXXMethodDecl *getter = nullptr;
     const clang::CXXMethodDecl *setter = nullptr;
   };
-  llvm::StringMap<Property> properties;
+  std::map<std::string, Property> properties;
 
 public:
   RecordExposer(const DeclContextGraph &graph,

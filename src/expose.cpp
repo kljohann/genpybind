@@ -1040,10 +1040,9 @@ void RecordExposer::finalizeDefinition(llvm::raw_ostream &os) {
 }
 
 void RecordExposer::emitProperties(llvm::raw_ostream &os) {
-  // TODO: Sort / make deterministic
   for (const auto &entry : properties) {
-    llvm::StringRef name = entry.getKey();
-    const Property &property = entry.getValue();
+    const std::string& name = entry.first;
+    const Property &property = entry.second;
     if (property.getter == nullptr) {
       if (property.setter == nullptr)
         continue;
