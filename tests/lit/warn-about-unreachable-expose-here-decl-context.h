@@ -7,15 +7,13 @@ template <typename T> struct Type {
   struct GENPYBIND(visible) Something {};
 };
 
-// TODO: These errors should be reported in the right order.
-
-// CHECK-DAG: context.h:[[# @LINE + 3]]:8: warning: Declaration context 'A' contains 'visible' declarations but is not exposed
-// CHECK-DAG: struct A {
-// CHECK-DAG: ~~~~~~~^~~
+// CHECK: context.h:[[# @LINE + 3]]:8: warning: Declaration context 'A' contains 'visible' declarations but is not exposed
+// CHECK-NEXT: struct A {
+// CHECK-NEXT: ~~~~~~~^~~
 struct A {
-  // CHECK-DAG: context.h:[[# @LINE + 3]]:9: warning: Declaration context 'A::Instantiation' contains 'visible' declarations but is not exposed
-  // CHECK-DAG: using Instantiation GENPYBIND(expose_here) = Type<int>;
-  // CHECK-DAG: ~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  // CHECK: context.h:[[# @LINE + 3]]:9: warning: Declaration context 'A::Instantiation' contains 'visible' declarations but is not exposed
+  // CHECK-NEXT: using Instantiation GENPYBIND(expose_here) = Type<int>;
+  // CHECK-NEXT: ~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   using Instantiation GENPYBIND(expose_here) = Type<int>;
 };
 

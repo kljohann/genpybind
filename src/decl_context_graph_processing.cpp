@@ -347,8 +347,9 @@ genpybind::pruneGraph(const DeclContextGraph &graph,
 void genpybind::reportUnreachableVisibleDeclContexts(
     const DeclContextGraph &graph,
     const ConstDeclContextSet &contexts_with_visible_decls,
-    const DeclContextGraphBuilder::RelocatedDeclsMap &relocated_decls) {
-  // TODO: Change to a sensible/stable iteration order.
+    const DeclContextGraphBuilder::RelocatedDeclsMap &relocated_decls,
+    const clang::SourceManager &source_manager) {
+  std::vector<const clang::Decl *> unreachable_decls;
   for (const clang::DeclContext *context : contexts_with_visible_decls) {
     const auto *decl = llvm::dyn_cast<clang::NamedDecl>(context);
     if (decl == nullptr || graph.getNode(decl) != nullptr)
@@ -359,9 +360,13 @@ void genpybind::reportUnreachableVisibleDeclContexts(
     if (it != relocated_decls.end())
       decl = it->getSecond();
 
+    unreachable_decls.push_back(decl);
+  }
+
+  llvm::sort(unreachable_decls, IsBeforeInTranslationUnit(source_manager));
+  for (const auto* decl : unreachable_decls)
     Diagnostics::report(decl, Diagnostics::Kind::UnreachableDeclContextWarning)
         << getNameForDisplay(decl);
-  }
 }
 
 llvm::SmallVector<const clang::DeclContext *, 0>

@@ -94,7 +94,8 @@ pruneGraph(const DeclContextGraph &graph,
 void reportUnreachableVisibleDeclContexts(
     const DeclContextGraph &graph,
     const ConstDeclContextSet &contexts_with_visible_decls,
-    const DeclContextGraphBuilder::RelocatedDeclsMap &relocated_decls);
+    const DeclContextGraphBuilder::RelocatedDeclsMap &relocated_decls,
+    const clang::SourceManager &source_manager);
 
 /// Returns reachable declaration contexts of `graph` in an order suitable for
 /// binding generation.

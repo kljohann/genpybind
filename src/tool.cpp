@@ -175,7 +175,8 @@ public:
     graph = pruneGraph(*graph, contexts_with_visible_decls, visibilities);
 
     reportUnreachableVisibleDeclContexts(*graph, contexts_with_visible_decls,
-                                         builder.getRelocatedDecls());
+                                         builder.getRelocatedDecls(),
+                                         source_manager);
 
     inspectGraph(*graph, annotations, visibilities, module_name,
                  InspectGraphStage::Pruned);

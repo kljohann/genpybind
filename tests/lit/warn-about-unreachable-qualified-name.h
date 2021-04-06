@@ -7,17 +7,17 @@ template <typename T> struct Type {
   struct GENPYBIND(visible) Something {};
 };
 
-// CHECK-DAG: qualified-name.h:[[# @LINE + 3]]:23: warning: Declaration context 'Type<bool>' contains 'visible' declarations but is not exposed
-// CHECK-DAG: extern template class Type<bool>;
-// CHECK-DAG: ~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~
+// CHECK: qualified-name.h:[[# @LINE + 3]]:23: warning: Declaration context 'Type<bool>' contains 'visible' declarations but is not exposed
+// CHECK-NEXT: extern template class Type<bool>;
+// CHECK-NEXT: ~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~
 extern template class Type<bool>;
 
 // TODO: Is the following warning desirable?
 
 template <typename T>
-// CHECK-DAG: qualified-name.h:[[# @LINE + 3]]:8: warning: Declaration context 'Other<B>' contains 'visible' declarations but is not exposed
-// CHECK-DAG: struct Other {
-// CHECK-DAG: ~~~~~~~^~~~~~~
+// CHECK: qualified-name.h:[[# @LINE + 3]]:8: warning: Declaration context 'Other<B>' contains 'visible' declarations but is not exposed
+// CHECK-NEXT: struct Other {
+// CHECK-NEXT: ~~~~~~~^~~~~~~
 struct Other {
   struct GENPYBIND(visible) Something {};
   using Self GENPYBIND(visible) = Other<T>;
