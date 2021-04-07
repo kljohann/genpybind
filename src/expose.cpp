@@ -626,8 +626,8 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
   const EnclosingScopeMap parents = findEnclosingScopes(graph, annotations);
 
   const clang::DeclContext *cycle = nullptr;
-  const auto sorted_contexts =
-      declContextsSortedByDependencies(graph, parents, &cycle);
+  const auto sorted_contexts = declContextsSortedByDependencies(
+      graph, parents, sema.getSourceManager(), &cycle);
   if (cycle != nullptr) {
     // TODO: Report this before any other output, ideally pointing to the
     // typedef name decl for `expose_here` cycles.

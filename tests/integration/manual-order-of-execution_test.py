@@ -18,18 +18,18 @@ def test_order_of_execution_matches_context_graph_hierarchy():
         "::reopened_namespace [first]",
         "::reopened_namespace [second]",
         "::reopened_namespace [third]",
-        # TODO: It would be more natural for `nested` to occur before `Toplevel`
-        # here, since both only depend on the exposed TU.
-        "::Toplevel",
         # All manual bindings in `nested` are emitted together and thus come
         # before those from nested declaration contexts.
         "::nested [before Example]",
         "::nested [after Example]",
-        # TODO: `::nested::Example` before `::nested::nested` would also be
-        # more natural.
-        "::nested::nested",
+        # `::nested::Example` comes before `::nested::nested`, because they have
+        # no interdependence and `Example` occurs earlier in the TU.
         "::nested::Example [first]",
         "::nested::Example [second]",
+        "::nested::nested",
+        # The same is true for `::Toplevel` in relation to `::nested`: Both only
+        # depend on the exposed TU context, but `nested` occurs earlier.
+        "::Toplevel",
         # `postamble` manual bindings come last.
         ":: [first postamble]",
         ":: [second postamble]",

@@ -109,6 +109,7 @@ void reportUnreachableVisibleDeclContexts(
 llvm::SmallVector<const clang::DeclContext *, 0>
 declContextsSortedByDependencies(const DeclContextGraph &graph,
                                  const EnclosingScopeMap &parents,
+                                 const clang::SourceManager &source_manager,
                                  const clang::DeclContext **cycle);
 
 } // namespace genpybind

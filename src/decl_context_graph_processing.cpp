@@ -10,6 +10,7 @@
 #include <clang/AST/Type.h>
 #include <clang/Basic/Diagnostic.h>
 #include <clang/Basic/Specifiers.h>
+#include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/DenseSet.h>
 #include <llvm/ADT/DepthFirstIterator.h>
 #include <llvm/ADT/Optional.h>
@@ -20,6 +21,7 @@
 
 #include <cassert>
 #include <memory>
+#include <queue>
 #include <vector>
 
 using namespace genpybind;
@@ -369,54 +371,85 @@ void genpybind::reportUnreachableVisibleDeclContexts(
         << getNameForDisplay(decl);
 }
 
-llvm::SmallVector<const clang::DeclContext *, 0>
-genpybind::declContextsSortedByDependencies(const DeclContextGraph &graph,
-                                            const EnclosingScopeMap &parents,
-                                            const clang::DeclContext **cycle) {
-  llvm::SmallVector<const clang::DeclContext *, 0> result;
-  llvm::DenseSet<const clang::DeclContext *> started, finished;
-  // Boolean encodes whether all dependencies have been visited.
-  using WorklistItem =
-      llvm::PointerIntPair<const clang::DeclContext *, 1, bool>;
-  llvm::SmallVector<WorklistItem, 0> worklist;
-  result.reserve(graph.size());
-  started.reserve(graph.size());
-  finished.reserve(graph.size());
-  worklist.reserve(2 * graph.size());
-  for (const DeclContextNode *node : llvm::depth_first(&graph)) {
-    worklist.push_back({node->getDeclContext(), false});
+/// Return nodes of graph in topologically sorted order.
+///
+/// Nodes that are “large” according to `comp` are given precedence.
+///
+/// If there are cycles, the returned sequence has less elements than the number
+/// of nodes in the graph.  Its last entry corresponds to the largest node that
+/// participates in any cycle, while the remaining entries correspond to the
+/// nodes that do not participate in a circle in their topologically sorted
+/// order.  (Note: A cycle consists of at least two nodes, so this encoding
+/// is safe.)
+template <class GraphType, class FindPredecessors, class Compare>
+static std::vector<typename llvm::GraphTraits<GraphType>::NodeRef>
+lexicographicalTopologicalSort(const GraphType &graph,
+                               FindPredecessors find_predecessors,
+                               Compare comp) {
+  using NodeRef = typename llvm::GraphTraits<GraphType>::NodeRef;
+  using NodeRefs = std::vector<NodeRef>;
+  const unsigned graph_size = llvm::GraphTraits<GraphType>::size(graph);
+  llvm::DenseMap<NodeRef, int> num_predecessors(graph_size);
+  llvm::DenseMap<NodeRef, NodeRefs> successors(graph_size);
+  std::priority_queue<NodeRef, NodeRefs, Compare> ready(comp);
+
+  for (NodeRef node : llvm::nodes(graph)) {
+    auto add_predecessor = [&](NodeRef other) {
+      successors[other].push_back(node);
+      ++num_predecessors[node];
+    };
+    find_predecessors(node, add_predecessor);
+    if (num_predecessors[node] == 0)
+      ready.push(node);
   }
 
-  while (!worklist.empty()) {
-    const WorklistItem item = worklist.back();
-    worklist.pop_back();
-    const clang::DeclContext *decl_context = item.getPointer();
-    bool after_dependencies = item.getInt();
+  NodeRefs result;
+  result.reserve(graph_size);
 
-    if (finished.count(decl_context))
-      continue;
+  while (!ready.empty()) {
+    NodeRef node = ready.top();
+    ready.pop();
 
-    if (after_dependencies) {
-      finished.insert(decl_context);
-      result.push_back(decl_context);
-      continue;
+    auto node_successors = successors.find(node);
+    if (node_successors != successors.end()) {
+      for (NodeRef other : node_successors->getSecond()) {
+        if (--num_predecessors[other] == 0)
+          ready.push(other);
+      }
+      successors.erase(node_successors);
     }
 
-    bool cycle_detected = !started.insert(decl_context).second;
-    if (cycle_detected) {
-      if (cycle != nullptr)
-        *cycle = decl_context;
-      result.clear();
-      break;
-    }
+    result.push_back(node);
+  }
 
-    // Re-visit this node after all its dependencies.
-    worklist.push_back({decl_context, true});
+  if (!successors.empty()) {
+    // There is a cycle.
+    for (auto node_in_cycle : successors) {
+      ready.push(node_in_cycle.getFirst());
+    }
+    assert(!ready.empty());
+    NodeRef node = ready.top();
+    result.push_back(node);
+    assert(result.size() != graph_size && "result should not be ambiguous");
+  }
+
+  return result;
+}
+
+llvm::SmallVector<const clang::DeclContext *, 0>
+genpybind::declContextsSortedByDependencies(
+    const DeclContextGraph &graph, const EnclosingScopeMap &parents,
+    const clang::SourceManager &source_manager,
+    const clang::DeclContext **cycle) {
+  auto find_predecessors = [&](const DeclContextNode *node,
+                               auto add_predecessor) {
+    const clang::DeclContext *decl_context = node->getDeclContext();
     // Add parent context as dependency.
     if (const clang::DeclContext *parent = parents.lookup(decl_context)) {
-      assert(graph.getNode(llvm::cast<clang::Decl>(parent)) != nullptr &&
-             "parent should be in graph");
-      worklist.push_back({parent, false});
+      const DeclContextNode *parent_node =
+          graph.getNode(llvm::cast<clang::Decl>(parent));
+      assert(parent_node != nullptr && "parent should be in graph");
+      add_predecessor(parent_node);
     }
     // Add all exposed (i.e. part of graph) public bases as dependencies.
     if (const auto *decl = llvm::dyn_cast<clang::CXXRecordDecl>(decl_context)) {
@@ -426,11 +459,33 @@ genpybind::declContextsSortedByDependencies(const DeclContextGraph &graph,
         const clang::TagDecl *base_decl = base.getType()->getAsTagDecl();
         if (const DeclContextNode *base_node =
                 graph.getNode(base_decl->getDefinition())) {
-          worklist.push_back({base_node->getDeclContext(), false});
+          assert(base_node != nullptr && "base should be in graph");
+          add_predecessor(base_node);
         }
       }
     }
-  }
+  };
 
+  IsBeforeInTranslationUnit is_before(source_manager);
+
+  auto nodes = lexicographicalTopologicalSort(
+      &graph, find_predecessors,
+      [&](const DeclContextNode *lhs, const DeclContextNode *rhs) {
+        // Note: Larger elements are sorted earlier, thus the arguments are
+        // swapped here.
+        return is_before(rhs->getDecl(), lhs->getDecl());
+      });
+
+  bool cycle_detected = nodes.size() != graph.size();
+  if (cycle_detected) {
+    assert(!nodes.empty());
+    if (cycle != nullptr)
+      *cycle = nodes.back()->getDeclContext();
+    nodes.clear();
+  }
+  llvm::SmallVector<const clang::DeclContext *, 0> result;
+  result.reserve(graph.size());
+  for (const DeclContextNode* node : nodes)
+    result.push_back(node->getDeclContext());
   return result;
 }
