@@ -97,9 +97,12 @@ static void inspectGraph(const DeclContextGraph &graph,
                          const llvm::Twine &name, InspectGraphStage stage) {
   if (llvm::is_contained(g_inspect_graph, stage))
     viewGraph(&graph, annotations, "genpybind_" + name);
-  if (llvm::is_contained(g_dump_graph, stage))
+  if (llvm::is_contained(g_dump_graph, stage)) {
     printGraph(llvm::errs(), &graph, visibilities, annotations,
                graphTitle(stage));
+    if (graph.size() == 1)
+      llvm::errs() << "<no children>\n";
+  }
 }
 
 static void emitQuotedArguments(llvm::raw_ostream &os,

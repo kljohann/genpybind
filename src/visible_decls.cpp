@@ -56,9 +56,6 @@ public:
     if (!is_visible_in_scope || !is_accessible)
       return;
 
-    if (DeclContextGraph::accepts(proposed_decl))
-      return;
-
     if (in_base_class && !shouldInlineDecl(proposed_decl))
       return;
 
@@ -66,6 +63,9 @@ public:
             llvm::dyn_cast<clang::UsingShadowDecl>(proposed_decl)) {
       proposed_decl = using_decl->getTargetDecl();
     }
+
+    if (DeclContextGraph::accepts(proposed_decl))
+      return;
 
     if (!proposed_decl->getLocation().isValid())
       return;
