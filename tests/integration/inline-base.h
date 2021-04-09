@@ -2,8 +2,6 @@
 
 #include "genpybind.h"
 
-struct GENPYBIND(visible) Unrelated {};
-
 struct GENPYBIND(visible) Base {
   bool from_base() const;
   bool hidden() const;
@@ -40,17 +38,17 @@ struct GENPYBIND(inline_base("Base", "Derived")) InlineBaseAndDerived
 struct GENPYBIND(inline_base("Base"), hide_base("Derived")) InlineBaseHideDerived
     : public Derived {};
 
-struct NumberOne {
+struct ConflictOne {
   int number() const;
 };
 
-struct NumberTwo {
+struct ConflictTwo {
   int number() const;
 };
 
-struct GENPYBIND(inline_base("NumberOne", "NumberTwo")) InlineNumber
-    : public NumberOne,
-      public NumberTwo {};
+struct GENPYBIND(inline_base("ConflictOne", "ConflictTwo")) InlineConflict
+    : public ConflictOne,
+      public ConflictTwo {};
 
 namespace nested {
 

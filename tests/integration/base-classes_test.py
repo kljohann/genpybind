@@ -1,4 +1,5 @@
 import base_classes as m
+from helpers import get_user_mro
 
 
 def test_classes_are_present():
@@ -13,12 +14,6 @@ def test_classes_are_present():
     ]:
         assert hasattr(m, name)
     assert not hasattr(m, "Hidden")
-
-
-def get_user_mro(cls):
-    mro = cls.mro()
-    assert mro[-2].__class__.__name__ == "pybind11_type"
-    return mro[:-2]
 
 
 def test_mro():
