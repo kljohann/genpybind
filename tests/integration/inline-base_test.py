@@ -40,11 +40,14 @@ def test_several_bases_can_be_inlined():
     assert inst.from_other()
 
 
-def test_inlining_an_intermediate_base_ignores_further_bases():
+def test_inlining_an_intermediate_base_preserves_inheritance_for_further_bases():
     inst = m.InlineDerived()
-    assert not isinstance(inst, m.Base)
+    assert issubclass(m.Derived, m.Base)
+    assert issubclass(m.InlineDerived, m.Base)
+    assert not issubclass(m.InlineDerived, m.Derived)
+    assert isinstance(inst, m.Base)
     assert not isinstance(inst, m.Derived)
-    assert not hasattr(inst, "from_base")
+    assert inst.from_base()
     assert inst.from_derived()
 
 
@@ -111,14 +114,20 @@ def test_base_classes_from_nested_namespace_can_be_inlined():
 
 class TestCRTP:
     def test_helpers_are_hidden(self):
-        """CRTP helpers are “hidden”."""
+        """CRTP helpers are “hidden”, but base inheritance is preserved."""
+        for klass in [m.TwoLevelCRTPInlineBoth]:
+            assert get_user_mro(klass) == [klass, m.Base]
+        # But without inlining, the class is not considered as inherited from
+        # `Base`, since the intermediate levels in the hierarchy are hidden
+        # and only immediate base classes are registered with pybind11.
         for klass in [
             m.TwoLevelCRTPNoInline,
             m.TwoLevelCRTPInlineFirst,
-            m.TwoLevelCRTPInlineSecond,
-            m.TwoLevelCRTPInlineBoth,
         ]:
-            assert get_user_mro(klass)[1:] == []
+            assert get_user_mro(klass) == [klass]
+        # Same reasoning, as currently only the `inline_base` annotations on the
+        # most derived class are taken into account.
+        assert get_user_mro(m.TwoLevelCRTPInlineSecond)[1:] == []
 
     def test_without_annotation_on_most_derived_class_nothing_is_inlined(self):
         inst = m.TwoLevelCRTPNoInline()

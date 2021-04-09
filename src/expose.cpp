@@ -1177,19 +1177,27 @@ void RecordExposer::emitType(llvm::raw_ostream &os) {
             llvm::cast<clang::TypeDecl>(annotated_decl->getDecl()));
 
   // Add all exposed (i.e. part of graph) public bases as arguments.
-  if (const auto *decl =
-          llvm::dyn_cast<clang::CXXRecordDecl>(annotated_decl->getDecl())) {
-    for (const clang::CXXBaseSpecifier &base : decl->bases()) {
+  // This is called recursively, since bases of inlined bases also need to
+  // be emitted.
+  auto maybe_emit_bases = [&](const clang::CXXRecordDecl *record_decl,
+                              auto &&recurse) -> void {
+    for (const clang::CXXBaseSpecifier &base : record_decl->bases()) {
       const clang::TagDecl *base_decl =
           base.getType()->getAsTagDecl()->getDefinition();
       if (base.getAccessSpecifier() != clang::AS_public ||
-          annotated_decl->hide_base.count(base_decl) != 0 ||
-          annotated_decl->inline_base.count(base_decl) != 0 ||
-          graph.getNode(base_decl) == nullptr)
+          annotated_decl->hide_base.count(base_decl) != 0)
         continue;
-      os << ", " << getFullyQualifiedName(base_decl);
+      if (annotated_decl->inline_base.count(base_decl) != 0) {
+        if (const auto *decl = llvm::dyn_cast<clang::CXXRecordDecl>(base_decl))
+          recurse(decl, recurse);
+      } else if (graph.getNode(base_decl) != nullptr) {
+        os << ", " << getFullyQualifiedName(base_decl);
+      }
     }
-  }
+  };
+  if (const auto *decl =
+          llvm::dyn_cast<clang::CXXRecordDecl>(annotated_decl->getDecl()))
+    maybe_emit_bases(decl, maybe_emit_bases);
 
   if (!annotated_decl->holder_type.empty()) {
     os << ", " << annotated_decl->holder_type;
