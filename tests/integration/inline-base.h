@@ -2,6 +2,8 @@
 
 #include "genpybind.h"
 
+#include <ostream>
+
 struct GENPYBIND(visible) Base {
   bool from_base() const;
   bool hidden() const;
@@ -63,3 +65,55 @@ struct GENPYBIND(inline_base("::nested::NestedBase")) InlineNestedBase
 
 struct GENPYBIND(inline_base("NestedBase")) InlineNestedBaseShort
     : public nested::NestedBase {};
+
+template <typename Derived, typename T> struct CRTP : public T {
+  bool from_crtp = true;
+};
+
+// TODO/NOTE: Currently only the `inline_base` annotation on the exposed class
+// (see `TwoLevelCRTP...` below) is taken into account.  The annotation here
+// is ignored.
+template <typename Derived, typename T>
+struct GENPYBIND(inline_base(CRTP), hidden) SecondLevelOfCRTP
+    : public CRTP<Derived, T> {
+  bool from_second_level_crtp = true;
+};
+
+struct GENPYBIND(visible) TwoLevelCRTPNoInline
+    : public SecondLevelOfCRTP<TwoLevelCRTPNoInline, Base> {};
+
+struct GENPYBIND(inline_base(CRTP)) TwoLevelCRTPInlineFirst
+    : public SecondLevelOfCRTP<TwoLevelCRTPInlineFirst, Base> {};
+
+struct GENPYBIND(inline_base(SecondLevelOfCRTP)) TwoLevelCRTPInlineSecond
+    : public SecondLevelOfCRTP<TwoLevelCRTPInlineSecond, Base> {};
+
+struct GENPYBIND(inline_base(CRTP, SecondLevelOfCRTP)) TwoLevelCRTPInlineBoth
+    : public SecondLevelOfCRTP<TwoLevelCRTPInlineBoth, Base> {};
+
+template <typename T> struct NeqMixin {
+  friend bool operator!=(T const &lhs, T const &rhs) { return !(lhs == rhs); }
+};
+
+template <typename T> struct NonsenseInvertMixin {
+  T operator~() const { return T(-5); }
+};
+
+template <typename T> struct OstreamMixin {
+  GENPYBIND(expose_as(__str__))
+  friend std::ostream &operator<<(std::ostream &os, const T &instance) {
+    return os << "The value is " << instance.value;
+  }
+};
+
+struct GENPYBIND(inline_base) WithOperatorMixins
+    : NeqMixin<WithOperatorMixins>,
+      NonsenseInvertMixin<WithOperatorMixins>,
+      OstreamMixin<WithOperatorMixins> {
+  int value;
+  WithOperatorMixins(int value) : value(value) {}
+  friend bool operator==(WithOperatorMixins const &lhs,
+                         WithOperatorMixins const &rhs) {
+    return lhs.value == rhs.value;
+  }
+};

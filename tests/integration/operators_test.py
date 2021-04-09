@@ -1,23 +1,13 @@
 import operators as m
 
-import inspect
 import operator
 
 import pytest
 
+from helpers import get_proper_members
+
 
 assert (not NotImplemented) is False
-
-
-def get_proper_members(cls, predicate=None):
-    mro = cls.mro()
-    assert mro[-2].__class__.__name__ == "pybind11_type"
-    return {
-        attr.name: attr.object
-        for attr in inspect.classify_class_attrs(cls)
-        if attr.defining_class in mro[:-2]
-        and (predicate is None or predicate(attr.object))
-    }
 
 
 def test_only_expected_operators_are_defined():
