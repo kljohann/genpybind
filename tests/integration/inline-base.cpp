@@ -6,6 +6,8 @@ bool Base::hidden() const { return false; }
 
 bool InlineBase::hidden() const { return true; }
 
+bool HideBase::hidden() const { return true; }
+
 bool Other::from_other() const { return true; }
 
 bool Derived::from_derived() const { return true; }

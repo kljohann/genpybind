@@ -15,6 +15,15 @@ struct GENPYBIND(inline_base("::Base")) InlineBase : public Base {
 
 struct GENPYBIND(visible) DerivedFromInlineBase : public InlineBase {};
 
+struct GENPYBIND(inline_base(InlineBase)) InlineInlineBase : public InlineBase {
+};
+
+struct GENPYBIND(hide_base) HideBase : public Base {
+  bool hidden() const;
+};
+
+struct GENPYBIND(inline_base(HideBase)) InlineHideBase : public HideBase {};
+
 struct Other {
   bool from_other() const;
 };
@@ -24,6 +33,8 @@ struct GENPYBIND(inline_base("::Other")) InlineOther : public Base,
 
 struct GENPYBIND(inline_base("Base", "Other")) InlineBoth : public Base,
                                                             public Other {};
+
+struct GENPYBIND(inline_base) InlineAll : public Base, public Other {};
 
 struct GENPYBIND(visible) Derived : public Base {
   bool from_derived() const;
@@ -37,8 +48,9 @@ struct GENPYBIND(inline_base("Base", "Derived")) InlineBaseAndDerived
     : public Derived {};
 
 // `Base` isn't inlined, as the intermediate base class is hidden.
-struct GENPYBIND(inline_base("Base"), hide_base("Derived")) InlineBaseHideDerived
-    : public Derived {};
+struct GENPYBIND(inline_base("Base"),
+                 hide_base("Derived")) InlineBaseHideDerived : public Derived {
+};
 
 struct ConflictOne {
   int number() const;

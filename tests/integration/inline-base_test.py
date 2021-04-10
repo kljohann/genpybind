@@ -17,10 +17,36 @@ def test_names_in_the_derived_class_win_during_lookup():
 
 
 def test_it_is_possible_to_derive_from_an_inlined_class():
+    assert issubclass(m.DerivedFromInlineBase, m.InlineBase)
+    assert not issubclass(m.DerivedFromInlineBase, m.Base)
     inst = m.DerivedFromInlineBase()
     assert isinstance(inst, m.InlineBase)
     assert not isinstance(inst, m.Base)
     assert inst.from_base()
+    assert inst.hidden()
+
+
+@pytest.mark.xfail(reason="only annotations on most derived class are considered")
+def test_inlining_a_class_that_uses_inlining():
+    assert not issubclass(m.InlineInlineBase, m.InlineBase)
+    assert not issubclass(m.InlineInlineBase, m.Base)
+    assert get_user_mro(m.InlineInlineBase) == [m.InlineInlineBase]
+    inst = m.InlineInlineBase()
+    assert not isinstance(inst, m.InlineBase)
+    assert not isinstance(inst, m.Base)
+    assert inst.from_base()
+    assert inst.hidden()
+
+
+@pytest.mark.xfail(reason="only annotations on most derived class are considered")
+def test_inlining_a_class_that_hides_its_base():
+    assert not issubclass(m.InlineHideBase, m.HideBase)
+    assert not issubclass(m.InlineHideBase, m.Base)
+    assert get_user_mro(m.InlineHideBase) == [m.InlineHideBase]
+    inst = m.InlineHideBase()
+    assert not isinstance(inst, m.HideBase)
+    assert not isinstance(inst, m.Base)
+    assert not hasattr(inst, "from_base")
     assert inst.hidden()
 
 
@@ -36,6 +62,15 @@ def test_several_bases_can_be_inlined():
     inst = m.InlineBoth()
     assert not isinstance(inst, m.Base)
     assert get_user_mro(m.InlineBoth) == [m.InlineBoth]
+    assert inst.from_base()
+    assert inst.from_other()
+
+
+def test_all_bases_are_inlined_when_used_without_arguments():
+    assert not issubclass(m.InlineAll, m.Base)
+    inst = m.InlineAll()
+    assert not isinstance(inst, m.Base)
+    assert get_user_mro(m.InlineAll) == [m.InlineAll]
     assert inst.from_base()
     assert inst.from_other()
 
