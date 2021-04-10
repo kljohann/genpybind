@@ -26,7 +26,6 @@ def test_it_is_possible_to_derive_from_an_inlined_class():
     assert inst.hidden()
 
 
-@pytest.mark.xfail(reason="only annotations on most derived class are considered")
 def test_inlining_a_class_that_uses_inlining():
     assert not issubclass(m.InlineInlineBase, m.InlineBase)
     assert not issubclass(m.InlineInlineBase, m.Base)
@@ -38,7 +37,6 @@ def test_inlining_a_class_that_uses_inlining():
     assert inst.hidden()
 
 
-@pytest.mark.xfail(reason="only annotations on most derived class are considered")
 def test_inlining_a_class_that_hides_its_base():
     assert not issubclass(m.InlineHideBase, m.HideBase)
     assert not issubclass(m.InlineHideBase, m.Base)
@@ -150,7 +148,10 @@ def test_base_classes_from_nested_namespace_can_be_inlined():
 class TestCRTP:
     def test_helpers_are_hidden(self):
         """CRTP helpers are “hidden”, but base inheritance is preserved."""
-        for klass in [m.TwoLevelCRTPInlineBoth]:
+        for klass in [
+            m.TwoLevelCRTPInlineSecond,
+            m.TwoLevelCRTPInlineBoth,
+        ]:
             assert get_user_mro(klass) == [klass, m.Base]
         # But without inlining, the class is not considered as inherited from
         # `Base`, since the intermediate levels in the hierarchy are hidden
@@ -160,9 +161,6 @@ class TestCRTP:
             m.TwoLevelCRTPInlineFirst,
         ]:
             assert get_user_mro(klass) == [klass]
-        # Same reasoning, as currently only the `inline_base` annotations on the
-        # most derived class are taken into account.
-        assert get_user_mro(m.TwoLevelCRTPInlineSecond)[1:] == []
 
     def test_without_annotation_on_most_derived_class_nothing_is_inlined(self):
         inst = m.TwoLevelCRTPNoInline()
@@ -174,11 +172,12 @@ class TestCRTP:
         assert hasattr(inst, "from_crtp")
         assert not hasattr(inst, "from_second_level_crtp")
 
-    def test_only_annotation_on_most_derived_class_has_an_effect(self):
+    def test_annotation_on_inlined_base_is_taken_into_account(self):
         inst = m.TwoLevelCRTPInlineSecond()
-        assert not hasattr(inst, "from_crtp")
+        assert hasattr(inst, "from_crtp")
         assert hasattr(inst, "from_second_level_crtp")
-
+        # The same behavior as if all `inline_base` annotations were moved to
+        # the most derived class:
         inst = m.TwoLevelCRTPInlineBoth()
         assert hasattr(inst, "from_crtp")
         assert hasattr(inst, "from_second_level_crtp")

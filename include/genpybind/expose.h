@@ -100,6 +100,7 @@ private:
 class RecordExposer : public DeclContextExposer {
   const DeclContextGraph &graph;
   const AnnotatedRecordDecl *annotated_decl;
+  RecordInliningPolicy inlining_policy;
   struct Property {
     const clang::CXXMethodDecl *getter = nullptr;
     const clang::CXXMethodDecl *setter = nullptr;
@@ -108,7 +109,8 @@ class RecordExposer : public DeclContextExposer {
 
 public:
   RecordExposer(const DeclContextGraph &graph,
-                const AnnotatedRecordDecl *annotated_decl);
+                const AnnotatedRecordDecl *annotated_decl,
+                RecordInliningPolicy inlining_policy);
 
   llvm::Optional<RecordInliningPolicy> inliningPolicy() const override;
   void emitParameter(llvm::raw_ostream &os) override;

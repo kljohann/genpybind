@@ -1,8 +1,10 @@
 #pragma once
 
+#include "genpybind/annotated_decl.h"
+
 #include <llvm/ADT/None.h>
 #include <llvm/ADT/Optional.h>
-#include <llvm/ADT/SetVector.h>
+#include <llvm/ADT/SmallPtrSet.h>
 
 #include <vector>
 
@@ -14,10 +16,6 @@ class Sema;
 class TagDecl;
 } // namespace clang
 
-namespace llvm {
-template <typename T> class SmallPtrSetImpl;
-} // namespace llvm
-
 namespace genpybind {
 
 class AnnotatedRecordDecl;
@@ -26,8 +24,7 @@ class AnnotatedRecordDecl;
 /// a given record.  There has to be a path with public access from
 /// the record to the base class.
 class RecordInliningPolicy {
-  using BaseSet = llvm::SmallSetVector<const clang::TagDecl *, 1>;
-  using const_iterator = BaseSet::const_iterator;
+  using BaseSet = llvm::SmallPtrSet<const clang::TagDecl *, 1>;
 
 public:
   RecordInliningPolicy() = default;
@@ -42,17 +39,15 @@ public:
       const llvm::SmallPtrSetImpl<const clang::TagDecl *> &hidden_bases);
 
   static RecordInliningPolicy
-  createFromAnnotation(const AnnotatedRecordDecl &annotated_record);
-
-  /// Iterate through inline base classes in a deterministic but unspecified
-  /// order.
-  const_iterator begin() const { return inline_bases.begin(); }
-  const_iterator end() const { return inline_bases.end(); }
+  createFromAnnotations(const AnnotationStorage &annotations,
+                        const clang::CXXRecordDecl *record_decl);
 
   bool shouldInline(const clang::TagDecl *decl) const;
+  bool shouldHide(const clang::TagDecl *decl) const;
 
 private:
   BaseSet inline_bases;
+  BaseSet hide_bases;
 };
 
 /// Return all visible (in the language sense of name hiding) named declarations

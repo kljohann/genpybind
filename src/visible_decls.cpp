@@ -13,6 +13,7 @@
 #include <clang/Sema/Sema.h>
 #include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/SmallPtrSet.h>
+#include <llvm/ADT/SmallVector.h>
 #include <llvm/Support/Casting.h>
 
 using namespace genpybind;
@@ -76,18 +77,39 @@ public:
 
 } // namespace
 
-RecordInliningPolicy RecordInliningPolicy::createFromAnnotation(
-    const AnnotatedRecordDecl &annotated_record) {
-  if (const auto *decl =
-          llvm::dyn_cast<clang::CXXRecordDecl>(annotated_record.getDecl()))
-    return {decl, annotated_record.inline_base, annotated_record.hide_base};
-  return {};
+RecordInliningPolicy RecordInliningPolicy::createFromAnnotations(
+    const AnnotationStorage &annotations,
+    const clang::CXXRecordDecl *record_decl) {
+  llvm::SmallVector<const clang::TagDecl *, 1> remaining{record_decl};
+  llvm::SmallPtrSet<const clang::TagDecl *, 1> inline_candidates;
+  llvm::SmallPtrSet<const clang::TagDecl *, 1> hidden_bases;
+
+  // If a base class is a candidate for inlining, treat its `inline_base` and
+  // `hide_base` annotations as if they were present on `record_decl`.
+  while (!remaining.empty()) {
+    const clang::TagDecl *decl = remaining.back();
+    remaining.pop_back();
+    const auto *annotated =
+        llvm::dyn_cast_or_null<AnnotatedRecordDecl>(annotations.get(decl));
+    if (annotated == nullptr)
+      continue;
+    hidden_bases.insert(annotated->hide_base.begin(),
+                        annotated->hide_base.end());
+    for (const clang::TagDecl *base : annotated->inline_base) {
+      auto result = inline_candidates.insert(base);
+      if (result.second)
+        remaining.push_back(base);
+    }
+  }
+
+  return {record_decl, inline_candidates, hidden_bases};
 }
 
 RecordInliningPolicy::RecordInliningPolicy(
     const clang::CXXRecordDecl *record_decl,
     const llvm::SmallPtrSetImpl<const clang::TagDecl *> &inline_candidates,
-    const llvm::SmallPtrSetImpl<const clang::TagDecl *> &hidden_bases) {
+    const llvm::SmallPtrSetImpl<const clang::TagDecl *> &hidden_bases)
+    : hide_bases(hidden_bases.begin(), hidden_bases.end()) {
   auto is_hidden_base = [&](const clang::CXXBasePathElement &element) -> bool {
     const auto *base_decl = element.Base->getType()->getAsCXXRecordDecl();
     base_decl = base_decl->getDefinition();
@@ -121,6 +143,12 @@ bool RecordInliningPolicy::shouldInline(const clang::TagDecl *decl) const {
   // TODO: Calls to getDefinition necessary here?
   decl = decl->getDefinition();
   return inline_bases.count(decl) != 0;
+}
+
+bool RecordInliningPolicy::shouldHide(const clang::TagDecl *decl) const {
+  // TODO: Calls to getDefinition necessary here?
+  decl = decl->getDefinition();
+  return hide_bases.count(decl) != 0;
 }
 
 std::vector<const clang::NamedDecl *>

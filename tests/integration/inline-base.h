@@ -82,9 +82,6 @@ template <typename Derived, typename T> struct CRTP : public T {
   bool from_crtp = true;
 };
 
-// TODO/NOTE: Currently only the `inline_base` annotation on the exposed class
-// (see `TwoLevelCRTP...` below) is taken into account.  The annotation here
-// is ignored.
 template <typename Derived, typename T>
 struct GENPYBIND(inline_base(CRTP), hidden) SecondLevelOfCRTP
     : public CRTP<Derived, T> {

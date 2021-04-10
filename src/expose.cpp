@@ -812,8 +812,13 @@ DeclContextExposer::create(const DeclContextGraph &graph,
       return std::make_unique<NamespaceExposer>(ad);
     if (const auto *ad = llvm::dyn_cast<AnnotatedEnumDecl>(annotated_decl))
       return std::make_unique<EnumExposer>(ad);
-    if (const auto *ad = llvm::dyn_cast<AnnotatedRecordDecl>(annotated_decl))
-      return std::make_unique<RecordExposer>(graph, ad);
+    if (const auto *ad = llvm::dyn_cast<AnnotatedRecordDecl>(annotated_decl)) {
+      const auto *record_decl = llvm::cast<clang::CXXRecordDecl>(decl);
+      return std::make_unique<RecordExposer>(
+          graph, ad,
+          RecordInliningPolicy::createFromAnnotations(annotations,
+                                                      record_decl));
+    }
   }
   if (DeclContextGraph::accepts(decl))
     return std::make_unique<DeclContextExposer>();
@@ -992,13 +997,15 @@ void EnumExposer::handleDeclImpl(llvm::raw_ostream &os,
 }
 
 RecordExposer::RecordExposer(const DeclContextGraph &graph,
-                             const AnnotatedRecordDecl *annotated_decl)
-    : graph(graph), annotated_decl(annotated_decl) {
+                             const AnnotatedRecordDecl *annotated_decl,
+                             RecordInliningPolicy inlining_policy)
+    : graph(graph), annotated_decl(annotated_decl),
+      inlining_policy(std::move(inlining_policy)) {
   assert(annotated_decl != nullptr);
 }
 
 llvm::Optional<RecordInliningPolicy> RecordExposer::inliningPolicy() const {
-  return RecordInliningPolicy::createFromAnnotation(*annotated_decl);
+  return inlining_policy;
 }
 
 void RecordExposer::emitParameter(llvm::raw_ostream &os) {
@@ -1185,9 +1192,9 @@ void RecordExposer::emitType(llvm::raw_ostream &os) {
       const clang::TagDecl *base_decl =
           base.getType()->getAsTagDecl()->getDefinition();
       if (base.getAccessSpecifier() != clang::AS_public ||
-          annotated_decl->hide_base.count(base_decl) != 0)
+          inlining_policy.shouldHide(base_decl))
         continue;
-      if (annotated_decl->inline_base.count(base_decl) != 0) {
+      if (inlining_policy.shouldInline(base_decl)) {
         if (const auto *decl = llvm::dyn_cast<clang::CXXRecordDecl>(base_decl))
           recurse(decl, recurse);
       } else if (graph.getNode(base_decl) != nullptr) {
