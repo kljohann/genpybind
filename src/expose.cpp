@@ -621,8 +621,10 @@ TranslationUnitExposer::TranslationUnitExposer(
     : sema(sema), graph(graph), visibilities(visibilities),
       annotations(annotations) {}
 
-void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
-                                        llvm::StringRef name) {
+void TranslationUnitExposer::emitModule(
+    std::vector<llvm::raw_ostream *> ostreams, llvm::StringRef name) {
+  assert(!ostreams.empty());
+
   const EnclosingScopeMap parents = findEnclosingScopes(graph, annotations);
 
   const clang::DeclContext *cycle = nullptr;
@@ -696,17 +698,25 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
     }
   }
 
-  // Emit declarations for `expose_` functions
-  for (const auto &item : worklist) {
+  auto emit_expose_declarator = [](llvm::raw_ostream &os,
+                                   const WorklistItem &item) {
     os << "void expose_" << item.identifier << "(";
     item.exposer->emitParameter(os);
-    os << ");\n";
+    os << ")";
+  };
+
+  llvm::raw_ostream &main_stream = *ostreams.front();
+
+  // Emit declarations for `expose_` functions
+  for (const auto &item : worklist) {
+    emit_expose_declarator(main_stream, item);
+    main_stream << ";\n";
   }
 
-  os << '\n';
+  main_stream << '\n';
 
   // Emit module definition
-  os << "PYBIND11_MODULE(" << name << ", root) {\n";
+  main_stream << "PYBIND11_MODULE(" << name << ", root) {\n";
 
   // Emit context introducers
   for (const auto &item : worklist) {
@@ -718,16 +728,17 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
     assert(parent_identifier != context_identifiers.end() &&
            "identifier should have been stored at this point");
 
-    os << "auto " << item.identifier << " = ";
-    item.exposer->emitIntroducer(os, parent_identifier->getSecond());
-    os << ";\n";
+    main_stream << "auto " << item.identifier << " = ";
+    item.exposer->emitIntroducer(main_stream, parent_identifier->getSecond());
+    main_stream << ";\n";
   }
 
-  os << '\n';
+  main_stream << '\n';
 
   // Emit calls to `expose_` functions
   for (const auto &item : worklist) {
-    os << "expose_" << item.identifier << "(" << item.identifier << ");\n";
+    main_stream << "expose_" << item.identifier << "(" << item.identifier
+                << ");\n";
   }
 
   { // Emit 'postamble' manual bindings.
@@ -741,19 +752,25 @@ void TranslationUnitExposer::emitModule(llvm::raw_ostream &os,
       if (!annotation->postamble || annotation->manual_bindings == nullptr)
         continue;
       const clang::ASTContext &ast_context = it->getASTContext();
-      os << "\n";
-      emitManualBindings(os, ast_context, annotation->manual_bindings);
+      main_stream << "\n";
+      emitManualBindings(main_stream, ast_context, annotation->manual_bindings);
     }
   }
 
-  os << "}\n\n";
+  main_stream << "}\n\n";
 
   // Emit definitions for `expose_` functions
-  // (can be partitioned into several files in the future)
+  unsigned index = 0;
   for (const auto &item : worklist) {
-    os << "void expose_" << item.identifier << "(";
-    item.exposer->emitParameter(os);
-    os << ") {\n";
+    // Distribute chunks of consecutive exposers to the different streams.
+    llvm::raw_ostream &os =
+        *ostreams[index++ * ostreams.size() / worklist.size()];
+    // Also emit declaration to this stream, in order to avoid
+    // `-Wmissing-declarations` warnings.
+    emit_expose_declarator(os, item);
+    os << ";\n";
+    emit_expose_declarator(os, item);
+    os << " {\n";
 
     // For inlined decls use the default visibility of the current
     // lookup context.

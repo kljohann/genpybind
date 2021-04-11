@@ -9,6 +9,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace clang {
 class CXXMethodDecl;
@@ -44,7 +45,8 @@ public:
                          const EffectiveVisibilityMap &visibilities,
                          AnnotationStorage &annotations);
 
-  void emitModule(llvm::raw_ostream &os, llvm::StringRef name);
+  void emitModule(std::vector<llvm::raw_ostream *> ostreams,
+                  llvm::StringRef name);
 };
 
 class DeclContextExposer {

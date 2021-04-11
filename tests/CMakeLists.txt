@@ -54,6 +54,7 @@ foreach(test_implementation IN LISTS integration_tests)
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
     PUBLIC $<TARGET_PROPERTY:pybind11::module,INTERFACE_INCLUDE_DIRECTORIES>
   )
+  list(TRANSFORM test_bindings PREPEND "-o=" OUTPUT_VARIABLE output_args)
   add_custom_command(
     OUTPUT ${test_bindings}
     MAIN_DEPENDENCY ${test_header}
@@ -61,7 +62,7 @@ foreach(test_implementation IN LISTS integration_tests)
     IMPLICIT_DEPENDS CXX ${test_header}
     COMMAND $<TARGET_FILE:genpybind-tool>
     ARGS -p ${CMAKE_BINARY_DIR} ${test_header} --extra-arg=-D__GENPYBIND__
-    > ${test_bindings}
+    ${output_args}
     COMMENT "Analyzing ${test_header}"
     VERBATIM USES_TERMINAL
   )

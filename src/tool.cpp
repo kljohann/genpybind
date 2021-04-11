@@ -81,6 +81,34 @@ static llvm::cl::opt<bool>
                llvm::cl::desc("Debug dump the AST after initial augmentation"),
                llvm::cl::init(false), llvm::cl::Hidden);
 
+struct OutputFilenameParser : public llvm::cl::parser<std::string> {
+  OutputFilenameParser(llvm::cl::Option &opt) : parser(opt) {}
+
+  bool parse(llvm::cl::Option &opt, llvm::StringRef, llvm::StringRef arg,
+             std::string &value) {
+    // NOTE: Absolute paths are enforced for the output files, since
+    // `ClangTool::run` changes to a different working directory.
+    if (arg != "-" && !llvm::sys::path::is_absolute(arg))
+      return opt.error("path has to be absolute!");
+    value = arg.str();
+    return false;
+  }
+
+  llvm::StringRef getValueName() const override { return "absolute path"; }
+};
+
+static llvm::cl::list<std::string, bool, OutputFilenameParser> g_output_files(
+    "o", llvm::cl::cat(g_genpybind_category),
+    llvm::cl::desc(
+        "Path to the output file (\"-\" for stdout); Can be specified multiple "
+        "times\nto spread the generated code over several files."),
+    llvm::cl::ZeroOrMore);
+
+static llvm::cl::opt<bool> g_keep_output_files(
+    "keep-output-files", llvm::cl::cat(g_genpybind_category),
+    llvm::cl::desc("Don't erase the output files if compiler errors occurred."),
+    llvm::cl::init(false), llvm::cl::Hidden);
+
 static const char *graphTitle(InspectGraphStage stage) {
   switch (stage) {
   case InspectGraphStage::Visibility:
@@ -127,11 +155,13 @@ static void emitQuotedArguments(llvm::raw_ostream &os,
 class GenpybindASTConsumer : public clang::SemaConsumer {
   AnnotationStorage annotations;
   clang::Sema *sema = nullptr;
+  clang::CompilerInstance &compiler;
   const genpybind::PragmaGenpybindHandler *pragma_handler;
 
 public:
-  GenpybindASTConsumer(const genpybind::PragmaGenpybindHandler *pragma_handler)
-      : pragma_handler(pragma_handler) {}
+  GenpybindASTConsumer(clang::CompilerInstance &compiler,
+                       const genpybind::PragmaGenpybindHandler *pragma_handler)
+      : compiler(compiler), pragma_handler(pragma_handler) {}
 
   void InitializeSema(clang::Sema &sema_) override { sema = &sema_; }
   void ForgetSema() override { sema = nullptr; }
@@ -184,22 +214,47 @@ public:
     inspectGraph(*graph, annotations, visibilities, module_name,
                  InspectGraphStage::Pruned);
 
+    std::vector<std::unique_ptr<llvm::raw_pwrite_stream>> output_streams;
+    for (llvm::StringRef output_path : g_output_files) {
+      bool binary = false;
+      bool remove_file_on_signal = true; // not thread-safe
+      llvm::StringRef base_input, extension;
+      bool use_temporary = true;
+      bool create_missing_directories = false;
+      auto stream = compiler.createOutputFile(
+          output_path, binary, remove_file_on_signal, base_input, extension,
+          use_temporary, create_missing_directories);
+      if (stream == nullptr)
+        return;
+      output_streams.push_back(std::move(stream));
+    }
+
+    if (output_streams.empty())
+      return;
+
     TranslationUnitExposer exposer(*sema, *graph, visibilities, annotations);
 
-    llvm::outs() << "#include \"" << main_file << "\"\n"
-                 << "#include <genpybind/runtime.h>\n"
-                 << "#include <pybind11/pybind11.h>\n";
+    std::string includes;
+    {
+      llvm::raw_string_ostream stream(includes);
+      stream << "#include \"" << main_file << "\"\n"
+             << "#include <genpybind/runtime.h>\n"
+             << "#include <pybind11/pybind11.h>\n";
 
-    if (pragma_handler != nullptr) {
-      for (const std::string &include : pragma_handler->getIncludes()) {
-        llvm::outs() << "#include " << include << '\n';
+      if (pragma_handler != nullptr) {
+        for (const std::string &include : pragma_handler->getIncludes()) {
+          stream << "#include " << include << '\n';
+        }
       }
+      stream << '\n';
     }
-    llvm::outs() << '\n';
 
-    exposer.emitModule(llvm::outs(), module_name);
-
-    llvm::outs().flush();
+    std::vector<llvm::raw_ostream *> streams;
+    for (const auto &stream : output_streams) {
+      (*stream) << includes;
+      streams.push_back(stream.get());
+    }
+    exposer.emitModule(streams, module_name);
   }
 };
 
@@ -221,6 +276,11 @@ public:
     pragma_genpybind_handler.reset();
   }
 
+  bool shouldEraseOutputFiles() override {
+    return !g_keep_output_files &&
+           getCompilerInstance().getDiagnostics().hasErrorOccurred();
+  }
+
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance & /*compiler*/,
                     llvm::StringRef /*in_file*/) override {
@@ -229,8 +289,8 @@ public:
         std::make_unique<InstantiateAnnotatedTemplatesASTConsumer>());
     consumers.push_back(
         std::make_unique<InstantiateDefaultArgumentsASTConsumer>());
-    consumers.push_back(
-        std::make_unique<GenpybindASTConsumer>(pragma_genpybind_handler.get()));
+    consumers.push_back(std::make_unique<GenpybindASTConsumer>(
+        getCompilerInstance(), pragma_genpybind_handler.get()));
     return std::make_unique<clang::MultiplexConsumer>(std::move(consumers));
   }
 };
@@ -283,11 +343,19 @@ int main(int argc, const char **argv) {
                               llvm::cl::desc("Use verbose output"),
                               llvm::cl::init(false));
 
-  CommonOptionsParser options_parser(argc, argv, g_genpybind_category);
+  // Only accept one source path, since the current implementation only allows
+  // one set of output files.
+  CommonOptionsParser options_parser(argc, argv, g_genpybind_category,
+                                     /*OccurrencesFlag=*/llvm::cl::Required);
+
+  if (g_output_files.empty())
+    g_output_files.push_back("-");
 
   const CompilationDatabase &compilations = options_parser.getCompilations();
   const std::vector<std::string> &source_paths =
       options_parser.getSourcePathList();
+
+  assert(source_paths.size() == 1);
 
   if (verbose) {
     for (const auto &source_path : source_paths) {
