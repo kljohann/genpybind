@@ -1,6 +1,7 @@
 #include "genpybind/sort_decls.h"
 
 #include <clang/AST/Decl.h>
+#include <clang/Basic/SourceLocation.h>
 #include <clang/Basic/SourceManager.h>
 
 using namespace genpybind;

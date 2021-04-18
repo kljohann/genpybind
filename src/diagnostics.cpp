@@ -4,7 +4,6 @@
 #include <clang/AST/Decl.h>
 #include <clang/AST/QualTypeNames.h>
 #include <clang/AST/Type.h>
-#include <clang/Basic/SourceLocation.h>
 #include <llvm/Support/Casting.h>
 #include <llvm/Support/ErrorHandling.h>
 

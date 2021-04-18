@@ -9,12 +9,15 @@
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/Optional.h>
 #include <llvm/ADT/StringRef.h>
+#include <llvm/ADT/iterator_range.h>
 #include <llvm/Support/Casting.h>
 #include <llvm/Support/DOTGraphTraits.h>
 #include <llvm/Support/GraphWriter.h>
 #include <llvm/Support/raw_ostream.h>
 
 #include <string>
+#include <type_traits>
+#include <utility>
 
 namespace llvm {
 template <class GraphType> struct GraphTraits;

@@ -2,7 +2,13 @@
 
 #include <clang/Lex/Pragma.h>
 
+#include <string>
 #include <vector>
+
+namespace clang {
+class Preprocessor;
+class Token;
+} // namespace clang
 
 namespace genpybind {
 

@@ -11,16 +11,15 @@
 #include <clang/Basic/Diagnostic.h>
 #include <clang/Basic/Specifiers.h>
 #include <llvm/ADT/DenseMap.h>
-#include <llvm/ADT/DenseSet.h>
 #include <llvm/ADT/DepthFirstIterator.h>
+#include <llvm/ADT/GraphTraits.h>
 #include <llvm/ADT/Optional.h>
-#include <llvm/ADT/PointerIntPair.h>
 #include <llvm/ADT/PostOrderIterator.h>
 #include <llvm/ADT/STLExtras.h>
+#include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/Support/Casting.h>
 
 #include <cassert>
-#include <memory>
 #include <queue>
 #include <vector>
 

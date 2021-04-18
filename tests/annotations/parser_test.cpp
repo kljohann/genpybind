@@ -8,6 +8,8 @@
 #include <gtest/gtest.h>
 
 #include <initializer_list>
+#include <tuple>
+#include <type_traits>
 
 namespace {
 

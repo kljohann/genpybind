@@ -6,7 +6,6 @@
 
 namespace clang {
 class Decl;
-class SourceLocation;
 } // namespace clang
 
 namespace genpybind {

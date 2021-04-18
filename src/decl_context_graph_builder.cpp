@@ -7,13 +7,13 @@
 
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/Decl.h>
-#include <clang/AST/DeclTemplate.h>
 #include <clang/AST/Type.h>
 #include <clang/Basic/Diagnostic.h>
 #include <llvm/ADT/None.h>
 #include <llvm/Support/Casting.h>
 
 #include <cassert>
+#include <type_traits>
 #include <utility>
 #include <vector>
 

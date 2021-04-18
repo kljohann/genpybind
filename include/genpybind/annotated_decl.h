@@ -10,16 +10,17 @@
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringRef.h>
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
 namespace clang {
-class CXXMethodDecl;
 class CXXConstructorDecl;
+class CXXMethodDecl;
 class LambdaExpr;
-}  // namespace clang
+} // namespace clang
 
 namespace genpybind {
 

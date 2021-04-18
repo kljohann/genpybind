@@ -10,6 +10,9 @@
 #include <clang/AST/DeclBase.h>
 #include <clang/AST/DeclCXX.h>
 #include <clang/AST/DeclTemplate.h>
+#include <clang/AST/DeclarationName.h>
+#include <clang/AST/Expr.h>
+#include <clang/AST/ExprCXX.h>
 #include <clang/AST/Type.h>
 #include <clang/ASTMatchers/ASTMatchersInternal.h>
 #include <clang/Basic/CharInfo.h>
@@ -22,13 +25,15 @@
 #include <llvm/ADT/SmallString.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringRef.h>
+#include <llvm/ADT/iterator_range.h>
 #include <llvm/Support/Casting.h>
 #include <llvm/Support/Error.h>
 #include <llvm/Support/ErrorHandling.h>
 #include <llvm/Support/raw_ostream.h>
 
+#include <algorithm>
 #include <cassert>
-#include <cstdint>
+#include <cstddef>
 #include <iterator>
 #include <string>
 #include <type_traits>

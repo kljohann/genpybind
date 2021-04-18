@@ -1,13 +1,16 @@
 #include "genpybind/visible_decls.h"
 
 #include "genpybind/annotated_decl.h"
+#include "genpybind/annotations/literal_value.h"
 #include "genpybind/decl_context_graph.h"
 
+#include <clang/AST/ASTContext.h>
 #include <clang/AST/CXXInheritance.h>
 #include <clang/AST/Decl.h>
 #include <clang/AST/DeclCXX.h>
 #include <clang/AST/DeclTemplate.h>
 #include <clang/AST/Type.h>
+#include <clang/Basic/SourceLocation.h>
 #include <clang/Basic/Specifiers.h>
 #include <clang/Sema/Lookup.h>
 #include <clang/Sema/Sema.h>
@@ -17,6 +20,7 @@
 #include <llvm/Support/Casting.h>
 
 #include <utility>
+#include <vector>
 
 using namespace genpybind;
 

@@ -3,6 +3,7 @@
 #include "genpybind/decl_context_graph_processing.h"
 #include "genpybind/visible_decls.h"
 
+#include <clang/Basic/OperatorKinds.h>
 #include <llvm/ADT/Optional.h>
 #include <llvm/ADT/StringRef.h>
 
@@ -12,16 +13,18 @@
 #include <vector>
 
 namespace clang {
+class ASTContext;
 class CXXMethodDecl;
 class DeclContext;
-class EnumDecl;
-class NamespaceDecl;
-class RecordDecl;
+class FunctionDecl;
+class NamedDecl;
 class Sema;
 class TypeDecl;
+class QualType;
 } // namespace clang
 namespace llvm {
 class raw_ostream;
+template <typename T> class SmallVectorImpl;
 } // namespace llvm
 
 namespace genpybind {

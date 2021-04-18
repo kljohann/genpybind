@@ -1,6 +1,6 @@
 #include "genpybind/decl_context_graph.h"
 
-#include <clang/AST/DeclCXX.h>
+#include <type_traits>
 
 using namespace genpybind;
 

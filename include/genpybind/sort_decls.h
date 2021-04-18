@@ -1,9 +1,8 @@
 #pragma once
 
-#include <clang/Basic/SourceLocation.h>
-
 namespace clang {
 class Decl;
+class SourceLocation;
 class SourceManager;
 } // namespace clang
 

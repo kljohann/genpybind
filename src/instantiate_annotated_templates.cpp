@@ -12,7 +12,9 @@
 #include <clang/Sema/Sema.h>
 #include <llvm/Support/Casting.h>
 
+#include <algorithm>
 #include <cassert>
+#include <type_traits>
 
 using namespace genpybind;
 

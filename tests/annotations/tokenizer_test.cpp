@@ -6,6 +6,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <initializer_list>
 #include <tuple>
 #include <vector>
 

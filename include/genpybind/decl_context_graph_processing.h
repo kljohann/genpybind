@@ -6,10 +6,10 @@
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/DenseSet.h>
 #include <llvm/ADT/SmallVector.h>
+#include <llvm/ADT/StringRef.h>
 
 namespace clang {
 class DeclContext;
-class NamedDecl;
 class Sema;
 class SourceManager;
 } // namespace clang

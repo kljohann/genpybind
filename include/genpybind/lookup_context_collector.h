@@ -3,9 +3,10 @@
 #include "genpybind/annotated_decl.h"
 
 #include <clang/AST/Decl.h>
-#include <clang/AST/DeclCXX.h>
 #include <clang/AST/RecursiveASTVisitor.h>
+#include <llvm/ADT/StringRef.h>
 
+#include <algorithm>
 #include <vector>
 
 namespace clang {

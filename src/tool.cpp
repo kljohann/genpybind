@@ -1,4 +1,5 @@
 #include "genpybind/annotated_decl.h"
+#include "genpybind/annotations/literal_value.h"
 #include "genpybind/decl_context_graph.h"
 #include "genpybind/decl_context_graph_builder.h"
 #include "genpybind/decl_context_graph_processing.h"
@@ -12,6 +13,7 @@
 #include <clang/AST/ASTConsumer.h>
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/Decl.h>
+#include <clang/Basic/Diagnostic.h>
 #include <clang/Basic/FileManager.h>
 #include <clang/Basic/SourceManager.h>
 #include <clang/Basic/Version.inc> // IWYU pragma: keep
@@ -19,6 +21,7 @@
 #include <clang/Frontend/CompilerInstance.h>
 #include <clang/Frontend/FrontendAction.h>
 #include <clang/Frontend/MultiplexConsumer.h>
+#include <clang/Lex/Preprocessor.h>
 #include <clang/Sema/SemaConsumer.h>
 #include <clang/Tooling/ArgumentsAdjusters.h>
 #include <clang/Tooling/CommonOptionsParser.h>
@@ -39,13 +42,20 @@
 #include <llvm/Support/Program.h>
 #include <llvm/Support/raw_ostream.h>
 
+#include <algorithm>
 #include <cassert>
+#include <initializer_list>
 #include <memory>
 #include <string>
+#include <system_error>
 #include <utility>
 #include <vector>
 
 using namespace genpybind;
+
+namespace clang {
+class Sema;
+}
 
 namespace {
 

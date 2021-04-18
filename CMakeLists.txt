@@ -30,6 +30,8 @@ if(NOT IWYU_PATH STREQUAL "IWYU_PATH-NOTFOUND")
     -Xiwyu --mapping_file=${CMAKE_CURRENT_SOURCE_DIR}/genpybind.imp
     -Xiwyu --transitive_includes_only
     -Xiwyu --quoted_includes_first
+    # TODO: Use ${CLANG_VERSION} instead
+    -resource-dir=${LLVM_LIBRARY_DIR}/clang/${LLVM_PACKAGE_VERSION}
   )
 endif()
 

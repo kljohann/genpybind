@@ -1,16 +1,20 @@
 #include "genpybind/pragmas.h"
 
+#include "clang/Basic/TokenKinds.h"
+
 #include <clang/Basic/Diagnostic.h>
 #include <clang/Basic/DiagnosticLex.h>
-#include <clang/Basic/DiagnosticParse.h>
+#include <clang/Basic/SourceLocation.h>
+#include <clang/Basic/SourceManager.h>
 #include <clang/Lex/Lexer.h>
 #include <clang/Lex/Pragma.h>
 #include <clang/Lex/Preprocessor.h>
-#include <clang/Lex/PreprocessorLexer.h>
 #include <clang/Lex/Token.h>
-#include <llvm/ADT/STLExtras.h>
-#include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringRef.h>
+
+#include <algorithm>
+#include <cassert>
+#include <utility>
 
 using namespace genpybind;
 

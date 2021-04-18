@@ -2,15 +2,19 @@
 
 #include <clang/Basic/CharInfo.h>
 #include <clang/Basic/SourceLocation.h>
+#include <llvm/ADT/None.h>
 #include <llvm/ADT/Optional.h>
 #include <llvm/ADT/Sequence.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringSwitch.h>
+#include <llvm/ADT/iterator_range.h>
 #include <llvm/Support/Error.h>
 #include <llvm/Support/ErrorHandling.h>
 #include <llvm/Support/raw_ostream.h>
 
+#include <algorithm>
 #include <cassert>
+#include <type_traits>
 #include <utility>
 
 using namespace genpybind::annotations;

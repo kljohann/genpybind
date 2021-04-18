@@ -6,35 +6,56 @@
 #include "genpybind/diagnostics.h"
 #include "genpybind/sort_decls.h"
 #include "genpybind/string_utils.h"
+#include "genpybind/visible_decls.h"
 
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/Decl.h>
+#include <clang/AST/DeclAccessPair.h>
 #include <clang/AST/DeclCXX.h>
 #include <clang/AST/DeclTemplate.h>
+#include <clang/AST/DeclarationName.h>
 #include <clang/AST/Expr.h>
 #include <clang/AST/ExprCXX.h>
 #include <clang/AST/PrettyPrinter.h>
 #include <clang/AST/QualTypeNames.h>
+#include <clang/AST/RawCommentList.h>
+#include <clang/AST/Stmt.h>
 #include <clang/AST/Type.h>
 #include <clang/ASTMatchers/ASTMatchersInternal.h>
+#include <clang/Basic/Diagnostic.h>
+#include <clang/Basic/DiagnosticIDs.h>
+#include <clang/Basic/IdentifierTable.h>
+#include <clang/Basic/LangOptions.h>
+#include <clang/Basic/OperatorKinds.h>
+#include <clang/Basic/SourceLocation.h>
 #include <clang/Basic/Specifiers.h>
 #include <clang/Sema/Lookup.h>
-#include <clang/Sema/Overload.h>
 #include <clang/Sema/Sema.h>
+#include <llvm/ADT/ArrayRef.h>
 #include <llvm/ADT/DenseMap.h>
+#include <llvm/ADT/None.h>
 #include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/Sequence.h>
+#include <llvm/ADT/SmallSet.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringExtras.h>
 #include <llvm/ADT/StringMap.h>
+#include <llvm/ADT/iterator.h>
+#include <llvm/ADT/iterator_range.h>
 #include <llvm/Support/Casting.h>
 #include <llvm/Support/ErrorHandling.h>
 #include <llvm/Support/raw_ostream.h>
 
+#include <algorithm>
 #include <cassert>
+#include <cstddef>
+#include <initializer_list>
 #include <iterator>
+#include <string>
+#include <type_traits>
 #include <utility>
+#include <vector>
 
 using namespace genpybind;
 

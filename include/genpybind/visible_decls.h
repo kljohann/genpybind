@@ -1,7 +1,5 @@
 #pragma once
 
-#include "genpybind/annotated_decl.h"
-
 #include <llvm/ADT/None.h>
 #include <llvm/ADT/Optional.h>
 #include <llvm/ADT/SmallPtrSet.h>
@@ -17,8 +15,7 @@ class TagDecl;
 } // namespace clang
 
 namespace genpybind {
-
-class AnnotatedRecordDecl;
+class AnnotationStorage;
 
 /// A set of base classes whose declarations should be "inlined" into
 /// a given record.  There has to be a path with public access from
