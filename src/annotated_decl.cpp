@@ -232,7 +232,7 @@ bool AnnotatedNamedDecl::processAnnotation(const Annotation &annotation) {
     } else if (auto value = arguments.take<LiteralValue::Kind::String>()) {
       llvm::StringRef text = value->getString();
       if (clang::isValidIdentifier(text)) {
-        spelling = text;
+        spelling = text.str();
       } else {
         Diagnostics::report(getDecl(),
                             Diagnostics::Kind::AnnotationInvalidSpellingError)
@@ -275,7 +275,7 @@ std::string AnnotatedNamedDecl::getSpelling() const {
     makeValidIdentifier(result);
   }
 
-  return result.str();
+  return result.str().str();
 }
 
 llvm::StringRef AnnotatedNamespaceDecl::getFriendlyDeclKindName() const {
@@ -417,15 +417,14 @@ bool AnnotatedRecordDecl::processAnnotation(const Annotation &annotation) {
     bool found_match = false;
     // TODO: More verbose error if this is not the case?
     if (const auto *decl = llvm::dyn_cast<clang::CXXRecordDecl>(getDecl())) {
-      found_match = !decl->forallBases(
-          [&](const clang::CXXRecordDecl *base_decl) -> bool {
-            base_decl = base_decl->getDefinition();
-            if (!names.empty() && !matcher.matchesNode(*base_decl))
-              return true;
-            inline_base.insert(base_decl);
-            return false;
-          },
-          /*AllowShortCircuit=*/false);
+      decl->forallBases([&](const clang::CXXRecordDecl *base_decl) -> bool {
+        base_decl = base_decl->getDefinition();
+        if (names.empty() || matcher.matchesNode(*base_decl)) {
+          inline_base.insert(base_decl);
+          found_match = true;
+        }
+        return true; // continue visiting other bases
+      });
     }
     if (!found_match) {
       Diagnostics::report(
@@ -674,7 +673,7 @@ bool AnnotatedMethodDecl::processAnnotation(const Annotation &annotation) {
           << toString(annotation.getKind()) << identifier;
       continue;
     }
-    identifiers.push_back(identifier);
+    identifiers.push_back(identifier.str());
   }
   if (auto value = arguments.take()) {
     reportWrongArgumentTypeError(getDecl(), annotation.getKind(), *value);

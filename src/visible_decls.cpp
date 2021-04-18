@@ -141,7 +141,7 @@ RecordInliningPolicy::RecordInliningPolicy(
   record_decl->forallBases([&](const clang::CXXRecordDecl *base_decl) -> bool {
     if (should_inline(base_decl))
       inline_bases.insert(base_decl);
-    return true;
+    return true; // continue visiting other bases
   });
 }
 

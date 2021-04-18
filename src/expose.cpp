@@ -1130,7 +1130,11 @@ void RecordExposer::emitOperator(llvm::raw_ostream &os,
   // both `==` and `<=>`, but exposing the same operator multiple times
   // should be benign: pybind11 will just pick one definition when it
   // resolves the call.
+#if LLVM_VERSION_MAJOR >= 11
+  bool allow_rewritten_candidates = ast_context.getLangOpts().CPlusPlus20;
+#else
   bool allow_rewritten_candidates = ast_context.getLangOpts().CPlusPlus2a;
+#endif
   // TODO: implement this...
   (void)allow_rewritten_candidates;
 

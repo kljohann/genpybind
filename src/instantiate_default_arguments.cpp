@@ -27,7 +27,11 @@ bool InstantiateDefaultArgumentsASTConsumer::VisitParmVarDecl(
   if (function->getTemplateSpecializationKind() == clang::TSK_Undeclared)
     return true;
 
+#if LLVM_VERSION_MAJOR >= 11
+  sema->InstantiateDefaultArgument(clang::SourceLocation(), function, decl);
+#else
   sema->CheckCXXDefaultArgExpr(clang::SourceLocation(), function, decl);
+#endif
 
   return true;
 }

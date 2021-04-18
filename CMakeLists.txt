@@ -66,6 +66,9 @@ target_include_directories(genpybind
 target_include_directories(genpybind
   SYSTEM PUBLIC ${LLVM_INCLUDE_DIRS} ${CLANG_INCLUDE_DIRS}
 )
+target_compile_definitions(genpybind
+  PUBLIC LLVM_VERSION_MAJOR=${LLVM_VERSION_MAJOR}
+)
 
 add_executable(genpybind-tool
   src/tool.cpp

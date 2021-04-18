@@ -317,7 +317,7 @@ std::string findClangExecutable() {
         // Failed to resolve path.
         resolved = *path;
       }
-      return resolved.str();
+      return resolved.str().str();
     }
   }
   return {};
