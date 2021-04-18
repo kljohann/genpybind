@@ -103,12 +103,12 @@ struct GraphTraits<DeclContextGraphWithAnnotations>
   }
   static nodes_iterator
   nodes_begin(const DeclContextGraphWithAnnotations &graph) {
-    return nodes_iterator(graph->begin(), &valueFromPair);
+    return {graph->begin(), &valueFromPair};
   }
 
   static nodes_iterator
   nodes_end(const DeclContextGraphWithAnnotations &graph) {
-    return nodes_iterator(graph->end(), &valueFromPair);
+    return {graph->end(), &valueFromPair};
   }
 
   static unsigned size(const DeclContextGraphWithAnnotations &graph) {

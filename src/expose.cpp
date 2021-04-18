@@ -76,7 +76,7 @@ struct AttemptFullQualificationPrinter : clang::PrinterHelper {
     if (expr == nullptr)
       return false;
 
-    auto printRecursively = [&](const clang::Expr *expr) {
+    auto print_recursively = [&](const clang::Expr *expr) {
       expr->printPretty(os, this, printing_policy, /*Indentation=*/0,
                         /*NewlineSymbol=*/"\n", &context);
     };
@@ -99,7 +99,7 @@ struct AttemptFullQualificationPrinter : clang::PrinterHelper {
                                                    printing_policy,
                                                    /*WithGlobalNsPrefix=*/true);
       within_braced_initializer = true;
-      printRecursively(expr);
+      print_recursively(expr);
       within_braced_initializer = false;
       return true;
     }
@@ -127,7 +127,7 @@ struct AttemptFullQualificationPrinter : clang::PrinterHelper {
     // - BlockExpr
     // - AsTypeExpr
 
-    auto printFullyQualifiedName = [&](clang::QualType qual_type) {
+    auto print_fully_qualified_name = [&](clang::QualType qual_type) {
       os << clang::TypeName::getFullyQualifiedName(qual_type, context,
                                                    printing_policy,
                                                    /*WithGlobalNsPrefix=*/true);
@@ -135,26 +135,26 @@ struct AttemptFullQualificationPrinter : clang::PrinterHelper {
 
     if (const auto *cast = llvm::dyn_cast<clang::CStyleCastExpr>(expr)) {
       os << '(';
-      printFullyQualifiedName(cast->getType());
+      print_fully_qualified_name(cast->getType());
       os << ')';
-      printRecursively(cast->getSubExpr());
+      print_recursively(cast->getSubExpr());
       return true;
     }
 
     if (const auto *cast = llvm::dyn_cast<clang::CXXNamedCastExpr>(expr)) {
       os << cast->getCastName() << '<';
-      printFullyQualifiedName(cast->getType());
+      print_fully_qualified_name(cast->getType());
       os << ">(";
-      printRecursively(cast->getSubExpr());
+      print_recursively(cast->getSubExpr());
       os << ')';
       return true;
     }
 
     if (const auto *cast = llvm::dyn_cast<clang::CXXFunctionalCastExpr>(expr)) {
-      printFullyQualifiedName(cast->getType());
+      print_fully_qualified_name(cast->getType());
       if (cast->getLParenLoc().isValid())
         os << '(';
-      printRecursively(cast->getSubExpr());
+      print_recursively(cast->getSubExpr());
       if (cast->getLParenLoc().isValid())
         os << ')';
       return true;
@@ -162,7 +162,7 @@ struct AttemptFullQualificationPrinter : clang::PrinterHelper {
 
     if (const auto *temporary =
             llvm::dyn_cast<clang::CXXTemporaryObjectExpr>(expr)) {
-      printFullyQualifiedName(temporary->getType());
+      print_fully_qualified_name(temporary->getType());
 
       if (temporary->isStdInitListInitialization())
         /* do nothing; braces are printed by containing expression */;
@@ -175,7 +175,7 @@ struct AttemptFullQualificationPrinter : clang::PrinterHelper {
           break;
         if (comma)
           os << ", ";
-        printRecursively(argument);
+        print_recursively(argument);
         comma = true;
       }
 
@@ -206,7 +206,7 @@ struct AttemptFullQualificationPrinter : clang::PrinterHelper {
       assert(!printing_policy.SuppressImplicitBase &&
              "suppressing implicit 'this' not implemented");
       const clang::Expr *base = member->getBase();
-      printRecursively(base);
+      print_recursively(base);
 
       bool suppress_member_access_operator = [&] {
         if (const auto *parent_member = llvm::dyn_cast<clang::MemberExpr>(base))
@@ -295,8 +295,8 @@ static void emitParameterTypes(llvm::raw_ostream &os,
 
 static bool isPybind11ArgsType(clang::QualType parameter_type) {
   const clang::CXXRecordDecl *record = nullptr;
-  if (!(record = parameter_type->getAsCXXRecordDecl()) &&
-      !(record = parameter_type->getPointeeCXXRecordDecl())) {
+  if ((record = parameter_type->getAsCXXRecordDecl()) == nullptr &&
+      (record = parameter_type->getPointeeCXXRecordDecl()) == nullptr) {
     return false;
   }
   assert(record != nullptr);
@@ -319,7 +319,8 @@ static void emitParameters(llvm::raw_ostream &os,
     if (isPybind11ArgsType(param->getType())) {
       last_args_or_kwargs_param_decl = param;
       continue;
-    } else if (last_args_or_kwargs_param_decl != nullptr) {
+    }
+    if (last_args_or_kwargs_param_decl != nullptr) {
       Diagnostics::report(last_args_or_kwargs_param_decl,
                           Diagnostics::Kind::TrailingParametersError);
       break;
@@ -1166,8 +1167,8 @@ void RecordExposer::emitOperatorDefinition(
   auto printing_policy = getPrintingPolicyForExposedNames(ast_context);
   os << "[](";
   bool comma = false;
-  int parameter_count = static_cast<int>(parameter_types.size());
-  for (int index : llvm::seq(0, parameter_count)) {
+  std::size_t parameter_count = parameter_types.size();
+  for (auto index : llvm::seq<std::size_t>(0, parameter_count)) {
     std::size_t type_index =
         reverse_parameters ? (parameter_count - 1 - index) : index;
     if (comma)
@@ -1188,7 +1189,7 @@ void RecordExposer::emitOperatorDefinition(
   if (unary) {
     os << getOperatorSpelling(kind) << parameter_names[0];
   } else {
-    int offset = reverse_parameters;
+    std::size_t offset = reverse_parameters ? 1 : 0;
     os << parameter_names[0 + offset] << ' ' << getOperatorSpelling(kind) << ' '
        << parameter_names[1 - offset];
   }

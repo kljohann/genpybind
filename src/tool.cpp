@@ -49,14 +49,14 @@ using namespace genpybind;
 
 namespace {
 
-static llvm::cl::OptionCategory g_genpybind_category("Genpybind Options");
+llvm::cl::OptionCategory g_genpybind_category("Genpybind Options");
 
 enum class InspectGraphStage {
   Visibility,
   Pruned,
 };
 
-static llvm::cl::ValuesClass getInspectGraphValues() {
+llvm::cl::ValuesClass getInspectGraphValues() {
   return llvm::cl::values(clEnumValN(InspectGraphStage::Visibility,
                                      "visibility",
                                      "With visibility of all nodes (unpruned)"),
@@ -64,19 +64,19 @@ static llvm::cl::ValuesClass getInspectGraphValues() {
                                      "After pruning of hidden nodes"));
 }
 
-static llvm::cl::list<InspectGraphStage>
+llvm::cl::list<InspectGraphStage>
     g_inspect_graph("inspect-graph", llvm::cl::cat(g_genpybind_category),
                     llvm::cl::desc("Show the declaration context graph."),
                     getInspectGraphValues(), llvm::cl::ZeroOrMore,
                     llvm::cl::Hidden);
 
-static llvm::cl::list<InspectGraphStage>
+llvm::cl::list<InspectGraphStage>
     g_dump_graph("dump-graph", llvm::cl::cat(g_genpybind_category),
                  llvm::cl::desc("Print the declaration context graph."),
                  getInspectGraphValues(), llvm::cl::ZeroOrMore,
                  llvm::cl::Hidden);
 
-static llvm::cl::opt<bool>
+llvm::cl::opt<bool>
     g_dump_ast("dump-ast", llvm::cl::cat(g_genpybind_category),
                llvm::cl::desc("Debug dump the AST after initial augmentation"),
                llvm::cl::init(false), llvm::cl::Hidden);
@@ -97,19 +97,19 @@ struct OutputFilenameParser : public llvm::cl::parser<std::string> {
   llvm::StringRef getValueName() const override { return "absolute path"; }
 };
 
-static llvm::cl::list<std::string, bool, OutputFilenameParser> g_output_files(
+llvm::cl::list<std::string, bool, OutputFilenameParser> g_output_files(
     "o", llvm::cl::cat(g_genpybind_category),
     llvm::cl::desc(
         "Path to the output file (\"-\" for stdout); Can be specified multiple "
         "times\nto spread the generated code over several files."),
     llvm::cl::ZeroOrMore);
 
-static llvm::cl::opt<bool> g_keep_output_files(
+llvm::cl::opt<bool> g_keep_output_files(
     "keep-output-files", llvm::cl::cat(g_genpybind_category),
     llvm::cl::desc("Don't erase the output files if compiler errors occurred."),
     llvm::cl::init(false), llvm::cl::Hidden);
 
-static const char *graphTitle(InspectGraphStage stage) {
+const char *graphTitle(InspectGraphStage stage) {
   switch (stage) {
   case InspectGraphStage::Visibility:
     return "Declaration context graph (unpruned) with visibility of all nodes:";
@@ -119,10 +119,10 @@ static const char *graphTitle(InspectGraphStage stage) {
   llvm_unreachable("Unknown inspection point.");
 }
 
-static void inspectGraph(const DeclContextGraph &graph,
-                         const AnnotationStorage &annotations,
-                         const EffectiveVisibilityMap &visibilities,
-                         const llvm::Twine &name, InspectGraphStage stage) {
+void inspectGraph(const DeclContextGraph &graph,
+                  const AnnotationStorage &annotations,
+                  const EffectiveVisibilityMap &visibilities,
+                  const llvm::Twine &name, InspectGraphStage stage) {
   if (llvm::is_contained(g_inspect_graph, stage))
     viewGraph(&graph, annotations, "genpybind_" + name);
   if (llvm::is_contained(g_dump_graph, stage)) {
@@ -133,8 +133,8 @@ static void inspectGraph(const DeclContextGraph &graph,
   }
 }
 
-static void emitQuotedArguments(llvm::raw_ostream &os,
-                                llvm::ArrayRef<std::string> arguments) {
+void emitQuotedArguments(llvm::raw_ostream &os,
+                         llvm::ArrayRef<std::string> arguments) {
   bool first = true;
   for (llvm::StringRef arg : arguments) {
     if (!first) {
@@ -163,6 +163,7 @@ public:
                        const genpybind::PragmaGenpybindHandler *pragma_handler)
       : compiler(compiler), pragma_handler(pragma_handler) {}
 
+  // NOLINTNEXTLINE(readability-identifier-naming)
   void InitializeSema(clang::Sema &sema_) override { sema = &sema_; }
   void ForgetSema() override { sema = nullptr; }
 
@@ -409,5 +410,5 @@ int main(int argc, const char **argv) {
   auto factory = newFrontendActionFactory<GenpybindAction>();
 
   const int exit_code = tool.run(factory.get());
-  return expect_failure ? (exit_code == 0) : exit_code;
+  return expect_failure ? static_cast<int>(exit_code == 0) : exit_code;
 }

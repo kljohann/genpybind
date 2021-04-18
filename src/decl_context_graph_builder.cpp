@@ -91,7 +91,7 @@ llvm::Optional<DeclContextGraph> DeclContextGraphBuilder::buildGraph() {
   for (const clang::DeclContext *decl_context : visitor.lookup_contexts) {
     const auto *decl = llvm::dyn_cast<clang::Decl>(decl_context);
     // Do not add original parent-child-edge to graph if decl has been moved.
-    if (relocated_decls.count(decl))
+    if (relocated_decls.count(decl) != 0)
       continue;
     // Expose declarations below their semantic parent.
     const clang::Decl *parent = findLookupContextDecl(decl->getDeclContext());

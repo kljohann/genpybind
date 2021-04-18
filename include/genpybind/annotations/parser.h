@@ -60,7 +60,7 @@ public:
   clang::DiagnosticBuilder report(clang::SourceLocation loc,
                                   clang::DiagnosticsEngine &diagnostics) const;
 
-  void log(llvm::raw_ostream &OS) const override;
+  void log(llvm::raw_ostream &os) const override;
 
   static char ID;
 

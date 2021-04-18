@@ -40,12 +40,14 @@ std::string genpybind::annotations::toString(const Annotation &annotation) {
   return stream.str();
 }
 
+// NOLINTNEXTLINE(readability-identifier-naming)
 void genpybind::annotations::PrintTo(const AnnotationKind &kind,
                                      std::ostream *os) {
   llvm::raw_os_ostream ostream(*os);
   kind.print(ostream);
 }
 
+// NOLINTNEXTLINE(readability-identifier-naming)
 void genpybind::annotations::PrintTo(const Annotation &annotation,
                                      std::ostream *os) {
   llvm::raw_os_ostream ostream(*os);

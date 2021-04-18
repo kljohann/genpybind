@@ -67,7 +67,7 @@ LiteralValue &LiteralValue::operator=(const LiteralValue &other) {
 }
 
 LiteralValue::LiteralValue(LiteralValue &&other) noexcept
-    : kind(Kind::Nothing), string(nullptr) {
+    : kind(Kind::Nothing) {
   if (other.isString()) {
     kind = Kind::String;
     std::swap(string, other.string);
@@ -181,6 +181,7 @@ std::string genpybind::annotations::toString(const LiteralValue &value) {
   return stream.str();
 }
 
+// NOLINTNEXTLINE(readability-identifier-naming)
 void genpybind::annotations::PrintTo(const LiteralValue &value,
                                      std::ostream *os) {
   llvm::raw_os_ostream ostream(*os);

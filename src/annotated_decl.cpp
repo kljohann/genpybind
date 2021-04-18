@@ -46,17 +46,17 @@ using annotations::AnnotationKind;
 using annotations::LiteralValue;
 using annotations::Parser;
 
-static const llvm::StringRef kLozenge = "◊";
+static const llvm::StringRef k_lozenge = "◊";
 
 bool genpybind::hasAnnotations(const clang::Decl *decl, bool allow_empty) {
   return llvm::any_of(
       decl->specific_attrs<clang::AnnotateAttr>(), [&](const auto *attr) {
         ::llvm::StringRef annotation_text = attr->getAnnotation();
-        if (!annotation_text.startswith(kLozenge))
+        if (!annotation_text.startswith(k_lozenge))
           return false;
         if (allow_empty)
           return true;
-        return !annotation_text.drop_front(kLozenge.size()).ltrim().empty();
+        return !annotation_text.drop_front(k_lozenge.size()).ltrim().empty();
       });
 }
 
@@ -65,7 +65,7 @@ genpybind::getAnnotationStrings(const clang::Decl *decl) {
   llvm::SmallVector<llvm::StringRef, 1> result;
   for (const auto *attr : decl->specific_attrs<::clang::AnnotateAttr>()) {
     ::llvm::StringRef annotation_text = attr->getAnnotation();
-    if (!annotation_text.consume_front(kLozenge))
+    if (!annotation_text.consume_front(k_lozenge))
       continue;
     result.push_back(annotation_text);
   }
@@ -77,7 +77,7 @@ static Parser::Annotations parseAnnotations(const ::clang::Decl *decl) {
 
   for (const auto *attr : decl->specific_attrs<::clang::AnnotateAttr>()) {
     ::llvm::StringRef annotation_text = attr->getAnnotation();
-    if (!annotation_text.consume_front(kLozenge))
+    if (!annotation_text.consume_front(k_lozenge))
       continue;
     handleAllErrors(Parser::parseAnnotations(annotation_text, annotations),
                     [attr, decl](const Parser::Error &error) {
@@ -99,7 +99,7 @@ class ArgumentsConsumer {
 
 public:
   ArgumentsConsumer(llvm::ArrayRef<LiteralValue> remaining)
-      : remaining(std::move(remaining)) {}
+      : remaining(remaining) {}
 
   llvm::Optional<LiteralValue> take() {
     if (!remaining.empty()) {
@@ -536,16 +536,11 @@ bool AnnotatedFunctionDecl::processAnnotation(const Annotation &annotation) {
       reportWrongNumberOfArgumentsError(getDecl(), annotation.getKind());
       return true;
     }
-    parameter_names.push_back("return");
+    parameter_names.emplace_back("return");
     if (llvm::isa<clang::CXXMethodDecl>(getDecl()))
-      parameter_names.push_back("this");
+      parameter_names.emplace_back("this");
     break;
   case AnnotationKind::Noconvert:
-    if (arguments.empty()) {
-      reportWrongNumberOfArgumentsError(getDecl(), annotation.getKind());
-      return true;
-    }
-    break;
   case AnnotationKind::Required:
     if (arguments.empty()) {
       reportWrongNumberOfArgumentsError(getDecl(), annotation.getKind());

@@ -23,7 +23,7 @@ void PragmaGenpybindHandler::HandlePragma(clang::Preprocessor &preproc,
   // a normal directive.  Ideally the tokens would be lexed here and appropriate
   // replacement tokens pushed back using `EnterTokenStream`.
   // However `HandleDirective` only works when lexing directly from source code.
-  clang::Token hash_token;
+  clang::Token hash_token{};
   hash_token.startToken();
   hash_token.setLocation(introducer.Loc);
   hash_token.setFlag(clang::Token::StartOfLine);
@@ -51,8 +51,8 @@ void PragmaGenpybindHandler::HandlePragma(clang::Preprocessor &preproc,
   lexer.setParsingPreprocessorDirective(true);
   assert(!lexer.isKeepWhitespaceMode() || !lexer.inKeepCommentMode());
 
-  clang::Token token;
-  clang::Token directive_token;
+  clang::Token token{};
+  clang::Token directive_token{};
   if (lexer.LexFromRawLexer(token) || lexer.LexFromRawLexer(directive_token) ||
       !directive_token.isAnyIdentifier()) {
     preproc.Diag(handler_name_token.getEndLoc(),

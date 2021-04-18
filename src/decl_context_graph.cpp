@@ -5,7 +5,7 @@
 using namespace genpybind;
 
 DeclContextGraph::DeclContextGraph(const clang::TranslationUnitDecl *decl)
-    : nodes(), root(getOrInsertNode(decl)) {}
+    : root(getOrInsertNode(decl)) {}
 
 DeclContextNode *DeclContextGraph::getNode(const clang::Decl *decl) const {
   auto it = nodes.find(decl);

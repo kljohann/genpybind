@@ -26,7 +26,7 @@ auto Parser::Tokenizer::tokenize() -> Token {
     return result;
   }
 
-  const auto tokenizeChar = [&result, &text = text](Token::Kind kind) {
+  const auto tokenize_char = [&result, &text = text](Token::Kind kind) {
     result.kind = kind;
     result.text = text.take_front(1);
     text = text.drop_front(1);
@@ -34,13 +34,13 @@ auto Parser::Tokenizer::tokenize() -> Token {
 
   switch (text.front()) {
   case '(':
-    tokenizeChar(Token::Kind::OpeningParen);
+    tokenize_char(Token::Kind::OpeningParen);
     break;
   case ')':
-    tokenizeChar(Token::Kind::ClosingParen);
+    tokenize_char(Token::Kind::ClosingParen);
     break;
   case ',':
-    tokenizeChar(Token::Kind::Comma);
+    tokenize_char(Token::Kind::Comma);
     break;
   case '0':
   case '1':
@@ -61,7 +61,7 @@ auto Parser::Tokenizer::tokenize() -> Token {
     if (clang::isIdentifierHead(static_cast<unsigned char>(text.front()))) {
       tokenizeIdentifier(result);
     } else {
-      tokenizeChar(Token::Kind::Invalid);
+      tokenize_char(Token::Kind::Invalid);
     }
     break;
   }
@@ -77,7 +77,7 @@ void Parser::Tokenizer::tokenizeNumberLiteral(Token &result) {
   result.text = text.take_while(clang::isDigit);
   text = text.drop_front(result.text.size());
 
-  unsigned value;
+  unsigned value = 0;
   if (!result.text.getAsInteger(10, value)) {
     result.value.setUnsigned(value);
     return;
@@ -112,7 +112,7 @@ void Parser::Tokenizer::tokenizeIdentifier(Token &result) {
   result.kind = Token::Kind::Identifier;
   result.text = text.take_while(
       [](unsigned char c) { return clang::isIdentifierBody(c); });
-  assert(result.text.size() >= 1);
+  assert(!result.text.empty());
   text = text.drop_front(result.text.size());
 }
 
@@ -243,6 +243,7 @@ static unsigned getCustomDiagID(clang::DiagnosticsEngine &diagnostics,
   llvm_unreachable("Unknown parser error.");
 }
 
+// NOLINTNEXTLINE(readability-identifier-naming)
 char Parser::Error::ID;
 
 auto Parser::Error::report(clang::SourceLocation loc,
@@ -251,4 +252,4 @@ auto Parser::Error::report(clang::SourceLocation loc,
   return diagnostics.Report(loc, getCustomDiagID(diagnostics, kind)) << token;
 }
 
-void Parser::Error::log(llvm::raw_ostream &OS) const { OS << "parser error"; }
+void Parser::Error::log(llvm::raw_ostream &os) const { os << "parser error"; }

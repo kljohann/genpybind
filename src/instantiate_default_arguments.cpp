@@ -16,7 +16,7 @@ void InstantiateDefaultArgumentsASTConsumer::HandleTranslationUnit(
 bool InstantiateDefaultArgumentsASTConsumer::VisitParmVarDecl(
     clang::ParmVarDecl *decl) {
   if (decl->hasUnparsedDefaultArg() || decl->hasUninstantiatedDefaultArg())
-    if (auto function =
+    if (auto *function =
             llvm::dyn_cast<clang::FunctionDecl>(decl->getDeclContext()))
       sema->CheckCXXDefaultArgExpr(clang::SourceLocation(), function, decl);
   return true;

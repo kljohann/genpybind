@@ -134,7 +134,7 @@ bool genpybind::reportExposeHereCycles(
   for (const auto &pair : graph) {
     const DeclContextNode *node = pair.getSecond().get();
     const clang::Decl *decl = node->getDecl();
-    if (reachable_contexts.count(node->getDeclContext()))
+    if (reachable_contexts.count(node->getDeclContext()) != 0)
       continue;
     // While all unreachable nodes are attached to one of the cycles, reporting
     // is only done on the type alias declarations.
@@ -157,7 +157,7 @@ ConstDeclContextSet genpybind::declContextsWithVisibleNamedDecls(
     const EffectiveVisibilityMap &visibilities) {
   ConstDeclContextSet result;
 
-  auto isHiddenTagDecl =
+  auto is_hidden_tag_decl =
       [&visibilities](const clang::DeclContext *context) -> bool {
     if (!llvm::isa<clang::TagDecl>(context))
       return false;
@@ -167,18 +167,18 @@ ConstDeclContextSet genpybind::declContextsWithVisibleNamedDecls(
     return !visible->getSecond();
   };
 
-  auto isParentOfContextWithVisibleNamedDecls =
-      [&result, &isHiddenTagDecl](const DeclContextNode *node) -> bool {
+  auto is_parent_of_context_with_visible_named_decls =
+      [&result, &is_hidden_tag_decl](const DeclContextNode *node) -> bool {
     for (const DeclContextNode *child : *node) {
       const clang::DeclContext *context = child->getDeclContext();
       // Hidden tag declarations conceal the entire corresponding sub-tree.
-      if (result.count(context) && !isHiddenTagDecl(context))
+      if (result.count(context) != 0 && !is_hidden_tag_decl(context))
         return true;
     }
     return false;
   };
 
-  auto containsVisibleNamedDecls =
+  auto contains_visible_named_decls =
       [&](const DeclContextNode *const node) -> bool {
     const clang::DeclContext *const context = node->getDeclContext();
 
@@ -201,7 +201,7 @@ ConstDeclContextSet genpybind::declContextsWithVisibleNamedDecls(
            "visibility should be known for all nodes");
     const bool default_visibility = visible->getSecond();
 
-    auto isVisibleGivenDefaultVisibility =
+    auto is_visible_given_default_visibility =
         [&](const clang::NamedDecl *decl) -> bool {
       const auto *annotated =
           llvm::dyn_cast_or_null<AnnotatedNamedDecl>(annotations.get(decl));
@@ -223,7 +223,7 @@ ConstDeclContextSet genpybind::declContextsWithVisibleNamedDecls(
       if (decl->isImplicit())
         continue;
 
-      if (isVisibleGivenDefaultVisibility(decl))
+      if (is_visible_given_default_visibility(decl))
         return true;
     }
 
@@ -235,8 +235,8 @@ ConstDeclContextSet genpybind::declContextsWithVisibleNamedDecls(
   // visible named declarations.
   for (const DeclContextNode *node : llvm::post_order(graph)) {
     const clang::DeclContext *context = node->getDeclContext();
-    if (isParentOfContextWithVisibleNamedDecls(node) ||
-        containsVisibleNamedDecls(node))
+    if (is_parent_of_context_with_visible_named_decls(node) ||
+        contains_visible_named_decls(node))
       result.insert(context);
   }
 
@@ -322,7 +322,7 @@ genpybind::pruneGraph(const DeclContextGraph &graph,
     const bool should_be_preserved =
         llvm::isa<clang::TagDecl>(decl)
             ? visible->getSecond()
-            : contexts_with_visible_decls.count(context);
+            : contexts_with_visible_decls.count(context) != 0;
 
     if (!should_be_preserved) {
       it.skipChildren(); // increments the iterator

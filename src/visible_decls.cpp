@@ -16,6 +16,8 @@
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/Support/Casting.h>
 
+#include <utility>
+
 using namespace genpybind;
 
 namespace {
@@ -33,7 +35,7 @@ class ExposableDeclConsumer : public clang::VisibleDeclConsumer {
 public:
   ExposableDeclConsumer(llvm::Optional<RecordInliningPolicy> inlining_policy,
                         std::vector<const clang::NamedDecl *> &decls)
-      : inlining_policy(inlining_policy), decls(decls) {}
+      : inlining_policy(std::move(inlining_policy)), decls(decls) {}
 
   bool shouldInlineDecl(clang::NamedDecl *proposed_decl) {
     // TODO: What about using declarations? Where should they be resolved?
@@ -156,7 +158,7 @@ genpybind::collectVisibleDeclsFromDeclContext(
     clang::Sema &sema, const clang::DeclContext *decl_context,
     llvm::Optional<RecordInliningPolicy> inlining_policy) {
   std::vector<const clang::NamedDecl *> decls;
-  ExposableDeclConsumer consumer(inlining_policy, decls);
+  ExposableDeclConsumer consumer(std::move(inlining_policy), decls);
   // Include global scope *iff* looking up decls in the TU decl context.
   bool include_global_scope = llvm::dyn_cast<clang::Decl>(decl_context) ==
                               sema.getASTContext().getTranslationUnitDecl();
