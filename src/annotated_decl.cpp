@@ -300,11 +300,12 @@ bool AnnotatedNamespaceDecl::processAnnotation(const Annotation &annotation) {
     }
     break;
   case AnnotationKind::OnlyExposeIn:
-    if (auto value = arguments.take<LiteralValue::Kind::String>()) {
-      only_expose_in = value->getString();
-    } else if ((value = arguments.take())) {
+    if (arguments.empty())
+      reportWrongNumberOfArgumentsError(getDecl(), annotation.getKind());
+    while (auto value = arguments.take<LiteralValue::Kind::String>())
+      only_expose_in.push_back(value->getString());
+    if (auto value = arguments.take())
       reportWrongArgumentTypeError(getDecl(), annotation.getKind(), *value);
-    }
     break;
   default:
     return false;

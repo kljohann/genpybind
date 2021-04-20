@@ -290,14 +290,16 @@ void genpybind::hideNamespacesBasedOnExposeInAnnotation(
       const auto *annotation = llvm::cast_or_null<AnnotatedNamespaceDecl>(
           annotations.get(namespace_decl));
       return annotation != nullptr && !annotation->only_expose_in.empty() &&
-             annotation->only_expose_in != module_name;
+             !llvm::any_of(
+                 annotation->only_expose_in,
+                 [&](const std::string &name) { return name == module_name; });
     };
     if (!visited.isDominated()) {
       if (!is_namespace_for_different_module())
         continue;
       visited.setDominator(*it);
     }
-    const clang::DeclContext* decl_context = it->getDeclContext();
+    const clang::DeclContext *decl_context = it->getDeclContext();
     contexts_with_visible_decls.erase(decl_context);
     visibilities[decl_context] = false;
   }

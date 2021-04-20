@@ -77,7 +77,7 @@ public:
 class AnnotatedNamespaceDecl : public AnnotatedNamedDecl {
 public:
   bool module = false;
-  std::string only_expose_in;
+  std::vector<std::string> only_expose_in;
 
   llvm::StringRef getFriendlyDeclKindName() const override;
   bool processAnnotation(const annotations::Annotation &annotation) override;
