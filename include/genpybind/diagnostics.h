@@ -25,6 +25,7 @@ struct Diagnostics {
     AnnotationsNeedToMatchCanonicalDeclError,
     ConflictingAnnotationsError,
     ExposeHereCycleError,
+    InvalidAssumptionWarning,
     IgnoringQualifiersOnAliasWarning,
     OnlyGlobalScopeAllowedError,
     PreviouslyExposedHereNote,

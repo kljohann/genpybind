@@ -3,6 +3,7 @@
 #include "genpybind/annotations/literal_value.h"
 #include "genpybind/annotations/parser.h"
 #include "genpybind/diagnostics.h"
+#include "genpybind/lookup_context_collector.h"
 #include "genpybind/string_utils.h"
 
 #include <clang/AST/ASTContext.h>
@@ -182,6 +183,12 @@ AnnotatedDecl::create(const clang::NamedDecl *named_decl) {
 }
 
 void AnnotatedDecl::processAnnotations() {
+  if (LookupContextCollector::shouldSkip(decl)) {
+    Diagnostics::report(decl, Diagnostics::Kind::InvalidAssumptionWarning)
+        << "annotations are only parsed during initial pass";
+    decl->dump();
+    return;
+  }
   const Parser::Annotations annotations = parseAnnotations(decl);
   for (const Annotation &annotation : annotations) {
     if (!processAnnotation(annotation)) {

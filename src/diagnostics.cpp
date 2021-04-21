@@ -67,6 +67,10 @@ static unsigned getCustomDiagID(clang::DiagnosticsEngine &engine,
   case Kind::ExposeHereCycleError:
     return engine.getCustomDiagID(clang::DiagnosticsEngine::Error,
                                   "'expose_here' annotations form a cycle");
+  case Kind::InvalidAssumptionWarning:
+    return engine.getCustomDiagID(
+        clang::DiagnosticsEngine::Warning,
+        "Invalid assumption in genpybind (please report this): %0");
   case Kind::IgnoringQualifiersOnAliasWarning:
     return engine.getCustomDiagID(clang::DiagnosticsEngine::Warning,
                                   "Ignoring qualifiers on alias");

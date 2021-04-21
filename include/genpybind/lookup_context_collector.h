@@ -51,10 +51,28 @@ public:
     return true;
   }
 
+  static bool shouldSkip(const clang::Decl *decl) {
+    return shouldSkip(llvm::dyn_cast<clang::TagDecl>(decl)) ||
+           shouldSkip(llvm::dyn_cast<clang::NamespaceDecl>(decl));
+  }
+
+  static bool shouldSkip(const clang::TagDecl *decl) {
+    return decl != nullptr &&
+           (!decl->isCompleteDefinition() || decl->isDependentType());
+  }
+
+  static bool shouldSkip(const clang::NamespaceDecl *decl) {
+    // Skip implementation namespaces like `std` and `__gnu_cxx`, as these
+    // cannot have annotations in any case.
+    return decl != nullptr &&
+           (decl->isStdNamespace() || decl->getName().startswith("__"));
+  }
+
   bool VisitNamedDecl(const clang::NamedDecl *decl) {
     // Collect all annotated declarations, such that annotation errors are
     // reported in the correct order.
-    if (!hasAnnotations(decl) || decl->getDeclContext()->isDependentContext())
+    if (shouldSkip(llvm::dyn_cast<clang::TagDecl>(decl)) ||
+        decl->getDeclContext()->isDependentContext() || !hasAnnotations(decl))
       return true;
     annotations.getOrInsert(decl);
     return true;
@@ -73,20 +91,14 @@ public:
     return true;
   }
 
-  bool shouldSkipNamespace(const clang::NamespaceDecl *decl) {
-    // Skip implementation namespaces like `std` and `__gnu_cxx`, as these
-    // cannot have annotations in any case.
-    return decl->isStdNamespace() || decl->getName().startswith("__");
-  }
-
   bool TraverseNamespaceDecl(clang::NamespaceDecl *decl) {
-    if (shouldSkipNamespace(decl))
+    if (shouldSkip(decl))
       return true;
     return RecursiveASTVisitor::TraverseNamespaceDecl(decl);
   }
 
   bool VisitNamespaceDecl(const clang::NamespaceDecl *decl) {
-    if (shouldSkipNamespace(decl))
+    if (shouldSkip(decl))
       return true;
     lookup_contexts.push_back(decl);
     errorIfAnnotationsDoNotMatchCanonicalDecl(decl);
@@ -94,7 +106,7 @@ public:
   }
 
   bool VisitTagDecl(const clang::TagDecl *decl) {
-    if (!decl->isCompleteDefinition() || decl->isDependentType())
+    if (shouldSkip(decl))
       return true;
     lookup_contexts.push_back(decl);
     return true;
