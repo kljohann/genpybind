@@ -56,7 +56,9 @@ class GraphPrinter : private clang::TextTreeStructure {
 
       if (const auto *annotated = llvm::dyn_cast_or_null<AnnotatedNamedDecl>(
               annotations.get(named_decl))) {
-        const std::string spelling = annotated->getSpelling();
+        const std::string spelling = !annotated->spelling.empty()
+                                         ? annotated->spelling
+                                         : getSpelling(named_decl);
         if (spelling != named_decl->getName()) {
           result.append(" as '");
           result.append(spelling);

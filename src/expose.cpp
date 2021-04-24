@@ -263,14 +263,13 @@ static void emitStringLiteral(llvm::raw_ostream &os, llvm::StringRef text) {
   os << '"';
 }
 
-static void emitSpelling(llvm::raw_ostream &os,
+static void emitSpelling(llvm::raw_ostream &os, const clang::NamedDecl *decl,
                          const AnnotatedNamedDecl *annotation,
                          llvm::StringRef fallback = {}) {
-  if (!annotation->spelling.empty() || fallback.empty()) {
-    emitStringLiteral(os, annotation->getSpelling());
-  } else {
-    emitStringLiteral(os, fallback);
-  }
+  emitStringLiteral(os,
+                    !annotation->spelling.empty()
+                        ? annotation->spelling
+                        : (!fallback.empty() ? fallback : getSpelling(decl)));
 }
 
 static llvm::StringRef getBriefText(const clang::Decl *decl) {
@@ -327,8 +326,8 @@ static bool isPybind11ArgsType(clang::QualType parameter_type) {
 }
 
 static void emitParameters(llvm::raw_ostream &os,
+                           const clang::FunctionDecl* function,
                            const AnnotatedFunctionDecl *annotation) {
-  const auto *function = llvm::cast<clang::FunctionDecl>(annotation->getDecl());
   const clang::ASTContext &context = function->getASTContext();
   auto printing_policy = getPrintingPolicyForExposedNames(context);
   AttemptFullQualificationPrinter printer_helper{context, printing_policy};
@@ -847,14 +846,19 @@ DeclContextExposer::create(const DeclContextGraph &graph,
   assert(decl_context != nullptr);
   const auto *decl = llvm::cast<clang::Decl>(decl_context);
   if (const AnnotatedDecl *annotated_decl = annotations.getOrInsert(decl)) {
-    if (const auto *ad = llvm::dyn_cast<AnnotatedNamespaceDecl>(annotated_decl))
-      return std::make_unique<NamespaceExposer>(ad);
-    if (const auto *ad = llvm::dyn_cast<AnnotatedEnumDecl>(annotated_decl))
-      return std::make_unique<EnumExposer>(ad);
+    if (const auto *ad =
+            llvm::dyn_cast<AnnotatedNamespaceDecl>(annotated_decl)) {
+      const auto *namespace_decl = llvm::cast<clang::NamespaceDecl>(decl);
+      return std::make_unique<NamespaceExposer>(namespace_decl, ad);
+    }
+    if (const auto *ad = llvm::dyn_cast<AnnotatedEnumDecl>(annotated_decl)) {
+      const auto *enum_decl = llvm::cast<clang::EnumDecl>(decl);
+      return std::make_unique<EnumExposer>(enum_decl, ad);
+    }
     if (const auto *ad = llvm::dyn_cast<AnnotatedRecordDecl>(annotated_decl)) {
       const auto *record_decl = llvm::cast<clang::CXXRecordDecl>(decl);
       return std::make_unique<RecordExposer>(
-          graph, ad,
+          graph, record_decl, ad,
           RecordInliningPolicy::createFromAnnotations(annotations,
                                                       record_decl));
     }
@@ -914,7 +918,7 @@ void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &os,
       return;
 
     os << "context.attr(";
-    emitSpelling(os, annot);
+    emitSpelling(os, decl, annot);
     os << ") = ::genpybind::getObjectForType<" << getFullyQualifiedName(target)
        << ">();\n";
 
@@ -931,7 +935,7 @@ void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &os,
     assert(!llvm::isa<clang::FieldDecl>(decl) &&
            "should have been processed by RecordExposer");
     os << "context.attr(";
-    emitSpelling(os, annot);
+    emitSpelling(os, decl, annot);
     os << ") = ::";
     decl->printQualifiedName(os, printing_policy);
     os << ";\n";
@@ -961,12 +965,12 @@ void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &os,
 
     os << ((method != nullptr && method->isStatic()) ? "context.def_static("
                                                      : "context.def(");
-    emitSpelling(os, annot, is_call_operator ? "__call__" : "");
+    emitSpelling(os, decl, annot, is_call_operator ? "__call__" : "");
     os << ", ";
     emitFunctionPointer(os, function);
     os << ", ";
     emitStringLiteral(os, getDocstring(function));
-    emitParameters(os, annot);
+    emitParameters(os, function, annot);
     emitPolicies(os, annot);
     os << ");\n";
   }
@@ -976,21 +980,23 @@ void DeclContextExposer::finalizeDefinition(llvm::raw_ostream &os) {
   os << "(void)context;\n";
 }
 
-NamespaceExposer::NamespaceExposer(const AnnotatedNamespaceDecl *annotated_decl)
-    : annotated_decl(annotated_decl) {}
+NamespaceExposer::NamespaceExposer(const clang::NamespaceDecl *namespace_decl,
+                                   const AnnotatedNamespaceDecl *annotated_decl)
+    : namespace_decl(namespace_decl), annotated_decl(annotated_decl) {}
 
 void NamespaceExposer::emitIntroducer(llvm::raw_ostream &os,
                                       llvm::StringRef parent_identifier) {
   os << parent_identifier;
   if (annotated_decl != nullptr && annotated_decl->module) {
     os << ".def_submodule(";
-    emitSpelling(os, annotated_decl);
+    emitSpelling(os, namespace_decl, annotated_decl);
     os << ")";
   }
 }
 
-EnumExposer::EnumExposer(const AnnotatedEnumDecl *annotated_decl)
-    : annotated_decl(annotated_decl) {
+EnumExposer::EnumExposer(const clang::EnumDecl *enum_decl,
+                         const AnnotatedEnumDecl *annotated_decl)
+    : enum_decl(enum_decl), annotated_decl(annotated_decl) {
   assert(annotated_decl != nullptr);
 }
 
@@ -1003,42 +1009,37 @@ void EnumExposer::emitIntroducer(llvm::raw_ostream &os,
                                  llvm::StringRef parent_identifier) {
   emitType(os);
   os << "(" << parent_identifier << ", ";
-  emitSpelling(os, annotated_decl);
+  emitSpelling(os, enum_decl, annotated_decl);
   if (annotated_decl->arithmetic)
     os << ", ::pybind11::arithmetic()";
   os << ")";
 }
 
 void EnumExposer::finalizeDefinition(llvm::raw_ostream &os) {
-  const auto *decl = llvm::cast<clang::EnumDecl>(annotated_decl->getDecl());
-  if (annotated_decl->export_values.getValueOr(!decl->isScoped()))
+  if (annotated_decl->export_values.getValueOr(!enum_decl->isScoped()))
     os << "context.export_values();\n";
 }
 
 void EnumExposer::emitType(llvm::raw_ostream &os) {
-  os << "::pybind11::enum_<"
-     << getFullyQualifiedName(
-            llvm::cast<clang::TypeDecl>(annotated_decl->getDecl()))
-     << ">";
+  os << "::pybind11::enum_<" << getFullyQualifiedName(enum_decl) << ">";
 }
 
 void EnumExposer::handleDeclImpl(llvm::raw_ostream &os,
                                  const clang::NamedDecl *decl,
                                  const AnnotatedNamedDecl *annotation) {
   if (const auto *enumerator = llvm::dyn_cast<clang::EnumConstantDecl>(decl)) {
-    const auto *enum_decl =
-        llvm::cast<clang::EnumDecl>(annotated_decl->getDecl());
     const std::string scope = getFullyQualifiedName(enum_decl);
     os << "context.value(";
-    emitSpelling(os, annotation);
+    emitSpelling(os, decl, annotation);
     os << ", " << scope << "::" << enumerator->getName() << ");\n";
   }
 }
 
 RecordExposer::RecordExposer(const DeclContextGraph &graph,
+                             const clang::CXXRecordDecl *record_decl,
                              const AnnotatedRecordDecl *annotated_decl,
                              RecordInliningPolicy inlining_policy)
-    : graph(graph), annotated_decl(annotated_decl),
+    : graph(graph), record_decl(record_decl), annotated_decl(annotated_decl),
       inlining_policy(std::move(inlining_policy)) {
   assert(annotated_decl != nullptr);
 }
@@ -1056,7 +1057,7 @@ void RecordExposer::emitIntroducer(llvm::raw_ostream &os,
                                    llvm::StringRef parent_identifier) {
   emitType(os);
   os << "(" << parent_identifier << ", ";
-  emitSpelling(os, annotated_decl);
+  emitSpelling(os, record_decl, annotated_decl);
   if (annotated_decl->dynamic_attr)
     os << ", ::pybind11::dynamic_attr()";
   os << ")";
@@ -1065,13 +1066,13 @@ void RecordExposer::emitIntroducer(llvm::raw_ostream &os,
 void RecordExposer::finalizeDefinition(llvm::raw_ostream &os) {
   emitProperties(os);
   os << "context.doc() = ";
-  emitStringLiteral(os, getBriefText(annotated_decl->getDecl()));
+  emitStringLiteral(os, getBriefText(record_decl));
   os << ";\n";
 }
 
 void RecordExposer::emitProperties(llvm::raw_ostream &os) {
   for (const auto &entry : properties) {
-    const std::string& name = entry.first;
+    const std::string &name = entry.first;
     const Property &property = entry.second;
     if (property.getter == nullptr) {
       if (property.setter == nullptr)
@@ -1097,8 +1098,6 @@ void RecordExposer::emitProperties(llvm::raw_ostream &os) {
 
 void RecordExposer::emitOperator(llvm::raw_ostream &os,
                                  const clang::FunctionDecl *function) {
-  const auto *record_decl =
-      llvm::cast<clang::CXXRecordDecl>(annotated_decl->getDecl());
   const clang::ASTContext &ast_context = record_decl->getASTContext();
   const auto *method = llvm::dyn_cast<clang::CXXMethodDecl>(function);
 
@@ -1222,31 +1221,27 @@ void RecordExposer::emitOperatorDefinition(
 }
 
 void RecordExposer::emitType(llvm::raw_ostream &os) {
-  os << "::pybind11::class_<"
-     << getFullyQualifiedName(
-            llvm::cast<clang::TypeDecl>(annotated_decl->getDecl()));
+  os << "::pybind11::class_<" << getFullyQualifiedName(record_decl);
 
   // Add all exposed (i.e. part of graph) public bases as arguments.
   // This is called recursively, since bases of inlined bases also need to
   // be emitted.
-  auto maybe_emit_bases = [&](const clang::CXXRecordDecl *record_decl,
+  auto maybe_emit_bases = [&](const clang::CXXRecordDecl *decl,
                               auto &&recurse) -> void {
-    for (const clang::CXXBaseSpecifier &base : record_decl->bases()) {
+    for (const clang::CXXBaseSpecifier &base : decl->bases()) {
       const clang::TagDecl *base_decl =
           base.getType()->getAsTagDecl()->getDefinition();
       if (base.getAccessSpecifier() != clang::AS_public ||
           inlining_policy.shouldHide(base_decl))
         continue;
       if (inlining_policy.shouldInline(base_decl)) {
-        if (const auto *decl = llvm::dyn_cast<clang::CXXRecordDecl>(base_decl))
-          recurse(decl, recurse);
+        if (const auto *rd = llvm::dyn_cast<clang::CXXRecordDecl>(base_decl))
+          recurse(rd, recurse);
       } else if (graph.getNode(base_decl) != nullptr) {
         os << ", " << getFullyQualifiedName(base_decl);
       }
     }
   };
-  const auto *record_decl =
-      llvm::cast<clang::CXXRecordDecl>(annotated_decl->getDecl());
   maybe_emit_bases(record_decl, maybe_emit_bases);
 
   if (!annotated_decl->holder_type.empty()) {
@@ -1259,8 +1254,6 @@ void RecordExposer::emitType(llvm::raw_ostream &os) {
 void RecordExposer::handleDeclImpl(llvm::raw_ostream &os,
                                    const clang::NamedDecl *decl,
                                    const AnnotatedNamedDecl *annotation) {
-  const auto *record_decl =
-      llvm::cast<clang::CXXRecordDecl>(annotated_decl->getDecl());
   const clang::ASTContext &ast_context = decl->getASTContext();
   const auto printing_policy = getPrintingPolicyForExposedNames(ast_context);
 
@@ -1289,7 +1282,7 @@ void RecordExposer::handleDeclImpl(llvm::raw_ostream &os,
     emitParameterTypes(os, constructor);
     os << ">(), ";
     emitStringLiteral(os, getDocstring(constructor));
-    emitParameters(os, annot);
+    emitParameters(os, constructor, annot);
     emitPolicies(os, annot);
     os << ");\n";
     return;
@@ -1312,9 +1305,7 @@ void RecordExposer::handleDeclImpl(llvm::raw_ostream &os,
             os << "context.def(";
             emitStringLiteral(os, annotation->spelling);
             os << ", ::genpybind::string_from_lshift<"
-               << getFullyQualifiedName(
-                   llvm::cast<clang::TypeDecl>(annotated_decl->getDecl()))
-               << ">);\n";
+               << getFullyQualifiedName(record_decl) << ">);\n";
           }
           break;
         }
@@ -1364,7 +1355,7 @@ void RecordExposer::handleDeclImpl(llvm::raw_ostream &os,
     bool readonly = type.isConstQualified() || annot->readonly;
     os << (readonly ? "context.def_readonly" : "context.def_readwrite");
     os << (llvm::isa<clang::VarDecl>(decl) ? "_static(" : "(");
-    emitSpelling(os, annotation);
+    emitSpelling(os, decl, annotation);
     os << ", &::";
     decl->printQualifiedName(os, printing_policy);
     os << ");\n";

@@ -15,12 +15,15 @@
 namespace clang {
 class ASTContext;
 class CXXMethodDecl;
+class CXXRecordDecl;
 class DeclContext;
+class EnumDecl;
 class FunctionDecl;
 class NamedDecl;
+class NamespaceDecl;
+class QualType;
 class Sema;
 class TypeDecl;
-class QualType;
 } // namespace clang
 namespace llvm {
 class raw_ostream;
@@ -76,20 +79,24 @@ protected:
 };
 
 class NamespaceExposer : public DeclContextExposer {
+  const clang::NamespaceDecl *namespace_decl;
   const AnnotatedNamespaceDecl *annotated_decl;
 
 public:
-  NamespaceExposer(const AnnotatedNamespaceDecl *annotated_decl);
+  NamespaceExposer(const clang::NamespaceDecl *namespace_decl,
+                   const AnnotatedNamespaceDecl *annotated_decl);
 
   void emitIntroducer(llvm::raw_ostream &os,
                       llvm::StringRef parent_identifier) override;
 };
 
 class EnumExposer : public DeclContextExposer {
+  const clang::EnumDecl *enum_decl;
   const AnnotatedEnumDecl *annotated_decl;
 
 public:
-  EnumExposer(const AnnotatedEnumDecl *annotated_decl);
+  EnumExposer(const clang::EnumDecl *enum_decl,
+              const AnnotatedEnumDecl *annotated_decl);
 
   void emitParameter(llvm::raw_ostream &os) override;
   void emitIntroducer(llvm::raw_ostream &os,
@@ -104,6 +111,7 @@ private:
 
 class RecordExposer : public DeclContextExposer {
   const DeclContextGraph &graph;
+  const clang::CXXRecordDecl* record_decl;
   const AnnotatedRecordDecl *annotated_decl;
   RecordInliningPolicy inlining_policy;
   struct Property {
@@ -114,6 +122,7 @@ class RecordExposer : public DeclContextExposer {
 
 public:
   RecordExposer(const DeclContextGraph &graph,
+                const clang::CXXRecordDecl* record_decl,
                 const AnnotatedRecordDecl *annotated_decl,
                 RecordInliningPolicy inlining_policy);
 
