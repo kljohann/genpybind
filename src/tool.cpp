@@ -338,6 +338,71 @@ std::string findResourceDir() {
   return clang::driver::Driver::GetResourcesPath(clang_path);
 }
 
+/// Add resource dir argument based on location of clang executable, if none has
+/// been specified.
+clang::tooling::ArgumentsAdjuster getDefaultResourceDirAdjuster() {
+  using namespace clang::tooling;
+  return [](const CommandLineArguments &arguments,
+            llvm::StringRef) -> CommandLineArguments {
+    // Return if there already is a -resource-dir or -resource-dir=<arg> flag
+    for (llvm::StringRef arg : arguments) {
+      if (arg.consume_front("-resource-dir") && (arg.empty() || arg[0] == '='))
+        return arguments;
+    }
+    CommandLineArguments result{arguments};
+    std::string resource_dir = findResourceDir();
+    if (!resource_dir.empty())
+      result.push_back("-resource-dir=" + resource_dir);
+    return result;
+  };
+}
+
+/// Adjust arguments to always parse as C++17 or later, as required for
+/// `GENPYBIND_MANUAL`.
+clang::tooling::ArgumentsAdjuster getCpp17OrLaterAdjuster() {
+  using namespace clang::tooling;
+  return [](const CommandLineArguments &arguments,
+            llvm::StringRef) -> CommandLineArguments {
+    bool uses_later_standard = false;
+    llvm::StringRef language_standard_prefix = "c"; // e.g., "c" or "gnu"
+
+    assert(!arguments.empty()); // first argument is the program name
+    CommandLineArguments result{arguments.front()};
+    result.reserve(arguments.size() + 2);
+    result.emplace_back("-xc++");
+
+    for (std::size_t idx = 1, end = arguments.size(); idx < end; ++idx) {
+      llvm::StringRef arg = arguments[idx];
+
+      // Skip further -x<language> arguments.
+      if (arg.consume_front("-x")) {
+        if (arg.empty())
+          ++idx; // skip next argument too
+        continue;
+      }
+
+      // Skip language standard argument, if less than 2x.
+      if (arg.consume_front("-std=")) {
+        // HACK: Simplistic check to also allow, e.g., gnu++2a.
+        auto parts = arg.split("++");
+        language_standard_prefix = parts.first;
+        if (!(uses_later_standard = parts.second.startswith("2")))
+          continue;
+      }
+
+      result.push_back(arguments[idx]);
+    }
+
+    if (!uses_later_standard)
+      result.push_back(llvm::Twine("-std=")
+                           .concat(language_standard_prefix)
+                           .concat("++17")
+                           .str());
+
+    return result;
+  };
+}
+
 } // namespace
 
 int main(int argc, const char **argv) {
@@ -390,21 +455,10 @@ int main(int argc, const char **argv) {
   tool.appendArgumentsAdjuster(getClangStripDependencyFileAdjuster());
   tool.appendArgumentsAdjuster(getClangStripSerializeDiagnosticAdjuster());
   tool.appendArgumentsAdjuster(getClangSyntaxOnlyAdjuster());
-  tool.appendArgumentsAdjuster([](const CommandLineArguments &arguments,
-                                  llvm::StringRef) -> CommandLineArguments {
-    // Return if there already is a -resource-dir or -resource-dir=<arg> flag
-    for (llvm::StringRef arg : arguments) {
-      if (arg.consume_front("-resource-dir") && (arg.empty() || arg[0] == '='))
-        return arguments;
-    }
-    CommandLineArguments result{arguments};
-    std::string resource_dir = findResourceDir();
-    if (!resource_dir.empty())
-      result.push_back("-resource-dir=" + resource_dir);
-    return result;
-  });
-  // TODO: Also append -xc++, -std=c++17, -D__GENPYBIND__?
+  tool.appendArgumentsAdjuster(getDefaultResourceDirAdjuster());
+  tool.appendArgumentsAdjuster(getCpp17OrLaterAdjuster());
   tool.appendArgumentsAdjuster(getInsertArgumentAdjuster("-Wno-everything"));
+  tool.appendArgumentsAdjuster(getInsertArgumentAdjuster("-D__GENPYBIND__"));
 
   if (verbose) {
     tool.appendArgumentsAdjuster(

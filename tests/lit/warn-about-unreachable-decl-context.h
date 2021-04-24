@@ -1,4 +1,5 @@
-// RUN: genpybind-tool %s -- -std=c++17 -xc++ -D__GENPYBIND__ 2>&1 | FileCheck %s --strict-whitespace
+// RUN: genpybind-tool %s -- 2>&1 \
+// RUN: | FileCheck %s --strict-whitespace
 #pragma once
 
 #include "genpybind.h"

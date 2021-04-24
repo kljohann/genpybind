@@ -72,7 +72,7 @@ function(genpybind_add_module target_name)
     DEPENDS genpybind-tool
     IMPLICIT_DEPENDS CXX ${ARG_HEADER}
     COMMAND $<TARGET_FILE:genpybind-tool>
-    ARGS -p ${CMAKE_BINARY_DIR} ${ARG_HEADER} --extra-arg=-D__GENPYBIND__
+    ARGS -p ${CMAKE_BINARY_DIR} ${ARG_HEADER}
     ${output_args}
     COMMENT "Analyzing ${ARG_HEADER}"
     VERBATIM USES_TERMINAL
@@ -97,6 +97,8 @@ foreach(test_implementation IN LISTS integration_tests)
   string(MAKE_C_IDENTIFIER ${test_name} module_name)
 
   add_library(${test_target} SHARED ${test_implementation})
+  # -Wno-comment: for multi-line comments used in lit tests
+  target_compile_options(${test_target} PUBLIC -Wno-comment)
   target_include_directories(${test_target}
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
     PUBLIC $<TARGET_PROPERTY:pybind11::module,INTERFACE_INCLUDE_DIRECTORIES>

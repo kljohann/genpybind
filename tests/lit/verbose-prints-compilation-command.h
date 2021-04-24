@@ -1,11 +1,12 @@
-// RUN: genpybind-tool --verbose %s -- -std=c++17 -xc++ -D__GENPYBIND__ 2>&1 \
+// RUN: genpybind-tool --verbose %s -- 2>&1 \
 // RUN: -DEXAMPLE_MARKER \
 // RUN: | FileCheck %s --strict-whitespace
 #pragma once
 
-#include "genpybind.h"
+// NOTE: The trailing `--` above should prevent genpybind to infer the command from
+// compile_commands.json.  This is tested using `{{$}}` below.
 
-// CHECK:      Analyzing file {{.*}}verbose-prints-compilation-command.h {{.*}} using command
+// CHECK:      Analyzing file {{.*}}verbose-prints-compilation-command.h {{.*}} using command{{ *$}}
 // CHECK-NEXT: -DEXAMPLE_MARKER
 
 // CHECK:      Adjusting command for file {{.*}}verbose-prints-compilation-command.h to

@@ -1,0 +1,7 @@
+// RUN: genpybind-tool --verbose %s -- -std=gnu++14 2>&1 \
+// RUN: | FileCheck %s --strict-whitespace
+#pragma once
+
+// CHECK:      Adjusting command for file {{.*}}cpp17-or-newer.h to
+// CHECK-NOT: gnu++14
+// CHECK-NEXT: -xc++{{.*}}cpp17-or-newer.h{{.*}}-std=gnu++17
