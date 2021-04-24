@@ -153,7 +153,7 @@ AnnotatedDecl::create(const clang::NamedDecl *named_decl) {
     return std::make_unique<AnnotatedNamespaceDecl>(decl);
   if (const auto *decl = llvm::dyn_cast<clang::EnumDecl>(named_decl))
     return std::make_unique<AnnotatedEnumDecl>(decl);
-  if (const auto *decl = llvm::dyn_cast<clang::RecordDecl>(named_decl))
+  if (const auto *decl = llvm::dyn_cast<clang::CXXRecordDecl>(named_decl))
     return std::make_unique<AnnotatedRecordDecl>(decl);
   if (const auto *decl = llvm::dyn_cast<clang::FieldDecl>(named_decl))
     return std::make_unique<AnnotatedFieldOrVarDecl>(decl);
@@ -361,13 +361,14 @@ bool AnnotatedEnumDecl::processAnnotation(const Annotation &annotation) {
 }
 
 llvm::StringRef AnnotatedRecordDecl::getFriendlyDeclKindName() const {
-  return "record";
+  return "class";
 }
 
 bool AnnotatedRecordDecl::processAnnotation(const Annotation &annotation) {
   if (AnnotatedNamedDecl::processAnnotation(annotation))
     return true;
 
+  const auto *record_decl = llvm::cast<clang::CXXRecordDecl>(getDecl());
   ArgumentsConsumer arguments(annotation.getArguments());
   switch (annotation.getKind().value()) {
   case AnnotationKind::DynamicAttr:
@@ -388,17 +389,16 @@ bool AnnotatedRecordDecl::processAnnotation(const Annotation &annotation) {
 
     clang::ast_matchers::internal::HasNameMatcher matcher(names);
     bool found_match = false;
-    // TODO: More verbose error if this is not the case?
-    if (const auto *decl = llvm::dyn_cast<clang::CXXRecordDecl>(getDecl())) {
-      for (const clang::CXXBaseSpecifier &base : decl->bases()) {
-        const clang::TagDecl *base_decl =
-            base.getType()->getAsTagDecl()->getDefinition();
-        if (names.empty() || matcher.matchesNode(*base_decl)) {
-          hide_base.insert(base_decl);
-          found_match = true;
-        }
+
+    for (const clang::CXXBaseSpecifier &base : record_decl->bases()) {
+      const clang::TagDecl *base_decl =
+          base.getType()->getAsTagDecl()->getDefinition();
+      if (names.empty() || matcher.matchesNode(*base_decl)) {
+        hide_base.insert(base_decl);
+        found_match = true;
       }
     }
+
     if (!found_match) {
       Diagnostics::report(
           getDecl(),
@@ -423,17 +423,16 @@ bool AnnotatedRecordDecl::processAnnotation(const Annotation &annotation) {
 
     clang::ast_matchers::internal::HasNameMatcher matcher(names);
     bool found_match = false;
-    // TODO: More verbose error if this is not the case?
-    if (const auto *decl = llvm::dyn_cast<clang::CXXRecordDecl>(getDecl())) {
-      decl->forallBases([&](const clang::CXXRecordDecl *base_decl) -> bool {
-        base_decl = base_decl->getDefinition();
-        if (names.empty() || matcher.matchesNode(*base_decl)) {
-          inline_base.insert(base_decl);
-          found_match = true;
-        }
-        return true; // continue visiting other bases
-      });
-    }
+    record_decl->forallBases(
+        [&](const clang::CXXRecordDecl *base_decl) -> bool {
+          base_decl = base_decl->getDefinition();
+          if (names.empty() || matcher.matchesNode(*base_decl)) {
+            inline_base.insert(base_decl);
+            found_match = true;
+          }
+          return true; // continue visiting other bases
+        });
+
     if (!found_match) {
       Diagnostics::report(
           getDecl(),

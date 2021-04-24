@@ -1245,9 +1245,9 @@ void RecordExposer::emitType(llvm::raw_ostream &os) {
       }
     }
   };
-  if (const auto *decl =
-          llvm::dyn_cast<clang::CXXRecordDecl>(annotated_decl->getDecl()))
-    maybe_emit_bases(decl, maybe_emit_bases);
+  const auto *record_decl =
+      llvm::cast<clang::CXXRecordDecl>(annotated_decl->getDecl());
+  maybe_emit_bases(record_decl, maybe_emit_bases);
 
   if (!annotated_decl->holder_type.empty()) {
     os << ", " << annotated_decl->holder_type;

@@ -6,7 +6,7 @@
 
 struct GENPYBIND(visible) Target {};
 
-// CHECK: annotations.h:[[# @LINE + 1]]:42: error: Invalid annotation for record: export_values()
+// CHECK: annotations.h:[[# @LINE + 1]]:42: error: Invalid annotation for class: export_values()
 struct GENPYBIND(visible, export_values) Context {
   // CHECK: annotations.h:[[# @LINE + 1]]:9: error: Invalid annotation for type alias: getter_for("something")
   using alias GENPYBIND(getter_for(something)) = Target;

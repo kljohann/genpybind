@@ -3,6 +3,7 @@
 #include "genpybind/annotations/annotation.h"
 
 #include <clang/AST/Decl.h>
+#include <clang/AST/DeclCXX.h>
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/Optional.h>
 #include <llvm/ADT/SmallPtrSet.h>
@@ -114,7 +115,7 @@ public:
 
   using AnnotatedNamedDecl::AnnotatedNamedDecl;
   static bool classof(const AnnotatedDecl *decl) {
-    return clang::RecordDecl::classofKind(decl->getKind());
+    return clang::CXXRecordDecl::classofKind(decl->getKind());
   }
 };
 

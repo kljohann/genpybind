@@ -15,7 +15,7 @@ ANNOTATION_KIND(ExportValues, export_values) // (Boolean|Default)?
 ANNOTATION_KIND(GetterFor, getter_for) // (String)+
 ANNOTATION_KIND(SetterFor, setter_for) // (String)+
 
-// RecordDecl
+// CXXRecordDecl
 ANNOTATION_KIND(DynamicAttr, dynamic_attr) // (Boolean)?
 ANNOTATION_KIND(HideBase, hide_base)       // (String)+
 ANNOTATION_KIND(HolderType, holder_type)   // (String)
