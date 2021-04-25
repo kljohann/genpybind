@@ -198,7 +198,8 @@ AnnotatedDecl::create(const clang::NamedDecl *decl) {
       return std::make_unique<AnnotatedConstructorDecl>();
     } else if (const auto *function =
                    llvm::dyn_cast<clang::FunctionDecl>(decl)) {
-      if (function->isOverloadedOperator())
+      if (function->isOverloadedOperator() &&
+          function->getOverloadedOperator() != clang::OO_Call)
         return std::make_unique<AnnotatedOperatorDecl>();
 
       if (llvm::isa<clang::CXXMethodDecl>(decl)) {
@@ -634,10 +635,6 @@ bool AnnotatedMethodDecl::processAnnotation(const clang::Decl *decl,
   };
 
   const auto *function_decl = llvm::cast<clang::FunctionDecl>(decl);
-
-  // Property-annotations are not valid for overloaded operators.
-  if (function_decl->isOverloadedOperator())
-    return false;
 
   clang::QualType return_type = function_decl->getReturnType();
   switch (annotation.getKind().value()) {

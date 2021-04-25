@@ -44,11 +44,11 @@ public:
     Class,
     TypeAlias,
     Variable,
+    Operator,
 
     Function,
     ConversionFunction,
     Method,
-    Operator,
     Constructor,
     lastFunction = Constructor,
     lastNamed = Constructor,
@@ -181,6 +181,21 @@ public:
   }
 };
 
+/// Overloaded operators do not support all function annotations and are thus
+/// handled separately.  One exception is call operators, which are represented
+/// as `AnnotatedMethodDecl`s.
+class AnnotatedOperatorDecl final : public AnnotatedNamedDecl {
+public:
+  AnnotatedOperatorDecl() : AnnotatedNamedDecl(Kind::Operator) {}
+
+  static bool classof(const AnnotatedDecl *decl) {
+    return classofKind(decl->getKind());
+  }
+  static constexpr bool classofKind(Kind kind) {
+    return kind == Kind::Operator;
+  }
+};
+
 class AnnotatedFunctionDecl : public AnnotatedNamedDecl {
 protected:
   AnnotatedFunctionDecl(Kind kind) : AnnotatedNamedDecl(kind) {}
@@ -232,18 +247,6 @@ public:
   }
   static constexpr bool classofKind(Kind kind) {
     return kind == Kind::Method;
-  }
-};
-
-class AnnotatedOperatorDecl final : public AnnotatedFunctionDecl {
-public:
-  AnnotatedOperatorDecl() : AnnotatedFunctionDecl(Kind::Operator) {}
-
-  static bool classof(const AnnotatedDecl *decl) {
-    return classofKind(decl->getKind());
-  }
-  static constexpr bool classofKind(Kind kind) {
-    return kind == Kind::Operator;
   }
 };
 

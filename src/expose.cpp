@@ -956,13 +956,6 @@ void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &os,
       return;
 
     bool is_call_operator = function->getOverloadedOperator() == clang::OO_Call;
-
-    // Both operators defined as member functions and operators in a record's
-    // associated namespace are handled by `RecordExposer`, thus most operators
-    // are ignored here.
-    if (function->isOverloadedOperator() && !is_call_operator)
-      return;
-
     os << ((method != nullptr && method->isStatic()) ? "context.def_static("
                                                      : "context.def(");
     emitSpelling(os, decl, annot, is_call_operator ? "__call__" : "");
@@ -1290,30 +1283,35 @@ void RecordExposer::handleDeclImpl(llvm::raw_ostream &os,
 
   // Operators can be either member functions or free functions in the record's
   // associated namespace (found via ADL).  Both cases are handled here.
-  if (llvm::isa<AnnotatedFunctionDecl>(annotation)) {
+  if (llvm::isa<AnnotatedOperatorDecl>(annotation)) {
     const auto *function = llvm::cast<clang::FunctionDecl>(decl);
-    if (function->isOverloadedOperator() && !function->isDeleted()) {
-      switch (function->getOverloadedOperator()) {
-      case clang::OO_Call:
-        // Handled by `DeclContextExposer`.
-        break;
-      case clang::OO_LessLess:
-        if (isOstreamOperator(function)) {
-          // ostream operators are only exposed when opted in via
-          // `expose_as(__str__)` or similar.
-          if (!annotation->spelling.empty()) {
-            os << "context.def(";
-            emitStringLiteral(os, annotation->spelling);
-            os << ", ::genpybind::string_from_lshift<"
-               << getFullyQualifiedName(record_decl) << ">);\n";
-          }
-          break;
+
+    if (function->isDeleted())
+      return;
+
+    switch (function->getOverloadedOperator()) {
+    case clang::OO_None:
+    case clang::OO_Call:
+      // Regular functions and call operators are not represented as
+      // `AnnotatedOperatorDecl`s and are handled by `DeclContextExposer`.
+      llvm_unreachable("Handled elsewhere.");
+      break;
+    case clang::OO_LessLess:
+      if (isOstreamOperator(function)) {
+        // ostream operators are only exposed when opted in via
+        // `expose_as(__str__)` or similar.
+        if (!annotation->spelling.empty()) {
+          os << "context.def(";
+          emitStringLiteral(os, annotation->spelling);
+          os << ", ::genpybind::string_from_lshift<"
+             << getFullyQualifiedName(record_decl) << ">);\n";
         }
-        [[gnu::fallthrough]];
-      default:
-        emitOperator(os, function);
-        return;
+        break;
       }
+      [[gnu::fallthrough]];
+    default:
+      emitOperator(os, function);
+      return;
     }
   }
 
