@@ -45,8 +45,6 @@ private:
   DeclContextGraph graph;
   RelocatedDeclsMap relocated_decls;
 
-  const clang::TagDecl *aliasTarget(const clang::TypedefNameDecl *decl);
-
   bool addEdgeForExposeHereAlias(const clang::TypedefNameDecl *decl);
 
 public:

@@ -29,18 +29,11 @@ findLookupContextDecl(const clang::DeclContext *decl_context) {
   return llvm::dyn_cast_or_null<clang::Decl>(decl_context);
 }
 
-auto DeclContextGraphBuilder::aliasTarget(const clang::TypedefNameDecl *decl)
-    -> const clang::TagDecl * {
-  const clang::TagDecl *target_decl = decl->getUnderlyingType()->getAsTagDecl();
-  assert(target_decl != nullptr &&
-         "type aliases can only be used with tag type targets");
-  return target_decl->getDefinition();
-}
-
 bool DeclContextGraphBuilder::addEdgeForExposeHereAlias(
     const clang::TypedefNameDecl *decl) {
   const clang::Decl *parent = findLookupContextDecl(decl->getDeclContext());
-  const clang::TagDecl *target_decl = aliasTarget(decl);
+  const clang::TagDecl *target_decl = AnnotatedTypedefNameDecl::aliasTarget(decl);
+  assert(target_decl != nullptr);
 
   auto inserted = relocated_decls.try_emplace(target_decl, decl);
   if (!inserted.second) {
@@ -70,18 +63,17 @@ llvm::Optional<DeclContextGraph> DeclContextGraphBuilder::buildGraph() {
   for (const clang::TypedefNameDecl *alias_decl : visitor.aliases) {
     const auto *annotated = llvm::dyn_cast_or_null<AnnotatedTypedefNameDecl>(
         annotations.get(alias_decl));
-    assert(annotated != nullptr &&
-           "only aliases with annotations are collected");
-    if (!annotated->encourage && !annotated->expose_here)
+    if (annotated == nullptr || (!annotated->encourage && !annotated->expose_here))
       continue;
-    const clang::TagDecl *target_decl = aliasTarget(alias_decl);
-    AnnotatedDecl *annotated_target = annotations.getOrInsert(target_decl);
-    assert(annotated_target != nullptr);
+    const clang::TagDecl *target_decl =
+        AnnotatedTypedefNameDecl::aliasTarget(alias_decl);
+    assert(target_decl != nullptr);
+    auto *annotated_target =
+        llvm::cast<AnnotatedNamedDecl>(annotations.getOrInsert(target_decl));
     if (annotated->encourage)
-      annotated_target->processAnnotation(alias_decl,
-                                          Annotation(AnnotationKind::Visible));
+      annotated_target->visible = true;
     if (annotated->expose_here && addEdgeForExposeHereAlias(alias_decl))
-      annotated->propagateAnnotations(alias_decl, *annotated_target);
+      annotated->propagateAnnotations(alias_decl, annotated_target);
   }
 
   // Bail out if establishing "expose_here" aliases failed, e.g. due to

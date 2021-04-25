@@ -65,7 +65,7 @@ public:
 
   /// Process the given annotation and emit potential errors
   /// via the declarations associated diagnostics engine.
-  /// \return whether the annotation has been processed (even with errors)
+  /// \return whether the annotation has been processed successfully
   virtual bool processAnnotation(const clang::Decl *decl,
                                  const annotations::Annotation &annotation) = 0;
 
@@ -160,7 +160,6 @@ public:
   bool encourage = false;
   /// Expose the underlying type at the location of the type alias instead.
   bool expose_here = false;
-  std::vector<annotations::Annotation> annotations_to_propagate;
 
   AnnotatedTypedefNameDecl() : AnnotatedNamedDecl(Kind::TypeAlias) {}
 
@@ -170,8 +169,10 @@ public:
   /// Applies all annotations of this declaration to another declaration.
   /// This is used to propagate spelling and visibility in the case of
   /// "expose_here" type aliases.
-  void propagateAnnotations(const clang::Decl *decl,
-                            AnnotatedDecl &other) const;
+  void propagateAnnotations(const clang::TypedefNameDecl *decl,
+                            AnnotatedNamedDecl *other) const;
+
+  static const clang::TagDecl *aliasTarget(const clang::TypedefNameDecl *decl);
 
   static bool classof(const AnnotatedDecl *decl) {
     return classofKind(decl->getKind());
