@@ -55,11 +55,10 @@ static unsigned getCustomDiagID(clang::DiagnosticsEngine &engine,
     return engine.getCustomDiagID(
         clang::DiagnosticsEngine::Error,
         "Wrong number of arguments for '%0' annotation");
-  case Kind::AnnotationsNeedToMatchCanonicalDeclError:
+  case Kind::AnnotationsNeedToMatchFirstDeclError:
     return engine.getCustomDiagID(
         clang::DiagnosticsEngine::Error,
-        "Annotations need to match those of the "
-        "%select{canonical declaration|original namespace}0");
+        "Annotations need to match those of the first declaration");
   case Kind::ConflictingAnnotationsError:
     return engine.getCustomDiagID(
         clang::DiagnosticsEngine::Error,

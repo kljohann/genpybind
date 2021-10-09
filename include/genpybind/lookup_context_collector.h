@@ -1,9 +1,11 @@
 #pragma once
 
 #include "genpybind/annotated_decl.h"
+#include "genpybind/diagnostics.h"
 
 #include <clang/AST/Decl.h>
 #include <clang/AST/RecursiveASTVisitor.h>
+#include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/StringRef.h>
 
 #include <algorithm>
@@ -34,6 +36,7 @@ namespace genpybind {
 class LookupContextCollector
     : public clang::RecursiveASTVisitor<LookupContextCollector> {
   AnnotationStorage &annotations;
+  llvm::DenseMap<const clang::Decl *, const clang::Decl *> first_decls;
 
 public:
   std::vector<const clang::DeclContext *> lookup_contexts;
@@ -80,7 +83,7 @@ public:
 
   void warnIfAliasHasQualifiers(const clang::TypedefNameDecl *decl);
 
-  void errorIfAnnotationsDoNotMatchCanonicalDecl(const clang::Decl *decl);
+  void errorIfAnnotationsDoNotMatchFirstDecl(const clang::Decl *decl);
 
   bool VisitTypedefNameDecl(const clang::TypedefNameDecl *decl) {
     // Only typedefs with explicit annotations are considered.
@@ -94,14 +97,23 @@ public:
   bool TraverseNamespaceDecl(clang::NamespaceDecl *decl) {
     if (shouldSkip(decl))
       return true;
-    return RecursiveASTVisitor::TraverseNamespaceDecl(decl);
+    auto before_traversing = annotations.size();
+    bool result = RecursiveASTVisitor::TraverseNamespaceDecl(decl);
+    bool saw_annotated_decls = annotations.size() != before_traversing;
+    if (saw_annotated_decls) {
+      // Only check annotations for namespaces that either are annotated
+      // themselves or that contain annotated decls.  Other namespaces are
+      // pruned in any case and enforcing them to have annotations would only
+      // annoy the user.
+      errorIfAnnotationsDoNotMatchFirstDecl(decl);
+    }
+    return result;
   }
 
   bool VisitNamespaceDecl(const clang::NamespaceDecl *decl) {
     if (shouldSkip(decl))
       return true;
     lookup_contexts.push_back(decl);
-    errorIfAnnotationsDoNotMatchCanonicalDecl(decl);
     return true;
   }
 

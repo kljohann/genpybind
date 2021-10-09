@@ -20,15 +20,16 @@ void LookupContextCollector::warnIfAliasHasQualifiers(
                         Diagnostics::Kind::IgnoringQualifiersOnAliasWarning);
 }
 
-void LookupContextCollector::errorIfAnnotationsDoNotMatchCanonicalDecl(
+void LookupContextCollector::errorIfAnnotationsDoNotMatchFirstDecl(
     const clang::Decl *decl) {
-  if (decl->isCanonicalDecl())
+  const auto inserted = first_decls.try_emplace(decl->getCanonicalDecl(), decl);
+  if (inserted.second) {
     return;
-  const auto *canonical_decl = decl->getCanonicalDecl();
-  if (getAnnotationStrings(decl) == getAnnotationStrings(canonical_decl))
+  }
+  const clang::Decl *first_decl = inserted.first->second;
+  if (getAnnotationStrings(decl) == getAnnotationStrings(first_decl))
     return;
-  Diagnostics::report(
-      decl, Diagnostics::Kind::AnnotationsNeedToMatchCanonicalDeclError)
-      << static_cast<unsigned>(llvm::isa<clang::NamespaceDecl>(decl));
-  Diagnostics::report(canonical_decl, clang::diag::note_declared_at);
+  Diagnostics::report(decl,
+                      Diagnostics::Kind::AnnotationsNeedToMatchFirstDeclError);
+  Diagnostics::report(first_decl, clang::diag::note_declared_at);
 }

@@ -302,6 +302,8 @@ public:
   /// If `declaration` is `nullptr`, unnamed or there is no corresponding entry,
   /// `nullptr` is returned.
   const AnnotatedDecl *get(const clang::Decl *declaration) const;
+
+  auto size() const { return annotations.size(); }
 };
 
 } // namespace genpybind

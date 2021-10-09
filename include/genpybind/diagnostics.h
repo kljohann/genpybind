@@ -22,7 +22,7 @@ struct Diagnostics {
     AnnotationInvalidSpellingError,
     AnnotationWrongArgumentTypeError,
     AnnotationWrongNumberOfArgumentsError,
-    AnnotationsNeedToMatchCanonicalDeclError,
+    AnnotationsNeedToMatchFirstDeclError,
     ConflictingAnnotationsError,
     ExposeHereCycleError,
     InvalidAssumptionWarning,
