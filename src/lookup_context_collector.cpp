@@ -27,7 +27,10 @@ void LookupContextCollector::errorIfAnnotationsDoNotMatchFirstDecl(
     return;
   }
   const clang::Decl *first_decl = inserted.first->second;
-  if (getAnnotationStrings(decl) == getAnnotationStrings(first_decl))
+  const AnnotatedDecl *annotation = annotations.get(decl);
+  const AnnotatedDecl *first_annotation = annotations.get(first_decl);
+  if ((annotation == nullptr && first_annotation == nullptr) ||
+      (annotation != nullptr && annotation->equals(first_annotation)))
     return;
   Diagnostics::report(decl,
                       Diagnostics::Kind::AnnotationsNeedToMatchFirstDeclError);

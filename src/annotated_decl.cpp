@@ -67,18 +67,6 @@ bool genpybind::hasAnnotations(const clang::Decl *decl, bool allow_empty) {
       });
 }
 
-llvm::SmallVector<llvm::StringRef, 1>
-genpybind::getAnnotationStrings(const clang::Decl *decl) {
-  llvm::SmallVector<llvm::StringRef, 1> result;
-  for (const auto *attr : decl->specific_attrs<::clang::AnnotateAttr>()) {
-    ::llvm::StringRef annotation_text = attr->getAnnotation();
-    if (!annotation_text.consume_front(k_lozenge))
-      continue;
-    result.push_back(annotation_text);
-  }
-  return result;
-}
-
 static Parser::Annotations parseAnnotations(const ::clang::Decl *decl) {
   Parser::Annotations annotations;
 
@@ -381,6 +369,12 @@ bool AnnotatedNamedDecl::processAnnotation(const clang::Decl *decl,
   }
 }
 
+bool AnnotatedNamedDecl::equals(const AnnotatedDecl *other) const {
+  if (const auto *o = llvm::dyn_cast_or_null<AnnotatedNamedDecl>(other))
+    return spelling == o->spelling && visible == o->visible;
+  return false;
+}
+
 std::string genpybind::getSpelling(const clang::NamedDecl *decl) {
   llvm::SmallString<128> result;
   llvm::raw_svector_ostream os(result);
@@ -439,6 +433,13 @@ bool AnnotatedNamespaceDecl::processAnnotation(const clang::Decl *decl,
   }
 }
 
+bool AnnotatedNamespaceDecl::equals(const AnnotatedDecl *other) const {
+  if (const auto *o = llvm::dyn_cast_or_null<AnnotatedNamespaceDecl>(other))
+    return AnnotatedNamedDecl::equals(other) && module == o->module &&
+           only_expose_in == o->only_expose_in;
+  return false;
+}
+
 bool AnnotatedEnumDecl::processAnnotation(const clang::Decl *decl,
                                           const Annotation &annotation) {
   ArgumentsDispatcher dispatch(decl, annotation);
@@ -468,6 +469,13 @@ bool AnnotatedEnumDecl::processAnnotation(const clang::Decl *decl,
                })
         .checkMatch();
   }
+}
+
+bool AnnotatedEnumDecl::equals(const AnnotatedDecl *other) const {
+  if (const auto *o = llvm::dyn_cast_or_null<AnnotatedEnumDecl>(other))
+    return AnnotatedNamedDecl::equals(other) && arithmetic == o->arithmetic &&
+           export_values == o->export_values;
+  return false;
 }
 
 bool AnnotatedRecordDecl::processAnnotation(const clang::Decl *decl,
@@ -559,6 +567,14 @@ bool AnnotatedRecordDecl::processAnnotation(const clang::Decl *decl,
   }
 }
 
+bool AnnotatedRecordDecl::equals(const AnnotatedDecl *other) const {
+  if (const auto *o = llvm::dyn_cast_or_null<AnnotatedRecordDecl>(other))
+    return AnnotatedNamedDecl::equals(other) &&
+           dynamic_attr == o->dynamic_attr && hide_base == o->hide_base &&
+           inline_base == o->inline_base && holder_type == o->holder_type;
+  return false;
+}
+
 bool AnnotatedTypedefNameDecl::processAnnotation(const clang::Decl *decl,
                                                  const Annotation &annotation) {
   ArgumentsDispatcher dispatch(decl, annotation);
@@ -584,6 +600,13 @@ bool AnnotatedTypedefNameDecl::processAnnotation(const clang::Decl *decl,
         .onMatch(check_for_conflict)
         .checkMatch();
   }
+}
+
+bool AnnotatedTypedefNameDecl::equals(const AnnotatedDecl *other) const {
+  if (const auto *o = llvm::dyn_cast_or_null<AnnotatedTypedefNameDecl>(other))
+    return AnnotatedNamedDecl::equals(other) && encourage == o->encourage &&
+           expose_here == o->expose_here;
+  return false;
 }
 
 void AnnotatedTypedefNameDecl::propagateAnnotations(
@@ -717,6 +740,14 @@ bool AnnotatedFunctionDecl::processAnnotation(const clang::Decl *decl,
   }
 }
 
+bool AnnotatedFunctionDecl::equals(const AnnotatedDecl *other) const {
+  if (const auto *o = llvm::dyn_cast_or_null<AnnotatedFunctionDecl>(other))
+    return AnnotatedNamedDecl::equals(other) && keep_alive == o->keep_alive &&
+           noconvert == o->noconvert && required == o->required &&
+           return_value_policy == o->return_value_policy;
+  return false;
+}
+
 bool AnnotatedMethodDecl::processAnnotation(const clang::Decl *decl,
                                             const Annotation &annotation) {
   ArgumentsDispatcher dispatch(decl, annotation);
@@ -784,6 +815,13 @@ bool AnnotatedMethodDecl::processAnnotation(const clang::Decl *decl,
   }
 }
 
+bool AnnotatedMethodDecl::equals(const AnnotatedDecl *other) const {
+  if (const auto *o = llvm::dyn_cast_or_null<AnnotatedMethodDecl>(other))
+    return AnnotatedFunctionDecl::equals(other) &&
+           getter_for == o->getter_for && setter_for == o->setter_for;
+  return false;
+}
+
 bool AnnotatedConstructorDecl::processAnnotation(const clang::Decl *decl,
                                                  const Annotation &annotation) {
   ArgumentsDispatcher dispatch(decl, annotation);
@@ -813,6 +851,13 @@ bool AnnotatedConstructorDecl::processAnnotation(const clang::Decl *decl,
                })
         .checkMatch();
   }
+}
+
+bool AnnotatedConstructorDecl::equals(const AnnotatedDecl *other) const {
+  if (const auto *o = llvm::dyn_cast_or_null<AnnotatedConstructorDecl>(other))
+    return AnnotatedFunctionDecl::equals(other) &&
+           implicit_conversion == o->implicit_conversion;
+  return false;
 }
 
 bool AnnotatedFieldOrVarDecl::processAnnotation(const clang::Decl *decl,
@@ -887,6 +932,13 @@ bool AnnotatedFieldOrVarDecl::processAnnotation(const clang::Decl *decl,
         .nullary([&] { manual_bindings = manual_bindings_expr; })
         .checkMatch();
   }
+}
+
+bool AnnotatedFieldOrVarDecl::equals(const AnnotatedDecl *other) const {
+  if (const auto *o = llvm::dyn_cast_or_null<AnnotatedFieldOrVarDecl>(other))
+    return AnnotatedNamedDecl::equals(other) && readonly == o->readonly &&
+           manual_bindings == o->manual_bindings && postamble && o->postamble;
+  return false;
 }
 
 AnnotatedDecl *AnnotationStorage::getOrInsert(const clang::Decl *declaration) {

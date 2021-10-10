@@ -57,14 +57,12 @@ UNEXPOSED
 
 // clang-format off
 // NOTE: Compared to below the verbatim annotation _text_ is different.
-namespace is_pedantic GENPYBIND(visible,module(sloppy )) {
+namespace not_pedantic GENPYBIND(visible,module(sloppy )) {
   EXPOSED
 }
 // clang-format on
 
-// CHECK: decls.h:[[# @LINE + 2]]:11: error: Annotations need to match those of the first declaration
-// CHECK: decls.h:[[# @LINE - 6]]:11: note: declared here
-namespace is_pedantic GENPYBIND(visible, module(sloppy)) {
+namespace not_pedantic GENPYBIND(visible, module(sloppy)) {
   EXPOSED
 }
 
@@ -150,4 +148,4 @@ namespace abc::common GENPYBIND(module(abc2)) {
 EXPOSED
 }
 
-// CHECK: 8 errors generated.
+// CHECK: 7 errors generated.
