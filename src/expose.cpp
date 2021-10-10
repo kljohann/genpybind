@@ -266,10 +266,10 @@ static void emitStringLiteral(llvm::raw_ostream &os, llvm::StringRef text) {
 static void emitSpelling(llvm::raw_ostream &os, const clang::NamedDecl *decl,
                          const AnnotatedNamedDecl *annotation,
                          llvm::StringRef fallback = {}) {
-  emitStringLiteral(os,
-                    !annotation->spelling.empty()
-                        ? annotation->spelling
-                        : (!fallback.empty() ? fallback : getSpelling(decl)));
+  emitStringLiteral(
+      os, !annotation->spelling.empty()
+              ? annotation->spelling
+              : (!fallback.empty() ? fallback.str() : getSpelling(decl)));
 }
 
 static llvm::StringRef getBriefText(const clang::Decl *decl) {
