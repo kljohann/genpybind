@@ -355,10 +355,14 @@ clang::tooling::ArgumentsAdjuster getDefaultResourceDirAdjuster() {
       if (arg.consume_front("-resource-dir") && (arg.empty() || arg[0] == '='))
         return arguments;
     }
-    CommandLineArguments result{arguments};
+    CommandLineArguments result;
+    result.reserve(arguments.size() + 1);
+    auto positional_it = llvm::find(arguments, "--");
+    std::copy(arguments.begin(), positional_it, std::back_inserter(result));
     std::string resource_dir = findResourceDir();
     if (!resource_dir.empty())
       result.push_back("-resource-dir=" + resource_dir);
+    std::copy(positional_it, arguments.end(), std::back_inserter(result));
     return result;
   };
 }
@@ -377,8 +381,14 @@ clang::tooling::ArgumentsAdjuster getCpp17OrLaterAdjuster() {
     result.reserve(arguments.size() + 2);
     result.emplace_back("-xc++");
 
-    for (std::size_t idx = 1, end = arguments.size(); idx < end; ++idx) {
+    std::size_t idx = 1;
+    const std::size_t end = arguments.size();
+    for (; idx < end; ++idx) {
       llvm::StringRef arg = arguments[idx];
+
+      if (arg == "--") {
+        break;
+      }
 
       // Skip further -x<language> arguments.
       if (arg.consume_front("-x")) {
@@ -404,6 +414,11 @@ clang::tooling::ArgumentsAdjuster getCpp17OrLaterAdjuster() {
                            .concat(language_standard_prefix)
                            .concat("++17")
                            .str());
+
+    // Append remaining positional arguments after `--`.
+    for (; idx < end; ++idx) {
+      result.push_back(arguments[idx]);
+    }
 
     return result;
   };
