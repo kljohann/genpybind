@@ -357,7 +357,7 @@ bool AnnotatedNamedDecl::processAnnotation(const clang::Decl *decl,
         .unary(LiteralValue::Kind::String,
                [&](const LiteralValue &value) {
                  llvm::StringRef text = value.getString();
-                 if (clang::isValidIdentifier(text)) {
+                 if (isValidIdentifier(text)) {
                    spelling = text.str();
                  } else {
                    Diagnostics::report(
@@ -412,7 +412,7 @@ bool AnnotatedNamespaceDecl::processAnnotation(const clang::Decl *decl,
         .unary(LiteralValue::Kind::String,
                [&](const LiteralValue &value) {
                  llvm::StringRef text = value.getString();
-                 if (clang::isValidIdentifier(text)) {
+                 if (isValidIdentifier(text)) {
                    module = true;
                    spelling = text.str();
                  } else {
@@ -762,7 +762,7 @@ bool AnnotatedMethodDecl::processAnnotation(const clang::Decl *decl,
 
   auto collect_identifier = [&](const LiteralValue &value) -> std::string {
     llvm::StringRef identifier = value.getString();
-    if (!clang::isValidIdentifier(identifier)) {
+    if (!isValidIdentifier(identifier)) {
       Diagnostics::report(decl,
                           Diagnostics::Kind::AnnotationInvalidSpellingError)
           << toString(annotation.getKind().value()) << identifier;

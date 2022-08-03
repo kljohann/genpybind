@@ -427,8 +427,15 @@ int main(int argc, const char **argv) {
 
   // Only accept one source path, since the current implementation only allows
   // one set of output files.
-  CommonOptionsParser options_parser(argc, argv, g_genpybind_category,
-                                     /*OccurrencesFlag=*/llvm::cl::Required);
+  auto expected_parser =
+      CommonOptionsParser::create(argc, argv, g_genpybind_category,
+                                  /*OccurrencesFlag=*/llvm::cl::Required);
+  if (!expected_parser) {
+    // unsupported options
+    llvm::errs() << expected_parser.takeError();
+    return 1;
+  }
+  CommonOptionsParser &options_parser = expected_parser.get();
 
   if (g_output_files.empty())
     g_output_files.push_back("-");
@@ -459,7 +466,6 @@ int main(int argc, const char **argv) {
 
   tool.appendArgumentsAdjuster(getClangStripOutputAdjuster());
   tool.appendArgumentsAdjuster(getClangStripDependencyFileAdjuster());
-  tool.appendArgumentsAdjuster(getClangStripSerializeDiagnosticAdjuster());
   tool.appendArgumentsAdjuster(getClangSyntaxOnlyAdjuster());
   tool.appendArgumentsAdjuster(getDefaultResourceDirAdjuster());
   tool.appendArgumentsAdjuster(getCpp17OrLaterAdjuster());

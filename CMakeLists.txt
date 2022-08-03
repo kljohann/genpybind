@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15.5)
-project(genpybind LANGUAGES CXX)
+project(genpybind LANGUAGES C CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS YES)
 set(CMAKE_CXX_STANDARD 14)

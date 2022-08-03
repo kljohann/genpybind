@@ -19,6 +19,22 @@
 
 using namespace genpybind::annotations;
 
+static inline bool isIdentifierStart(char c) {
+#if LLVM_VERSION_MAJOR >= 14
+  return clang::isAsciiIdentifierStart(static_cast<unsigned char>(c));
+#else
+  return clang::isIdentifierHead(static_cast<unsigned char>(c));
+#endif
+}
+
+static inline bool isIdentifierContinue(char c) {
+#if LLVM_VERSION_MAJOR >= 14
+  return clang::isAsciiIdentifierContinue(static_cast<unsigned char>(c));
+#else
+  return clang::isIdentifierBody(static_cast<unsigned char>(c));
+#endif
+}
+
 auto Parser::Tokenizer::tokenize() -> Token {
   Token result;
 
@@ -62,7 +78,7 @@ auto Parser::Tokenizer::tokenize() -> Token {
     tokenizeStringLiteral(result);
     break;
   default:
-    if (clang::isIdentifierHead(static_cast<unsigned char>(text.front()))) {
+    if (isIdentifierStart(text.front())) {
       tokenizeIdentifier(result);
     } else {
       tokenize_char(Token::Kind::Invalid);
@@ -111,11 +127,10 @@ void Parser::Tokenizer::tokenizeStringLiteral(Token &result) {
 }
 
 void Parser::Tokenizer::tokenizeIdentifier(Token &result) {
-  assert(clang::isIdentifierHead(static_cast<unsigned char>(text.front())));
+  assert(isIdentifierStart(text.front()));
 
   result.kind = Token::Kind::Identifier;
-  result.text = text.take_while(
-      [](unsigned char c) { return clang::isIdentifierBody(c); });
+  result.text = text.take_while([](char c) { return isIdentifierContinue(c); });
   assert(!result.text.empty());
   text = text.drop_front(result.text.size());
 }
