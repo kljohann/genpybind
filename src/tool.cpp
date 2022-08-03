@@ -55,7 +55,7 @@ using namespace genpybind;
 
 namespace clang {
 class Sema;
-}
+} // namespace clang
 
 namespace {
 
@@ -94,8 +94,8 @@ llvm::cl::opt<bool>
 struct OutputFilenameParser : public llvm::cl::parser<std::string> {
   OutputFilenameParser(llvm::cl::Option &opt) : parser(opt) {}
 
-  bool parse(llvm::cl::Option &opt, llvm::StringRef, llvm::StringRef arg,
-             std::string &value) {
+  static bool parse(llvm::cl::Option &opt, llvm::StringRef, llvm::StringRef arg,
+                    std::string &value) {
     // NOTE: Absolute paths are enforced for the output files, since
     // `ClangTool::run` changes to a different working directory.
     if (arg != "-" && !llvm::sys::path::is_absolute(arg))

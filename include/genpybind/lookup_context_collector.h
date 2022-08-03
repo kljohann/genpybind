@@ -81,7 +81,7 @@ public:
     return true;
   }
 
-  void warnIfAliasHasQualifiers(const clang::TypedefNameDecl *decl);
+  static void warnIfAliasHasQualifiers(const clang::TypedefNameDecl *decl);
 
   void errorIfAnnotationsDoNotMatchFirstDecl(const clang::Decl *decl);
 

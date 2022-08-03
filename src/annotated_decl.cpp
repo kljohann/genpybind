@@ -266,7 +266,8 @@ AnnotatedDecl::create(const clang::NamedDecl *decl) {
           AnnotatedTypedefNameDecl::aliasTarget(alias_decl);
       if (target_decl != nullptr) {
         return std::make_unique<AnnotatedTypedefNameDecl>();
-      } else if (hasAnnotations(decl)) {
+      }
+      if (hasAnnotations(decl)) {
         Diagnostics::report(decl,
                             Diagnostics::Kind::UnsupportedAliasTargetError);
       }

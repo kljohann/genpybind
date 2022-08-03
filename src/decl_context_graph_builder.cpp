@@ -19,9 +19,6 @@
 
 using namespace genpybind;
 
-using annotations::Annotation;
-using annotations::AnnotationKind;
-
 static const clang::Decl *
 findLookupContextDecl(const clang::DeclContext *decl_context) {
   while (decl_context != nullptr && !decl_context->isLookupContext())

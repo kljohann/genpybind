@@ -168,13 +168,11 @@ ConstDeclContextSet genpybind::declContextsWithVisibleNamedDecls(
 
   auto is_parent_of_context_with_visible_named_decls =
       [&result, &is_hidden_tag_decl](const DeclContextNode *node) -> bool {
-    for (const DeclContextNode *child : *node) {
+    return llvm::any_of(*node, [&](const DeclContextNode *child) {
       const clang::DeclContext *context = child->getDeclContext();
       // Hidden tag declarations conceal the entire corresponding sub-tree.
-      if (result.count(context) != 0 && !is_hidden_tag_decl(context))
-        return true;
-    }
-    return false;
+      return result.count(context) != 0 && !is_hidden_tag_decl(context);
+    });
   };
 
   auto contains_visible_named_decls =
@@ -212,7 +210,8 @@ ConstDeclContextSet genpybind::declContextsWithVisibleNamedDecls(
 
     std::vector<const clang::NamedDecl *> decls =
         collectVisibleDeclsFromDeclContext(sema, context);
-    for (const clang::NamedDecl *decl : decls) {
+
+    return llvm::any_of(decls, [&](const clang::NamedDecl *decl) {
       // Nested declaration contexts that are represented in the graph are taken
       // into account above.
       assert(!DeclContextGraph::accepts(decl));
@@ -220,13 +219,10 @@ ConstDeclContextSet genpybind::declContextsWithVisibleNamedDecls(
       // Do not visit implicit declarations, as these cannot have been annotated
       // explicitly by the user.
       if (decl->isImplicit())
-        continue;
+        return false;
 
-      if (is_visible_given_default_visibility(decl))
-        return true;
-    }
-
-    return false;
+      return is_visible_given_default_visibility(decl);
+    });
   };
 
   // Visit the nodes in a post-order traversal, s.t. if a node is visited,
