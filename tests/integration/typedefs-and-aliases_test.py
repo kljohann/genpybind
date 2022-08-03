@@ -3,7 +3,7 @@ import pytest
 
 @pytest.fixture(scope="session")
 def module_with_warnings():
-    with pytest.warns(None) as warnings_recorder:
+    with pytest.warns(Warning) as warnings_recorder:
         import typedefs_and_aliases as m
     yield m, warnings_recorder
     assert len(warnings_recorder) == 0, "not all warnings acknowledged via .pop()"

@@ -1,6 +1,6 @@
 import pytest
 
-with pytest.warns(None) as warnings_recorder:
+with pytest.warns(Warning) as warnings_recorder:
     import typedefs_across_modules as m
 
 # NOTE: Imported _after_ dependant module, so if there were no warnings the
