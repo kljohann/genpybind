@@ -25,6 +25,21 @@
 
 using namespace genpybind;
 
+/// Return the parent node in the graph, if it exists.
+///
+/// This corresponds to the previous node on the path in depth-first iteration.
+static const DeclContextNode *
+getParentNode(const llvm::df_iterator<const DeclContextGraph *> &it) {
+  assert(it.getPathLength() > 0 && "path should always contain decl itself");
+  // Path includes the root node and the declaration itself.
+  if (it.getPathLength() < 2) {
+    return nullptr;
+  }
+  const DeclContextNode *parent = it.getPath(it.getPathLength() - 2);
+  assert(parent != nullptr);
+  return parent;
+}
+
 EnclosingScopeMap
 genpybind::findEnclosingScopes(const DeclContextGraph &graph,
                                const AnnotationStorage &annotations) {
@@ -34,15 +49,13 @@ genpybind::findEnclosingScopes(const DeclContextGraph &graph,
   // visited, the enclosing scope is already known for the parent.
   for (auto it = llvm::df_begin(&graph), end_it = llvm::df_end(&graph);
        it != end_it; ++it) {
-    assert(it.getPathLength() > 0 && "path should always contain decl itself");
-
-    // The root node has no parent.
-    if (it.getPathLength() < 2) {
+    const DeclContextNode *parent = getParentNode(it);
+    if (parent == nullptr) {
+      // The root node has no parent.
       result[it->getDeclContext()] = nullptr;
       continue;
     }
 
-    const DeclContextNode *parent = it.getPath(it.getPathLength() - 2);
     const clang::DeclContext *parent_context = parent->getDeclContext();
 
     // Namespaces are transparent unless they define a submodule.
@@ -83,10 +96,9 @@ genpybind::deriveEffectiveVisibility(const DeclContextGraph &graph,
     // The visibility of the parent context is used as the default visibility.
     // The root node (`TranslationUnitDecl`) is implicitly hidden.
     bool is_visible = false;
-    if (it.getPathLength() >= 2) {
-      const clang::DeclContext *ancestor =
-          it.getPath(it.getPathLength() - 2)->getDeclContext();
-      auto it = result.find(ancestor);
+    if (const DeclContextNode *parent = getParentNode(it)) {
+      const clang::DeclContext *parent_context = parent->getDeclContext();
+      auto it = result.find(parent_context);
       assert(it != result.end() &&
              "visibility of parent should have already been updated");
       is_visible = it->getSecond();
@@ -326,18 +338,12 @@ genpybind::pruneGraph(const DeclContextGraph &graph,
       continue;
     }
 
-    // Path includes the root node and the declaration itself.
-    if (it.getPathLength() < 2) {
-      ++it;
-      continue;
+    if (const DeclContextNode *parent = getParentNode(it)) {
+      auto *new_node = pruned.getOrInsertNode(decl);
+      const clang::Decl *parent_decl = parent->getDecl();
+      auto *new_parent = pruned.getOrInsertNode(parent_decl);
+      new_parent->addChild(new_node);
     }
-
-    auto *node = pruned.getOrInsertNode(decl);
-    const clang::Decl *parent_decl =
-        it.getPath(it.getPathLength() - 2)->getDecl();
-    auto *parent_node = pruned.getOrInsertNode(parent_decl);
-    parent_node->addChild(node);
-
     ++it;
   }
   return pruned;
