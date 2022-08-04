@@ -8,6 +8,7 @@
 
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/Attr.h>
+#include <clang/AST/Decl.h>
 #include <clang/AST/DeclBase.h>
 #include <clang/AST/DeclCXX.h>
 #include <clang/AST/DeclTemplate.h>
@@ -36,6 +37,7 @@
 #include <cassert>
 #include <iterator>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -84,56 +86,50 @@ static Parser::Annotations parseAnnotations(const clang::Decl *decl) {
   return annotations;
 }
 
-static llvm::StringRef friendlyName(AnnotatedDecl::Kind kind) {
-  using Kind = AnnotatedDecl::Kind;
-  switch (kind) {
-  case Kind::Named:
-    return "named declaration";
-  case Kind::Namespace:
+static llvm::StringRef friendlyName(const clang::NamedDecl *decl) {
+  if (NamespaceDeclAttrs::supports(decl))
     return "namespace";
-  case Kind::Enum:
+  if (EnumDeclAttrs::supports(decl))
     return "enum";
-  case Kind::Class:
+  if (RecordDeclAttrs::supports(decl))
     return "class";
-  case Kind::TypeAlias:
+  if (TypedefNameDeclAttrs::supports(decl))
     return "type alias";
-  case Kind::Variable:
+  if (FieldOrVarDeclAttrs::supports(decl))
     return "variable";
-  case Kind::Operator:
+  if (OperatorDeclAttrs::supports(decl))
     return "operator";
-  case Kind::Function:
-    return "free function";
-  case Kind::ConversionFunction:
+  if (ConversionFunctionDeclAttrs::supports(decl))
     return "conversion function";
-  case Kind::Method:
+  if (MethodDeclAttrs::supports(decl))
     return "method";
-  case Kind::Constructor:
+  if (ConstructorDeclAttrs::supports(decl))
     return "constructor";
-  default:
-    llvm_unreachable("Unexpected annotated decl kind.");
-  }
+  if (FunctionDeclAttrs::supports(decl))
+    return "free function";
+  assert(NamedDeclAttrs::supports(decl));
+  return "named declaration";
 }
 
-static void reportWrongArgumentTypeError(const clang::Decl *decl,
+static void reportWrongArgumentTypeError(const clang::NamedDecl *decl,
                                          AnnotationKind kind,
                                          const LiteralValue &value) {
   Diagnostics::report(decl, Diagnostics::Kind::AnnotationWrongArgumentTypeError)
       << toString(kind) << toString(value);
 }
 
-static void reportWrongNumberOfArgumentsError(const clang::Decl *decl,
+static void reportWrongNumberOfArgumentsError(const clang::NamedDecl *decl,
                                               AnnotationKind kind) {
   Diagnostics::report(decl,
                       Diagnostics::Kind::AnnotationWrongNumberOfArgumentsError)
       << toString(kind);
 }
 
-static void reportInvalidAnnotationError(const clang::Decl *decl,
-                                         AnnotatedDecl::Kind kind,
+static void reportInvalidAnnotationError(const clang::NamedDecl *decl,
                                          const Annotation &annotation) {
   Diagnostics::report(decl,
                       Diagnostics::Kind::AnnotationInvalidForDeclKindError)
-      << friendlyName(kind) << toString(annotation);
+      << friendlyName(decl) << toString(annotation);
 }
 
 namespace {
@@ -141,7 +137,7 @@ namespace {
 /// For a given annotation, dispatches to different argument processing
 /// functions based on the number of provided arguments.
 class ArgumentsDispatcher {
-  const clang::Decl *decl;
+  const clang::NamedDecl *decl;
   AnnotationKind annotation_kind;
   llvm::ArrayRef<LiteralValue> arguments;
   enum class State { Unmatched, Matched, Invalid } state = State::Unmatched;
@@ -158,7 +154,8 @@ class ArgumentsDispatcher {
   }
 
 public:
-  ArgumentsDispatcher(const clang::Decl *decl, const Annotation &annotation)
+  ArgumentsDispatcher(const clang::NamedDecl *decl,
+                      const Annotation &annotation)
       : decl(decl), annotation_kind(annotation.getKind()),
         arguments(annotation.getArguments()) {}
 
@@ -253,110 +250,41 @@ public:
 
 } // namespace
 
-std::unique_ptr<AnnotatedDecl>
-AnnotatedDecl::create(const clang::NamedDecl *decl) {
-  assert(decl != nullptr);
-  auto result = [decl]() -> std::unique_ptr<AnnotatedNamedDecl> {
-    if (const auto *alias_decl = llvm::dyn_cast<clang::TypedefNameDecl>(decl)) {
-      // TODO: Move to more appropriate place.
-      const clang::TagDecl *target_decl =
-          AnnotatedTypedefNameDecl::aliasTarget(alias_decl);
-      if (target_decl != nullptr) {
-        return std::make_unique<AnnotatedTypedefNameDecl>();
-      }
-      if (hasAnnotations(decl)) {
-        Diagnostics::report(decl,
-                            Diagnostics::Kind::UnsupportedAliasTargetError);
-      }
-    }
-    if (llvm::isa<clang::NamespaceDecl>(decl))
-      return std::make_unique<AnnotatedNamespaceDecl>();
-    if (llvm::isa<clang::EnumDecl>(decl))
-      return std::make_unique<AnnotatedEnumDecl>();
-    if (llvm::isa<clang::CXXRecordDecl>(decl))
-      return std::make_unique<AnnotatedRecordDecl>();
-    if (llvm::isa<clang::FieldDecl>(decl) || llvm::isa<clang::VarDecl>(decl))
-      return std::make_unique<AnnotatedFieldOrVarDecl>();
-
-    if (llvm::isa<clang::CXXDeductionGuideDecl>(decl) ||
-        llvm::isa<clang::CXXDestructorDecl>(decl)) {
-      // Fall through to generic AnnotatedNamedDecl case.
-    } else if (llvm::isa<clang::CXXConversionDecl>(decl)) {
-      return std::make_unique<AnnotatedConversionFunctionDecl>();
-    } else if (llvm::isa<clang::CXXConstructorDecl>(decl)) {
-      return std::make_unique<AnnotatedConstructorDecl>();
-    } else if (const auto *function =
-                   llvm::dyn_cast<clang::FunctionDecl>(decl)) {
-      if (function->isOverloadedOperator() &&
-          function->getOverloadedOperator() != clang::OO_Call)
-        return std::make_unique<AnnotatedOperatorDecl>();
-
-      if (llvm::isa<clang::CXXMethodDecl>(decl)) {
-        // The extra annotations only apply to methods, not to derived classes
-        // such as constructors.  Therefore `AnnotatedConstructorDecl` directly
-        // derives from `AnnotatedFunctionDecl`.
-        assert(decl->getKind() == clang::Decl::Kind::CXXMethod);
-        return std::make_unique<AnnotatedMethodDecl>();
-      }
-
-      return std::make_unique<AnnotatedFunctionDecl>();
-    }
-
-    return std::make_unique<AnnotatedNamedDecl>();
-  }();
-
-  // Non-namespace named decls that have at least one annotation
-  // are visible by default.  This can be overruled by an explicit
-  // `visible(default)`, `visible(false)` or `hidden` annotation.
-  if (result != nullptr && !llvm::isa<clang::NamespaceDecl>(decl) &&
-      hasAnnotations(decl, /*allow_empty=*/false))
-    result->visible = true;
-
-  return result;
+bool NamedDeclAttrs::supports(const clang::NamedDecl * /*decl*/) {
+  return true;
 }
 
-void AnnotatedDecl::processAnnotations(const clang::Decl *decl) {
-  if (LookupContextCollector::shouldSkip(decl)) {
-    Diagnostics::report(decl, Diagnostics::Kind::InvalidAssumptionWarning)
-        << "annotations are only parsed during initial pass";
-    decl->dump();
-    return;
-  }
-  const Parser::Annotations annotations = parseAnnotations(decl);
-  for (const Annotation &annotation : annotations) {
-    processAnnotation(decl, annotation);
-  }
-}
-
-bool AnnotatedNamedDecl::processAnnotation(const clang::Decl *decl,
-                                           const Annotation &annotation) {
+bool genpybind::processAnnotation(const clang::NamedDecl *decl,
+                                  const Annotation &annotation,
+                                  NamedDeclAttrs &attrs) {
   ArgumentsDispatcher dispatch(decl, annotation);
 
   switch (annotation.getKind().value()) {
   default:
-    reportInvalidAnnotationError(decl, getKind(), annotation);
     return false;
 
   case AnnotationKind::Hidden:
-    return dispatch.nullary([&] { visible = false; }).checkMatch();
+    return dispatch.nullary([&] { attrs.visible = false; }).checkMatch();
 
   case AnnotationKind::Visible:
-    return dispatch.nullary([&] { visible = true; })
+    return dispatch.nullary([&] { attrs.visible = true; })
         .unary(LiteralValue::Kind::Default,
-               [&](const LiteralValue &) { visible = std::nullopt; })
+               [&](const LiteralValue &) { attrs.visible = std::nullopt; })
         .unary(LiteralValue::Kind::Boolean,
-               [&](const LiteralValue &value) { visible = value.getBoolean(); })
+               [&](const LiteralValue &value) {
+                 attrs.visible = value.getBoolean();
+               })
         .checkMatch();
 
   case AnnotationKind::ExposeAs:
     return dispatch
         .unary(LiteralValue::Kind::Default,
-               [&](const LiteralValue &) { spelling.clear(); })
+               [&](const LiteralValue &) { attrs.spelling.clear(); })
         .unary(LiteralValue::Kind::String,
                [&](const LiteralValue &value) {
                  llvm::StringRef text = value.getString();
                  if (isValidIdentifier(text)) {
-                   spelling = text.str();
+                   attrs.spelling = text.str();
                  } else {
                    Diagnostics::report(
                        decl, Diagnostics::Kind::AnnotationInvalidSpellingError)
@@ -364,13 +292,24 @@ bool AnnotatedNamedDecl::processAnnotation(const clang::Decl *decl,
                  }
                })
         .checkMatch();
-  }
-}
 
-bool AnnotatedNamedDecl::equals(const AnnotatedDecl *other) const {
-  if (const auto *o = llvm::dyn_cast_or_null<AnnotatedNamedDecl>(other))
-    return spelling == o->spelling && visible == o->visible;
-  return false;
+  case AnnotationKind::Module:
+    dispatch.ensure([&] { return llvm::isa<clang::NamespaceDecl>(decl); })
+        .unary(LiteralValue::Kind::String, [&](const LiteralValue &value) {
+          llvm::StringRef text = value.getString();
+          if (isValidIdentifier(text)) {
+            attrs.spelling = text.str();
+          } else {
+            Diagnostics::report(
+                decl, Diagnostics::Kind::AnnotationInvalidSpellingError)
+                << toString(AnnotationKind::Module) << text;
+          }
+        });
+    // Do not check for a match here and return false instead.
+    // This way, the annotation is also processed in the overload
+    // for namespaces.
+    return false;
+  }
 }
 
 std::string genpybind::getSpelling(const clang::NamedDecl *decl) {
@@ -397,102 +336,96 @@ std::string genpybind::getSpelling(const clang::NamedDecl *decl) {
   return result.str().str();
 }
 
-bool AnnotatedNamespaceDecl::processAnnotation(const clang::Decl *decl,
-                                               const Annotation &annotation) {
+bool NamespaceDeclAttrs::supports(const clang::NamedDecl *decl) {
+  return llvm::isa<clang::NamespaceDecl>(decl);
+}
+
+bool genpybind::processAnnotation(const clang::NamedDecl *decl,
+                                  const Annotation &annotation,
+                                  NamespaceDeclAttrs &attrs) {
   ArgumentsDispatcher dispatch(decl, annotation);
 
   switch (annotation.getKind().value()) {
   default:
-    return AnnotatedNamedDecl::processAnnotation(decl, annotation);
+    return false;
 
   case AnnotationKind::Module:
-    return dispatch.nullary([&]() { module = true; })
+    // Note: The spelling is set in the overload for named decls.
+    return dispatch.nullary([&]() { attrs.module = true; })
         .unary(LiteralValue::Kind::String,
-               [&](const LiteralValue &value) {
-                 llvm::StringRef text = value.getString();
-                 if (isValidIdentifier(text)) {
-                   module = true;
-                   spelling = text.str();
-                 } else {
-                   Diagnostics::report(
-                       decl, Diagnostics::Kind::AnnotationInvalidSpellingError)
-                       << toString(AnnotationKind::Module) << text;
-                 }
-               })
+               [&](const LiteralValue &) { attrs.module = true; })
         .checkMatch();
 
   case AnnotationKind::OnlyExposeIn:
     return dispatch
         .variadic(LiteralValue::Kind::String,
                   [&](const LiteralValue &value) {
-                    only_expose_in.push_back(value.getString());
+                    attrs.only_expose_in.push_back(value.getString());
                   })
         .checkMatch();
   }
 }
 
-bool AnnotatedNamespaceDecl::equals(const AnnotatedDecl *other) const {
-  if (const auto *o = llvm::dyn_cast_or_null<AnnotatedNamespaceDecl>(other))
-    return AnnotatedNamedDecl::equals(other) && module == o->module &&
-           only_expose_in == o->only_expose_in;
-  return false;
+bool EnumDeclAttrs::supports(const clang::NamedDecl *decl) {
+  return llvm::isa<clang::EnumDecl>(decl);
 }
 
-bool AnnotatedEnumDecl::processAnnotation(const clang::Decl *decl,
-                                          const Annotation &annotation) {
+bool genpybind::processAnnotation(const clang::NamedDecl *decl,
+                                  const Annotation &annotation,
+                                  EnumDeclAttrs &attrs) {
   ArgumentsDispatcher dispatch(decl, annotation);
 
   switch (annotation.getKind().value()) {
   default:
-    return AnnotatedNamedDecl::processAnnotation(decl, annotation);
+    return false;
 
   case AnnotationKind::Arithmetic:
     return dispatch
-        .nullary([&]() { arithmetic = true; })
+        .nullary([&]() { attrs.arithmetic = true; })
         // TODO: "default"?
-        .unary(
-            LiteralValue::Kind::Boolean,
-            [&](const LiteralValue &value) { arithmetic = value.getBoolean(); })
+        .unary(LiteralValue::Kind::Boolean,
+               [&](const LiteralValue &value) {
+                 attrs.arithmetic = value.getBoolean();
+               })
         .checkMatch();
 
   case AnnotationKind::ExportValues:
     return dispatch
-        .nullary([&]() { export_values = true; })
+        .nullary([&]() { attrs.export_values = true; })
         // TODO: Remove "default"?
-        .unary(LiteralValue::Kind::Default,
-               [&](const LiteralValue &) { export_values = std::nullopt; })
+        .unary(
+            LiteralValue::Kind::Default,
+            [&](const LiteralValue &) { attrs.export_values = std::nullopt; })
         .unary(LiteralValue::Kind::Boolean,
                [&](const LiteralValue &value) {
-                 export_values = value.getBoolean();
+                 attrs.export_values = value.getBoolean();
                })
         .checkMatch();
   }
 }
 
-bool AnnotatedEnumDecl::equals(const AnnotatedDecl *other) const {
-  if (const auto *o = llvm::dyn_cast_or_null<AnnotatedEnumDecl>(other))
-    return AnnotatedNamedDecl::equals(other) && arithmetic == o->arithmetic &&
-           export_values == o->export_values;
-  return false;
+bool RecordDeclAttrs::supports(const clang::NamedDecl *decl) {
+  return llvm::isa<clang::CXXRecordDecl>(decl);
 }
 
-bool AnnotatedRecordDecl::processAnnotation(const clang::Decl *decl,
-                                            const Annotation &annotation) {
+bool genpybind::processAnnotation(const clang::NamedDecl *decl,
+                                  const Annotation &annotation,
+                                  RecordDeclAttrs &attrs) {
   ArgumentsDispatcher dispatch(decl, annotation);
 
   const auto *record_decl = llvm::cast<clang::CXXRecordDecl>(decl);
 
   switch (annotation.getKind().value()) {
   default:
-    return AnnotatedNamedDecl::processAnnotation(decl, annotation);
+    return false;
 
   case AnnotationKind::DynamicAttr:
     return dispatch
-        .nullary([&]() { dynamic_attr = true; })
+        .nullary([&]() { attrs.dynamic_attr = true; })
         // TODO: "default"?
         .unary(LiteralValue::Kind::Boolean,
                [&](const LiteralValue &value) {
-                 dynamic_attr = value.getBoolean();
+                 attrs.dynamic_attr = value.getBoolean();
                })
         .checkMatch();
 
@@ -511,7 +444,7 @@ bool AnnotatedRecordDecl::processAnnotation(const clang::Decl *decl,
                 const clang::TagDecl *base_decl =
                     base.getType()->getAsTagDecl()->getDefinition();
                 if (names.empty() || matcher.matchesNode(*base_decl)) {
-                  hide_base.insert(base_decl);
+                  attrs.hide_base.insert(base_decl);
                   found_match = true;
                 }
               }
@@ -528,9 +461,10 @@ bool AnnotatedRecordDecl::processAnnotation(const clang::Decl *decl,
 
   case AnnotationKind::HolderType:
     return dispatch
-        .unary(
-            LiteralValue::Kind::String,
-            [&](const LiteralValue &value) { holder_type = value.getString(); })
+        .unary(LiteralValue::Kind::String,
+               [&](const LiteralValue &value) {
+                 attrs.holder_type = value.getString();
+               })
         .checkMatch();
 
   case AnnotationKind::InlineBase:
@@ -547,7 +481,7 @@ bool AnnotatedRecordDecl::processAnnotation(const clang::Decl *decl,
                   [&](const clang::CXXRecordDecl *base_decl) -> bool {
                     base_decl = base_decl->getDefinition();
                     if (names.empty() || matcher.matchesNode(*base_decl)) {
-                      inline_base.insert(base_decl);
+                      attrs.inline_base.insert(base_decl);
                       found_match = true;
                     }
                     return true; // continue visiting other bases
@@ -565,20 +499,24 @@ bool AnnotatedRecordDecl::processAnnotation(const clang::Decl *decl,
   }
 }
 
-bool AnnotatedRecordDecl::equals(const AnnotatedDecl *other) const {
-  if (const auto *o = llvm::dyn_cast_or_null<AnnotatedRecordDecl>(other))
-    return AnnotatedNamedDecl::equals(other) &&
-           dynamic_attr == o->dynamic_attr && hide_base == o->hide_base &&
-           inline_base == o->inline_base && holder_type == o->holder_type;
-  return false;
+bool TypedefNameDeclAttrs::supports(const clang::NamedDecl *decl) {
+  // TODO: Move to more appropriate place.
+  if (const auto *alias_decl = llvm::dyn_cast<clang::TypedefNameDecl>(decl)) {
+    const clang::TagDecl *target_decl = aliasTarget(alias_decl);
+    if (target_decl == nullptr && hasAnnotations(decl)) {
+      Diagnostics::report(decl, Diagnostics::Kind::UnsupportedAliasTargetError);
+    }
+  }
+  return llvm::isa<clang::TypedefNameDecl>(decl);
 }
 
-bool AnnotatedTypedefNameDecl::processAnnotation(const clang::Decl *decl,
-                                                 const Annotation &annotation) {
+bool genpybind::processAnnotation(const clang::NamedDecl *decl,
+                                  const Annotation &annotation,
+                                  TypedefNameDeclAttrs &attrs) {
   ArgumentsDispatcher dispatch(decl, annotation);
 
   auto check_for_conflict = [&] {
-    if (encourage && expose_here)
+    if (attrs.encourage && attrs.expose_here)
       Diagnostics::report(decl, Diagnostics::Kind::ConflictingAnnotationsError)
           << toString(AnnotationKind::Encourage)
           << toString(AnnotationKind::ExposeHere);
@@ -586,66 +524,72 @@ bool AnnotatedTypedefNameDecl::processAnnotation(const clang::Decl *decl,
 
   switch (annotation.getKind().value()) {
   default:
-    return AnnotatedNamedDecl::processAnnotation(decl, annotation);
+    return false;
 
   case AnnotationKind::Encourage:
-    return dispatch.nullary([&] { encourage = true; })
+    return dispatch.nullary([&] { attrs.encourage = true; })
         .onMatch(check_for_conflict)
         .checkMatch();
 
   case AnnotationKind::ExposeHere:
-    return dispatch.nullary([&] { expose_here = true; })
+    return dispatch.nullary([&] { attrs.expose_here = true; })
         .onMatch(check_for_conflict)
         .checkMatch();
   }
 }
 
-bool AnnotatedTypedefNameDecl::equals(const AnnotatedDecl *other) const {
-  if (const auto *o = llvm::dyn_cast_or_null<AnnotatedTypedefNameDecl>(other))
-    return AnnotatedNamedDecl::equals(other) && encourage == o->encourage &&
-           expose_here == o->expose_here;
-  return false;
-}
-
-void AnnotatedTypedefNameDecl::propagateAnnotations(
-    const clang::TypedefNameDecl *decl, AnnotatedNamedDecl *other) const {
+void genpybind::propagateAnnotations(AnnotationStorage &annotations,
+                                     const clang::TypedefNameDecl *decl) {
   // NOTE: At a later point in time, annotations specific to the declaration
   // kind might be forwarded (e.g. `inline_base`).  They would then need to be
-  // checked for validity in `processAnnotations`, with any diagnostics being
-  // attached to the `TypedefNameDecl` (in order to emit diagnostics in the
-  // right order).
+  // checked for validity when first processing the annotations, with any
+  // diagnostics being attached to the `TypedefNameDecl` (in order to emit
+  // diagnostics in the right order).
 
   const clang::TagDecl *target_decl = aliasTarget(decl);
   assert(target_decl != nullptr);
 
-  // Always propagate the effective spelling of the type alias, which is the
-  // name of its identifier if no explicit `expose_as` annotation has been
-  // given.  If there is one, it will be processed twice, but this is benign.
-  other->processAnnotation(
-      target_decl,
-      Annotation(AnnotationKind::ExposeAs,
-                 {LiteralValue::createString(
-                     spelling.empty() ? getSpelling(decl) : spelling)}));
-  // As the `visible` annotatation is implicit if there is at least one other
-  // annotation, its computed value also has to be propagated, as it's possible
-  // that there is no explicit annotation.
-  other->processAnnotation(
-      target_decl,
-      Annotation(AnnotationKind::Visible,
-                 {visible.has_value() ? LiteralValue::createBoolean(*visible)
-                                      : LiteralValue::createDefault()}));
+  // Ensure that any annotations on the target itself have been processed.
+  assert(annotations.has(target_decl));
+
+  const auto attrs = annotations.lookup<NamedDeclAttrs>(decl);
+  annotations.update<NamedDeclAttrs>(target_decl, [&](auto &target_attrs) {
+    // Always propagate the effective spelling of the type alias, which is the
+    // name of its identifier if no explicit `expose_as` annotation has been
+    // given.
+    target_attrs.spelling =
+        attrs.spelling.empty() ? getSpelling(decl) : attrs.spelling;
+
+    // As the `visible` annotatation is implicit if there is at least one other
+    // annotation, its computed value also has to be propagated, as it's
+    // possible that there is no explicit annotation.
+    processAnnotation(
+        target_decl,
+        Annotation(AnnotationKind::Visible,
+                   {attrs.visible.has_value()
+                        ? LiteralValue::createBoolean(*attrs.visible)
+                        : LiteralValue::createDefault()}),
+        target_attrs);
+  });
 }
 
 const clang::TagDecl *
-AnnotatedTypedefNameDecl::aliasTarget(const clang::TypedefNameDecl *decl) {
+genpybind::aliasTarget(const clang::TypedefNameDecl *decl) {
   if (const clang::TagDecl *target_decl =
           decl->getUnderlyingType()->getAsTagDecl())
     return target_decl->getDefinition();
   return nullptr;
 }
 
-bool AnnotatedFunctionDecl::processAnnotation(const clang::Decl *decl,
-                                              const Annotation &annotation) {
+bool FunctionDeclAttrs::supports(const clang::NamedDecl *decl) {
+  return llvm::isa<clang::FunctionDecl>(decl) &&
+         !llvm::isa<clang::CXXDeductionGuideDecl>(decl) &&
+         !llvm::isa<clang::CXXDestructorDecl>(decl);
+}
+
+bool genpybind::processAnnotation(const clang::NamedDecl *decl,
+                                  const Annotation &annotation,
+                                  FunctionDeclAttrs &attrs) {
   ArgumentsDispatcher dispatch(decl, annotation);
 
   const auto *function_decl = llvm::cast<clang::FunctionDecl>(decl);
@@ -677,13 +621,13 @@ bool AnnotatedFunctionDecl::processAnnotation(const clang::Decl *decl,
 
   switch (annotation.getKind().value()) {
   default:
-    return AnnotatedNamedDecl::processAnnotation(decl, annotation);
+    return false;
 
   case AnnotationKind::ReturnValuePolicy:
     return dispatch
         .unary(LiteralValue::Kind::String,
                [&](const LiteralValue &value) {
-                 return_value_policy = value.getString();
+                 attrs.return_value_policy = value.getString();
                })
         .checkMatch();
 
@@ -704,7 +648,7 @@ bool AnnotatedFunctionDecl::processAnnotation(const clang::Decl *decl,
                     return;
                   }
 
-                  keep_alive.emplace_back(*first_idx, *second_idx);
+                  attrs.keep_alive.emplace_back(*first_idx, *second_idx);
                 })
         .checkMatch();
 
@@ -718,7 +662,7 @@ bool AnnotatedFunctionDecl::processAnnotation(const clang::Decl *decl,
                       report_invalid_argument(value.getString());
                       return;
                     }
-                    noconvert.insert(*idx);
+                    attrs.noconvert.insert(*idx);
                   })
         .checkMatch();
 
@@ -732,22 +676,47 @@ bool AnnotatedFunctionDecl::processAnnotation(const clang::Decl *decl,
                       report_invalid_argument(value.getString());
                       return;
                     }
-                    required.insert(*idx);
+                    attrs.required.insert(*idx);
                   })
         .checkMatch();
   }
 }
 
-bool AnnotatedFunctionDecl::equals(const AnnotatedDecl *other) const {
-  if (const auto *o = llvm::dyn_cast_or_null<AnnotatedFunctionDecl>(other))
-    return AnnotatedNamedDecl::equals(other) && keep_alive == o->keep_alive &&
-           noconvert == o->noconvert && required == o->required &&
-           return_value_policy == o->return_value_policy;
+bool OperatorDeclAttrs::supports(const clang::NamedDecl *decl) {
+  if (const auto *function = llvm::dyn_cast<clang::FunctionDecl>(decl)) {
+    return (function->isOverloadedOperator() &&
+            function->getOverloadedOperator() != clang::OO_Call);
+  }
   return false;
 }
 
-bool AnnotatedMethodDecl::processAnnotation(const clang::Decl *decl,
-                                            const Annotation &annotation) {
+bool genpybind::processAnnotation(const clang::NamedDecl * /*decl*/,
+                                  const Annotation & /*annotation*/,
+                                  OperatorDeclAttrs & /*attrs*/) {
+  return false;
+}
+
+bool ConversionFunctionDeclAttrs::supports(const clang::NamedDecl *decl) {
+  return llvm::isa<clang::CXXConversionDecl>(decl);
+}
+
+bool genpybind::processAnnotation(const clang::NamedDecl * /*decl*/,
+                                  const Annotation & /*annotation*/,
+                                  ConversionFunctionDeclAttrs & /*attrs*/) {
+  return false;
+}
+
+bool MethodDeclAttrs::supports(const clang::NamedDecl *decl) {
+  return llvm::isa<clang::CXXMethodDecl>(decl) &&
+         FunctionDeclAttrs::supports(decl) &&
+         !llvm::isa<clang::CXXConstructorDecl>(decl) &&
+         !OperatorDeclAttrs::supports(decl) &&
+         !ConversionFunctionDeclAttrs::supports(decl);
+}
+
+bool genpybind::processAnnotation(const clang::NamedDecl *decl,
+                                  const Annotation &annotation,
+                                  MethodDeclAttrs &attrs) {
   ArgumentsDispatcher dispatch(decl, annotation);
 
   const auto *function_decl = llvm::cast<clang::FunctionDecl>(decl);
@@ -755,7 +724,7 @@ bool AnnotatedMethodDecl::processAnnotation(const clang::Decl *decl,
   auto report_invalid_signature = [&]() {
     Diagnostics::report(decl,
                         Diagnostics::Kind::AnnotationIncompatibleSignatureError)
-        << friendlyName(getKind()) << toString(annotation.getKind().value());
+        << friendlyName(decl) << toString(annotation.getKind().value());
   };
 
   auto collect_identifier = [&](const LiteralValue &value) -> std::string {
@@ -771,7 +740,7 @@ bool AnnotatedMethodDecl::processAnnotation(const clang::Decl *decl,
 
   switch (annotation.getKind().value()) {
   default:
-    return AnnotatedFunctionDecl::processAnnotation(decl, annotation);
+    return false;
 
   case AnnotationKind::GetterFor:
     return dispatch
@@ -787,7 +756,8 @@ bool AnnotatedMethodDecl::processAnnotation(const clang::Decl *decl,
                   [&](std::vector<std::string> identifiers) {
                     if (identifiers.empty())
                       return false;
-                    getter_for.insert(identifiers.begin(), identifiers.end());
+                    attrs.getter_for.insert(identifiers.begin(),
+                                            identifiers.end());
                     return true;
                   })
         .checkMatch();
@@ -806,29 +776,28 @@ bool AnnotatedMethodDecl::processAnnotation(const clang::Decl *decl,
                   [&](std::vector<std::string> identifiers) {
                     if (identifiers.empty())
                       return false;
-                    setter_for.insert(identifiers.begin(), identifiers.end());
+                    attrs.setter_for.insert(identifiers.begin(),
+                                            identifiers.end());
                     return true;
                   })
         .checkMatch();
   }
 }
 
-bool AnnotatedMethodDecl::equals(const AnnotatedDecl *other) const {
-  if (const auto *o = llvm::dyn_cast_or_null<AnnotatedMethodDecl>(other))
-    return AnnotatedFunctionDecl::equals(other) &&
-           getter_for == o->getter_for && setter_for == o->setter_for;
-  return false;
+bool ConstructorDeclAttrs::supports(const clang::NamedDecl *decl) {
+  return llvm::isa<clang::CXXConstructorDecl>(decl);
 }
 
-bool AnnotatedConstructorDecl::processAnnotation(const clang::Decl *decl,
-                                                 const Annotation &annotation) {
+bool genpybind::processAnnotation(const clang::NamedDecl *decl,
+                                  const Annotation &annotation,
+                                  ConstructorDeclAttrs &attrs) {
   ArgumentsDispatcher dispatch(decl, annotation);
 
   const auto *constructor = llvm::cast<clang::CXXConstructorDecl>(decl);
 
   switch (annotation.getKind().value()) {
   default:
-    return AnnotatedFunctionDecl::processAnnotation(decl, annotation);
+    return false;
 
   case AnnotationKind::ImplicitConversion:
     return dispatch
@@ -842,24 +811,22 @@ bool AnnotatedConstructorDecl::processAnnotation(const clang::Decl *decl,
           }
           return true;
         })
-        .nullary([&] { implicit_conversion = true; })
+        .nullary([&] { attrs.implicit_conversion = true; })
         .unary(LiteralValue::Kind::Boolean,
                [&](const LiteralValue &value) {
-                 implicit_conversion = value.getBoolean();
+                 attrs.implicit_conversion = value.getBoolean();
                })
         .checkMatch();
   }
 }
 
-bool AnnotatedConstructorDecl::equals(const AnnotatedDecl *other) const {
-  if (const auto *o = llvm::dyn_cast_or_null<AnnotatedConstructorDecl>(other))
-    return AnnotatedFunctionDecl::equals(other) &&
-           implicit_conversion == o->implicit_conversion;
-  return false;
+bool FieldOrVarDeclAttrs::supports(const clang::NamedDecl *decl) {
+  return llvm::isa<clang::FieldDecl>(decl) || llvm::isa<clang::VarDecl>(decl);
 }
 
-bool AnnotatedFieldOrVarDecl::processAnnotation(const clang::Decl *decl,
-                                                const Annotation &annotation) {
+bool genpybind::processAnnotation(const clang::NamedDecl *decl,
+                                  const Annotation &annotation,
+                                  FieldOrVarDeclAttrs &attrs) {
   ArgumentsDispatcher dispatch(decl, annotation);
 
   // Extract the lambda expression expected for manual bindings from the
@@ -889,22 +856,22 @@ bool AnnotatedFieldOrVarDecl::processAnnotation(const clang::Decl *decl,
 
   switch (annotation.getKind().value()) {
   default:
-    return AnnotatedNamedDecl::processAnnotation(decl, annotation);
+    return false;
 
   // TODO: `readonly` is only supported for fields and static
   // member variables.
   case AnnotationKind::Readonly:
-    return dispatch.nullary([&] { readonly = true; })
-        .unary(
-            LiteralValue::Kind::Boolean,
-            [&](const LiteralValue &value) { readonly = value.getBoolean(); })
+    return dispatch.nullary([&] { attrs.readonly = true; })
+        .unary(LiteralValue::Kind::Boolean,
+               [&](const LiteralValue &value) {
+                 attrs.readonly = value.getBoolean();
+               })
         .checkMatch();
 
   case AnnotationKind::Postamble:
     return dispatch
         .ensure([&] {
           if (manual_bindings_expr == nullptr) {
-            reportInvalidAnnotationError(decl, getKind(), annotation);
             return false;
           }
           if (!llvm::isa<clang::TranslationUnitDecl>(decl->getDeclContext())) {
@@ -915,51 +882,68 @@ bool AnnotatedFieldOrVarDecl::processAnnotation(const clang::Decl *decl,
           }
           return true;
         })
-        .nullary([&] { postamble = true; })
+        .nullary([&] { attrs.postamble = true; })
         .checkMatch();
 
   case AnnotationKind::Manual:
-    return dispatch
-        .ensure([&] {
-          if (manual_bindings_expr == nullptr) {
-            reportInvalidAnnotationError(decl, getKind(), annotation);
-            return false;
-          }
-          return true;
-        })
-        .nullary([&] { manual_bindings = manual_bindings_expr; })
+    return dispatch.ensure([&] { return manual_bindings_expr != nullptr; })
+        .nullary([&] { attrs.manual_bindings = manual_bindings_expr; })
         .checkMatch();
   }
 }
 
-bool AnnotatedFieldOrVarDecl::equals(const AnnotatedDecl *other) const {
-  if (const auto *o = llvm::dyn_cast_or_null<AnnotatedFieldOrVarDecl>(other))
-    return AnnotatedNamedDecl::equals(other) && readonly == o->readonly &&
-           manual_bindings == o->manual_bindings && postamble && o->postamble;
-  return false;
+void AnnotationStorage::insert(const clang::NamedDecl *decl) {
+  assert(decl != nullptr);
+  if (LookupContextCollector::shouldSkip(decl)) {
+    Diagnostics::report(decl, Diagnostics::Kind::InvalidAssumptionWarning)
+        << "annotations are only parsed during initial pass";
+    decl->dump();
+    return;
+  }
+
+  if (has(decl))
+    return;
+
+  std::vector<std::function<bool(const Annotation &)>> handlers;
+  std::apply(
+      [&](auto &...map) {
+        ((llvm::remove_cvref_t<decltype(map)>::mapped_type::supports(decl)
+              ? handlers.push_back(
+                    [decl, &attrs = map[decl]](const Annotation &annotation) {
+                      return processAnnotation(decl, annotation, attrs);
+                    })
+              : void()),
+         ...);
+      },
+      attrs_by_decl);
+
+  // Non-namespace named decls that have at least one annotation
+  // are visible by default.  This can be overruled by an explicit
+  // `visible(default)`, `visible(false)` or `hidden` annotation.
+  if (!llvm::isa<clang::NamespaceDecl>(decl) &&
+      hasAnnotations(decl, /*allow_empty=*/false)) {
+    std::get<Map<NamedDeclAttrs>>(attrs_by_decl)[decl].visible = true;
+  }
+
+  clang::DiagnosticsEngine &diag = decl->getASTContext().getDiagnostics();
+  const Parser::Annotations annotations = parseAnnotations(decl);
+  for (const Annotation &annotation : annotations) {
+    clang::DiagnosticErrorTrap trap{diag};
+    bool handled = llvm::any_of(
+        handlers, [&](const auto &handler) { return handler(annotation); });
+    if (!trap.hasErrorOccurred() && !handled) {
+      reportInvalidAnnotationError(decl, annotation);
+    }
+  }
 }
 
-AnnotatedDecl *AnnotationStorage::getOrInsert(const clang::Decl *declaration) {
-  if (const auto *named_decl =
-          llvm::dyn_cast_or_null<clang::NamedDecl>(declaration)) {
-    auto result =
-        annotations.try_emplace(named_decl, AnnotatedDecl::create(named_decl));
-    AnnotatedDecl *annotated_decl = result.first->getSecond().get();
-    assert(annotated_decl != nullptr);
-    if (result.second)
-      annotated_decl->processAnnotations(named_decl);
-    return annotated_decl;
-  }
-  return nullptr;
-}
-
-const AnnotatedDecl *
-AnnotationStorage::get(const clang::Decl *declaration) const {
-  if (const auto *named_decl =
-          llvm::dyn_cast_or_null<clang::NamedDecl>(declaration)) {
-    auto it = annotations.find(named_decl);
-    if (it != annotations.end())
-      return it->second.get();
-  }
-  return nullptr;
+bool AnnotationStorage::equal(const clang::NamedDecl *left,
+                              const clang::NamedDecl *right) const {
+  return std::apply(
+      [&](auto... x) {
+        return (
+            (this->get<decltype(x)>(left) == this->get<decltype(x)>(right)) &&
+            ...);
+      },
+      AttrTypes{});
 }

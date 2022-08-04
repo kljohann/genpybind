@@ -95,16 +95,13 @@ RecordInliningPolicy RecordInliningPolicy::createFromAnnotations(
   while (!remaining.empty()) {
     const clang::TagDecl *decl = remaining.back();
     remaining.pop_back();
-    const auto *annotated =
-        llvm::dyn_cast_or_null<AnnotatedRecordDecl>(annotations.get(decl));
-    if (annotated == nullptr)
-      continue;
-    hidden_bases.insert(annotated->hide_base.begin(),
-                        annotated->hide_base.end());
-    for (const clang::TagDecl *base : annotated->inline_base) {
-      auto result = inline_candidates.insert(base);
-      if (result.second)
-        remaining.push_back(base);
+    if (const auto attrs = annotations.get<RecordDeclAttrs>(decl)) {
+      hidden_bases.insert(attrs->hide_base.begin(), attrs->hide_base.end());
+      for (const clang::TagDecl *base : attrs->inline_base) {
+        auto result = inline_candidates.insert(base);
+        if (result.second)
+          remaining.push_back(base);
+      }
     }
   }
 

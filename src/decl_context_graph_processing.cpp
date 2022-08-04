@@ -61,10 +61,9 @@ genpybind::findEnclosingScopes(const DeclContextGraph &graph,
     // Otherwise the parent itself is the first enclosing lookup context.
 
     auto is_transparent = [&](const clang::Decl *decl) -> bool {
-      if (const auto *annotated_ns =
-              llvm::dyn_cast_or_null<AnnotatedNamespaceDecl>(
-                  annotations.get(decl)))
-        return !annotated_ns->module;
+      const auto *named_decl = llvm::dyn_cast<clang::NamedDecl>(decl);
+      if (const auto attrs = annotations.get<NamespaceDeclAttrs>(named_decl))
+        return !attrs->module;
       return false;
     };
 
@@ -116,9 +115,9 @@ genpybind::deriveEffectiveVisibility(const DeclContextGraph &graph,
     }
 
     // Retrieve value from annotations, if specified explicitly.
-    if (const auto *annotated =
-            llvm::dyn_cast_or_null<AnnotatedNamedDecl>(annotations.get(decl)))
-      is_visible = annotated->visible.value_or(is_visible);
+    const auto *named_decl = llvm::dyn_cast<clang::NamedDecl>(decl);
+    if (const auto attrs = annotations.get<NamedDeclAttrs>(named_decl))
+      is_visible = attrs->visible.value_or(is_visible);
 
     result[decl_context] = is_visible;
   }
@@ -212,12 +211,12 @@ ConstDeclContextSet genpybind::declContextsWithVisibleNamedDecls(
 
     auto is_visible_given_default_visibility =
         [&](const clang::NamedDecl *decl) -> bool {
-      const auto *annotated =
-          llvm::dyn_cast_or_null<AnnotatedNamedDecl>(annotations.get(decl));
+      if (const auto attrs = annotations.get<NamedDeclAttrs>(decl);
+          attrs.has_value() && attrs->visible.has_value()) {
+        return *attrs->visible;
+      }
       // An unannotated declaration in a "visible" context should be preserved.
-      if (annotated == nullptr || !annotated->visible.has_value())
-        return default_visibility;
-      return *annotated->visible;
+      return default_visibility;
     };
 
     std::vector<const clang::NamedDecl *> decls =
@@ -294,12 +293,11 @@ void genpybind::hideNamespacesBasedOnExposeInAnnotation(
     auto is_namespace_for_different_module = [&] {
       const auto *namespace_decl =
           llvm::dyn_cast<clang::NamespaceDecl>(it->getDecl());
-      const auto *annotation = llvm::cast_or_null<AnnotatedNamespaceDecl>(
-          annotations.get(namespace_decl));
-      return annotation != nullptr && !annotation->only_expose_in.empty() &&
-             !llvm::any_of(
-                 annotation->only_expose_in,
-                 [&](const std::string &name) { return name == module_name; });
+      const auto attrs = annotations.get<NamespaceDeclAttrs>(namespace_decl);
+      return attrs.has_value() && !attrs->only_expose_in.empty() &&
+             !llvm::any_of(attrs->only_expose_in, [&](const std::string &name) {
+               return name == module_name;
+             });
     };
     if (!visited.isDominated()) {
       if (!is_namespace_for_different_module())

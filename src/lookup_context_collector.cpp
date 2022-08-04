@@ -20,18 +20,16 @@ void LookupContextCollector::warnIfAliasHasQualifiers(
 }
 
 void LookupContextCollector::errorIfAnnotationsDoNotMatchFirstDecl(
-    const clang::Decl *decl) {
-  const auto inserted = first_decls.try_emplace(decl->getCanonicalDecl(), decl);
+    const clang::NamedDecl *decl) {
+  const auto inserted = first_decls.try_emplace(
+      llvm::dyn_cast<clang::NamedDecl>(decl->getCanonicalDecl()), decl);
   if (inserted.second) {
     return;
   }
-  const clang::Decl *first_decl = inserted.first->second;
-  const AnnotatedDecl *annotation = annotations.get(decl);
-  const AnnotatedDecl *first_annotation = annotations.get(first_decl);
-  if ((annotation == nullptr && first_annotation == nullptr) ||
-      (annotation != nullptr && annotation->equals(first_annotation)))
-    return;
-  Diagnostics::report(decl,
-                      Diagnostics::Kind::AnnotationsNeedToMatchFirstDeclError);
-  Diagnostics::report(first_decl, clang::diag::note_declared_at);
+  const clang::NamedDecl *first_decl = inserted.first->second;
+  if (!annotations.equal(decl, first_decl)) {
+    Diagnostics::report(
+        decl, Diagnostics::Kind::AnnotationsNeedToMatchFirstDeclError);
+    Diagnostics::report(first_decl, clang::diag::note_declared_at);
+  }
 }

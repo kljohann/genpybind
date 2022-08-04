@@ -51,10 +51,9 @@ class GraphPrinter : private clang::TextTreeStructure {
       result.append(getNameForDisplay(decl));
       result.push_back('\'');
 
-      if (const auto *annotated = llvm::dyn_cast_or_null<AnnotatedNamedDecl>(
-              annotations.get(named_decl))) {
-        const std::string spelling = !annotated->spelling.empty()
-                                         ? annotated->spelling
+      if (const auto attrs = annotations.get<NamedDeclAttrs>(named_decl)) {
+        const std::string spelling = !attrs->spelling.empty()
+                                         ? attrs->spelling
                                          : getSpelling(named_decl);
         if (spelling != named_decl->getName()) {
           result.append(" as '");
@@ -144,9 +143,9 @@ struct DOTGraphTraits<DeclContextGraphWithAnnotations>
   static std::string
   getNodeDescription(const DeclContextNode *node,
                      const DeclContextGraphWithAnnotations &graph) {
-    if (const auto *annotated = llvm::dyn_cast_or_null<AnnotatedNamedDecl>(
-            graph.annotations.get(node->getDecl())))
-      return annotated->spelling;
+    const auto *named_decl = llvm::dyn_cast<clang::NamedDecl>(node->getDecl());
+    if (const auto attrs = graph.annotations.get<NamedDeclAttrs>(named_decl))
+      return attrs->spelling;
     return "";
   }
 
@@ -156,11 +155,11 @@ struct DOTGraphTraits<DeclContextGraphWithAnnotations>
     std::string result;
     llvm::raw_string_ostream stream(result);
     stream << R"(style=")";
-    if (const auto *annotated = llvm::dyn_cast_or_null<AnnotatedNamedDecl>(
-            graph.annotations.get(node->getDecl()))) {
-      if (!annotated->visible.has_value()) {
+    const auto *named_decl = llvm::dyn_cast<clang::NamedDecl>(node->getDecl());
+    if (const auto attrs = graph.annotations.get<NamedDeclAttrs>(named_decl)) {
+      if (!attrs->visible.has_value()) {
         stream << "dotted";
-      } else if (!annotated->visible.value()) {
+      } else if (!attrs->visible.value()) {
         stream << "dashed";
       }
     }

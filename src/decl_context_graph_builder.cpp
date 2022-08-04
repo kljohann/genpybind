@@ -25,8 +25,7 @@ findLookupContextDecl(const clang::DeclContext *decl_context) {
 bool DeclContextGraphBuilder::addEdgeForExposeHereAlias(
     const clang::TypedefNameDecl *decl) {
   const clang::Decl *parent = findLookupContextDecl(decl->getDeclContext());
-  const clang::TagDecl *target_decl =
-      AnnotatedTypedefNameDecl::aliasTarget(decl);
+  const clang::TagDecl *target_decl = aliasTarget(decl);
   assert(target_decl != nullptr);
 
   auto inserted = relocated_decls.try_emplace(target_decl, decl);
@@ -55,20 +54,18 @@ std::optional<DeclContextGraph> DeclContextGraphBuilder::buildGraph() {
     return std::nullopt;
 
   for (const clang::TypedefNameDecl *alias_decl : visitor.aliases) {
-    const auto *annotated = llvm::dyn_cast_or_null<AnnotatedTypedefNameDecl>(
-        annotations.get(alias_decl));
-    if (annotated == nullptr ||
-        (!annotated->encourage && !annotated->expose_here))
+    const auto attrs = annotations.get<TypedefNameDeclAttrs>(alias_decl);
+    assert(attrs.has_value());
+    if (!attrs->encourage && !attrs->expose_here)
       continue;
-    const clang::TagDecl *target_decl =
-        AnnotatedTypedefNameDecl::aliasTarget(alias_decl);
+    const clang::TagDecl *target_decl = aliasTarget(alias_decl);
     assert(target_decl != nullptr);
-    auto *annotated_target =
-        llvm::cast<AnnotatedNamedDecl>(annotations.getOrInsert(target_decl));
-    if (annotated->encourage)
-      annotated_target->visible = true;
-    if (annotated->expose_here && addEdgeForExposeHereAlias(alias_decl))
-      annotated->propagateAnnotations(alias_decl, annotated_target);
+    annotations.insert(target_decl);
+    if (attrs->encourage)
+      annotations.update<NamedDeclAttrs>(
+          target_decl, [](auto &target_attrs) { target_attrs.visible = true; });
+    if (attrs->expose_here && addEdgeForExposeHereAlias(alias_decl))
+      propagateAnnotations(annotations, alias_decl);
   }
 
   // Bail out if establishing "expose_here" aliases failed, e.g. due to

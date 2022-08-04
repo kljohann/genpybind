@@ -35,7 +35,8 @@ namespace genpybind {
 class LookupContextCollector
     : public clang::RecursiveASTVisitor<LookupContextCollector> {
   AnnotationStorage &annotations;
-  llvm::DenseMap<const clang::Decl *, const clang::Decl *> first_decls;
+  llvm::DenseMap<const clang::NamedDecl *, const clang::NamedDecl *>
+      first_decls;
 
 public:
   std::vector<const clang::DeclContext *> lookup_contexts;
@@ -76,13 +77,13 @@ public:
     if (shouldSkip(llvm::dyn_cast<clang::TagDecl>(decl)) ||
         decl->getDeclContext()->isDependentContext() || !hasAnnotations(decl))
       return true;
-    annotations.getOrInsert(decl);
+    annotations.insert(decl);
     return true;
   }
 
   static void warnIfAliasHasQualifiers(const clang::TypedefNameDecl *decl);
 
-  void errorIfAnnotationsDoNotMatchFirstDecl(const clang::Decl *decl);
+  void errorIfAnnotationsDoNotMatchFirstDecl(const clang::NamedDecl *decl);
 
   bool VisitTypedefNameDecl(const clang::TypedefNameDecl *decl) {
     // Only typedefs with explicit annotations are considered.

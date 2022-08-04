@@ -2,29 +2,31 @@
 
 #include "genpybind/annotations/annotation.h"
 
-#include <clang/AST/Decl.h>
-#include <clang/AST/DeclCXX.h>
-#include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/ADT/SmallSet.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/Support/Casting.h>
 
-#include <functional>
-#include <memory>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 namespace clang {
 class CXXConstructorDecl;
 class CXXMethodDecl;
+class Decl;
+class NamedDecl;
+class TypedefNameDecl;
+class TagDecl;
 class LambdaExpr;
 } // namespace clang
 
 namespace genpybind {
+
+class AnnotationStorage;
 
 bool hasAnnotations(const clang::Decl *decl, bool allow_empty = true);
 
@@ -32,56 +34,15 @@ bool hasAnnotations(const clang::Decl *decl, bool allow_empty = true);
 /// the declaration.
 std::string getSpelling(const clang::NamedDecl *decl);
 
-class AnnotatedDecl {
-public:
-  enum class Kind {
-    Named,
+const clang::TagDecl *aliasTarget(const clang::TypedefNameDecl *decl);
 
-    Namespace,
-    Enum,
-    Class,
-    TypeAlias,
-    Variable,
-    Operator,
+/// Applies some annotations of this declaration to the alias target.
+/// This is used to propagate spelling and visibility in the case of
+/// `expose_here` type aliases.
+void propagateAnnotations(AnnotationStorage &annotations,
+                          const clang::TypedefNameDecl *decl);
 
-    Function,
-    ConversionFunction,
-    Method,
-    Constructor,
-    lastFunction = Constructor,
-    lastNamed = Constructor,
-  };
-
-private:
-  Kind kind;
-
-public:
-  AnnotatedDecl(Kind kind) : kind(kind) {}
-  virtual ~AnnotatedDecl() = default;
-
-  static std::unique_ptr<AnnotatedDecl> create(const clang::NamedDecl *decl);
-
-  /// Process the given annotation and emit potential errors
-  /// via the declarations associated diagnostics engine.
-  /// \return whether the annotation has been processed successfully
-  virtual bool processAnnotation(const clang::Decl *decl,
-                                 const annotations::Annotation &annotation) = 0;
-
-  virtual bool equals(const AnnotatedDecl *other) const = 0;
-
-  Kind getKind() const { return kind; };
-
-  /// Retrieve annotations from the annotation attributes of the declaration.
-  /// Any errors (e.g. invalid annotations) are reported via the declaration's
-  /// associated diagnostics engine.
-  void processAnnotations(const clang::Decl *decl);
-};
-
-class AnnotatedNamedDecl : public AnnotatedDecl {
-protected:
-  AnnotatedNamedDecl(Kind kind) : AnnotatedDecl(kind) {}
-
-public:
+struct NamedDeclAttrs {
   /// Alternative identifier to use when exposing the declaration.
   std::string spelling;
   /// Explicitly specified visibility of the declaration.
@@ -89,237 +50,273 @@ public:
   /// based on the visibility of the parent declaration.
   std::optional<bool> visible;
 
-  AnnotatedNamedDecl() : AnnotatedDecl(Kind::Named) {}
-
-  bool processAnnotation(const clang::Decl *decl,
-                         const annotations::Annotation &annotation) override;
-
-  bool equals(const AnnotatedDecl *other) const override;
-
-  static bool classof(const AnnotatedDecl *decl) {
-    return classofKind(decl->getKind());
+  static bool supports(const clang::NamedDecl *decl);
+  friend bool operator==(NamedDeclAttrs const &lhs, NamedDeclAttrs const &rhs) {
+    return lhs.spelling == rhs.spelling && lhs.visible == rhs.visible;
   }
-  static constexpr bool classofKind(Kind kind) {
-    return kind >= Kind::Named && kind <= Kind::lastNamed;
+  friend bool operator!=(NamedDeclAttrs const &lhs, NamedDeclAttrs const &rhs) {
+    return !(lhs == rhs);
   }
 };
 
-class AnnotatedNamespaceDecl : public AnnotatedNamedDecl {
-public:
+bool processAnnotation(const clang::NamedDecl *decl,
+                       const annotations::Annotation &annotation,
+                       NamedDeclAttrs &attrs);
+
+struct NamespaceDeclAttrs {
   bool module = false;
   std::vector<std::string> only_expose_in;
 
-  AnnotatedNamespaceDecl() : AnnotatedNamedDecl(Kind::Namespace) {}
-
-  bool processAnnotation(const clang::Decl *decl,
-                         const annotations::Annotation &annotation) override;
-
-  bool equals(const AnnotatedDecl *other) const override;
-
-  static bool classof(const AnnotatedDecl *decl) {
-    return classofKind(decl->getKind());
+  static bool supports(const clang::NamedDecl *decl);
+  friend bool operator==(NamespaceDeclAttrs const &lhs,
+                         NamespaceDeclAttrs const &rhs) {
+    return lhs.module == rhs.module && lhs.only_expose_in == rhs.only_expose_in;
   }
-  static constexpr bool classofKind(Kind kind) {
-    return kind == Kind::Namespace;
+  friend bool operator!=(NamespaceDeclAttrs const &lhs,
+                         NamespaceDeclAttrs const &rhs) {
+    return !(lhs == rhs);
   }
 };
 
-class AnnotatedEnumDecl : public AnnotatedNamedDecl {
-public:
+bool processAnnotation(const clang::NamedDecl *decl,
+                       const annotations::Annotation &annotation,
+                       NamespaceDeclAttrs &attrs);
+
+struct EnumDeclAttrs {
   bool arithmetic = false;
   std::optional<bool> export_values;
 
-  AnnotatedEnumDecl() : AnnotatedNamedDecl(Kind::Enum) {}
-
-  bool processAnnotation(const clang::Decl *decl,
-                         const annotations::Annotation &annotation) override;
-
-  bool equals(const AnnotatedDecl *other) const override;
-
-  static bool classof(const AnnotatedDecl *decl) {
-    return classofKind(decl->getKind());
+  static bool supports(const clang::NamedDecl *decl);
+  friend bool operator==(EnumDeclAttrs const &lhs, EnumDeclAttrs const &rhs) {
+    return lhs.arithmetic == rhs.arithmetic &&
+           lhs.export_values == rhs.export_values;
   }
-  static constexpr bool classofKind(Kind kind) { return kind == Kind::Enum; }
+  friend bool operator!=(EnumDeclAttrs const &lhs, EnumDeclAttrs const &rhs) {
+    return !(lhs == rhs);
+  }
 };
 
-class AnnotatedRecordDecl : public AnnotatedNamedDecl {
-public:
+bool processAnnotation(const clang::NamedDecl *decl,
+                       const annotations::Annotation &annotation,
+                       EnumDeclAttrs &attrs);
+
+struct RecordDeclAttrs {
   bool dynamic_attr = false;
   llvm::SmallPtrSet<const clang::TagDecl *, 1> hide_base;
   llvm::SmallPtrSet<const clang::TagDecl *, 1> inline_base;
   std::string holder_type;
 
-  AnnotatedRecordDecl() : AnnotatedNamedDecl(Kind::Class) {}
-
-  bool processAnnotation(const clang::Decl *decl,
-                         const annotations::Annotation &annotation) override;
-
-  bool equals(const AnnotatedDecl *other) const override;
-
-  static bool classof(const AnnotatedDecl *decl) {
-    return classofKind(decl->getKind());
+  static bool supports(const clang::NamedDecl *decl);
+  friend bool operator==(RecordDeclAttrs const &lhs,
+                         RecordDeclAttrs const &rhs) {
+    return lhs.dynamic_attr == rhs.dynamic_attr &&
+           lhs.hide_base == rhs.hide_base &&
+           lhs.inline_base == rhs.inline_base &&
+           lhs.holder_type == rhs.holder_type;
   }
-  static constexpr bool classofKind(Kind kind) { return kind == Kind::Class; }
+  friend bool operator!=(RecordDeclAttrs const &lhs,
+                         RecordDeclAttrs const &rhs) {
+    return !(lhs == rhs);
+  }
 };
 
-class AnnotatedTypedefNameDecl : public AnnotatedNamedDecl {
-public:
+bool processAnnotation(const clang::NamedDecl *decl,
+                       const annotations::Annotation &annotation,
+                       RecordDeclAttrs &attrs);
+
+struct TypedefNameDeclAttrs {
   /// If the underlying type has default visibility, make it visible explicitly.
   bool encourage = false;
   /// Expose the underlying type at the location of the type alias instead.
   bool expose_here = false;
 
-  AnnotatedTypedefNameDecl() : AnnotatedNamedDecl(Kind::TypeAlias) {}
-
-  bool processAnnotation(const clang::Decl *decl,
-                         const annotations::Annotation &annotation) override;
-
-  bool equals(const AnnotatedDecl *other) const override;
-
-  /// Applies all annotations of this declaration to another declaration.
-  /// This is used to propagate spelling and visibility in the case of
-  /// "expose_here" type aliases.
-  void propagateAnnotations(const clang::TypedefNameDecl *decl,
-                            AnnotatedNamedDecl *other) const;
-
-  static const clang::TagDecl *aliasTarget(const clang::TypedefNameDecl *decl);
-
-  static bool classof(const AnnotatedDecl *decl) {
-    return classofKind(decl->getKind());
+  static bool supports(const clang::NamedDecl *decl);
+  friend bool operator==(TypedefNameDeclAttrs const &lhs,
+                         TypedefNameDeclAttrs const &rhs) {
+    return lhs.encourage == rhs.encourage && lhs.expose_here == rhs.expose_here;
   }
-  static constexpr bool classofKind(Kind kind) {
-    return kind == Kind::TypeAlias;
+  friend bool operator!=(TypedefNameDeclAttrs const &lhs,
+                         TypedefNameDeclAttrs const &rhs) {
+    return !(lhs == rhs);
   }
 };
+
+bool processAnnotation(const clang::NamedDecl *decl,
+                       const annotations::Annotation &annotation,
+                       TypedefNameDeclAttrs &attrs);
+
+struct FieldOrVarDeclAttrs {
+  bool readonly = false;
+  const clang::LambdaExpr *manual_bindings = nullptr;
+  bool postamble = false;
+
+  static bool supports(const clang::NamedDecl *decl);
+  friend bool operator==(FieldOrVarDeclAttrs const &lhs,
+                         FieldOrVarDeclAttrs const &rhs) {
+    return lhs.readonly == rhs.readonly &&
+           lhs.manual_bindings == rhs.manual_bindings && lhs.postamble &&
+           rhs.postamble;
+  }
+  friend bool operator!=(FieldOrVarDeclAttrs const &lhs,
+                         FieldOrVarDeclAttrs const &rhs) {
+    return !(lhs == rhs);
+  }
+};
+
+bool processAnnotation(const clang::NamedDecl *decl,
+                       const annotations::Annotation &annotation,
+                       FieldOrVarDeclAttrs &attrs);
 
 /// Overloaded operators do not support all function annotations and are thus
 /// handled separately.  One exception is call operators, which are represented
-/// as `AnnotatedMethodDecl`s.
-class AnnotatedOperatorDecl final : public AnnotatedNamedDecl {
-public:
-  AnnotatedOperatorDecl() : AnnotatedNamedDecl(Kind::Operator) {}
-
-  static bool classof(const AnnotatedDecl *decl) {
-    return classofKind(decl->getKind());
+/// using `MethodDeclAttrs`s.
+struct OperatorDeclAttrs {
+  static bool supports(const clang::NamedDecl *decl);
+  friend bool operator==(OperatorDeclAttrs const & /*lhs*/,
+                         OperatorDeclAttrs const & /*rhs*/) {
+    return true;
   }
-  static constexpr bool classofKind(Kind kind) {
-    return kind == Kind::Operator;
+  friend bool operator!=(OperatorDeclAttrs const &lhs,
+                         OperatorDeclAttrs const &rhs) {
+    return !(lhs == rhs);
   }
 };
 
-class AnnotatedFunctionDecl : public AnnotatedNamedDecl {
-protected:
-  AnnotatedFunctionDecl(Kind kind) : AnnotatedNamedDecl(kind) {}
+bool processAnnotation(const clang::NamedDecl *decl,
+                       const annotations::Annotation &annotation,
+                       OperatorDeclAttrs &attrs);
 
-public:
+struct ConversionFunctionDeclAttrs {
+  static bool supports(const clang::NamedDecl *decl);
+  friend bool operator==(ConversionFunctionDeclAttrs const & /*lhs*/,
+                         ConversionFunctionDeclAttrs const & /*rhs*/) {
+    return true;
+  }
+  friend bool operator!=(ConversionFunctionDeclAttrs const &lhs,
+                         ConversionFunctionDeclAttrs const &rhs) {
+    return !(lhs == rhs);
+  }
+};
+
+bool processAnnotation(const clang::NamedDecl *decl,
+                       const annotations::Annotation &annotation,
+                       ConversionFunctionDeclAttrs &attrs);
+
+struct MethodDeclAttrs {
+  llvm::SmallSet<std::string, 1> getter_for;
+  llvm::SmallSet<std::string, 1> setter_for;
+
+  static bool supports(const clang::NamedDecl *decl);
+  friend bool operator==(MethodDeclAttrs const &lhs,
+                         MethodDeclAttrs const &rhs) {
+    return lhs.getter_for == rhs.getter_for && lhs.setter_for == rhs.setter_for;
+  }
+  friend bool operator!=(MethodDeclAttrs const &lhs,
+                         MethodDeclAttrs const &rhs) {
+    return !(lhs == rhs);
+  }
+};
+
+bool processAnnotation(const clang::NamedDecl *decl,
+                       const annotations::Annotation &annotation,
+                       MethodDeclAttrs &attrs);
+
+struct ConstructorDeclAttrs {
+  bool implicit_conversion = false;
+
+  static bool supports(const clang::NamedDecl *decl);
+  friend bool operator==(ConstructorDeclAttrs const &lhs,
+                         ConstructorDeclAttrs const &rhs) {
+    return lhs.implicit_conversion == rhs.implicit_conversion;
+  }
+  friend bool operator!=(ConstructorDeclAttrs const &lhs,
+                         ConstructorDeclAttrs const &rhs) {
+    return !(lhs == rhs);
+  }
+};
+
+bool processAnnotation(const clang::NamedDecl *decl,
+                       const annotations::Annotation &annotation,
+                       ConstructorDeclAttrs &attrs);
+
+struct FunctionDeclAttrs {
   llvm::SmallVector<std::pair<unsigned, unsigned>, 1> keep_alive;
   llvm::SmallSet<unsigned, 1> noconvert;
   llvm::SmallSet<unsigned, 1> required;
   std::string return_value_policy;
 
-  AnnotatedFunctionDecl() : AnnotatedNamedDecl(Kind::Function) {}
-
-  bool processAnnotation(const clang::Decl *decl,
-                         const annotations::Annotation &annotation) override;
-
-  bool equals(const AnnotatedDecl *other) const override;
-
-  static bool classof(const AnnotatedDecl *decl) {
-    return classofKind(decl->getKind());
+  static bool supports(const clang::NamedDecl *decl);
+  friend bool operator==(FunctionDeclAttrs const &lhs,
+                         FunctionDeclAttrs const &rhs) {
+    return lhs.keep_alive == rhs.keep_alive && lhs.noconvert == rhs.noconvert &&
+           lhs.required == rhs.required &&
+           lhs.return_value_policy == rhs.return_value_policy;
   }
-  static constexpr bool classofKind(Kind kind) {
-    return kind >= Kind::Function && kind <= Kind::lastFunction;
+  friend bool operator!=(FunctionDeclAttrs const &lhs,
+                         FunctionDeclAttrs const &rhs) {
+    return !(lhs == rhs);
   }
 };
 
-class AnnotatedConversionFunctionDecl final : public AnnotatedFunctionDecl {
-public:
-  AnnotatedConversionFunctionDecl()
-      : AnnotatedFunctionDecl(Kind::ConversionFunction) {}
-
-  static bool classof(const AnnotatedDecl *decl) {
-    return classofKind(decl->getKind());
-  }
-  static constexpr bool classofKind(Kind kind) {
-    return kind == Kind::ConversionFunction;
-  }
-};
-
-class AnnotatedMethodDecl final : public AnnotatedFunctionDecl {
-public:
-  llvm::SmallSet<std::string, 1> getter_for;
-  llvm::SmallSet<std::string, 1> setter_for;
-
-  AnnotatedMethodDecl() : AnnotatedFunctionDecl(Kind::Method) {}
-
-  bool processAnnotation(const clang::Decl *decl,
-                         const annotations::Annotation &annotation) override;
-
-  bool equals(const AnnotatedDecl *other) const override;
-
-  static bool classof(const AnnotatedDecl *decl) {
-    return classofKind(decl->getKind());
-  }
-  static constexpr bool classofKind(Kind kind) { return kind == Kind::Method; }
-};
-
-class AnnotatedConstructorDecl : public AnnotatedFunctionDecl {
-public:
-  bool implicit_conversion = false;
-
-  AnnotatedConstructorDecl() : AnnotatedFunctionDecl(Kind::Constructor) {}
-
-  bool processAnnotation(const clang::Decl *decl,
-                         const annotations::Annotation &annotation) override;
-
-  bool equals(const AnnotatedDecl *other) const override;
-
-  static bool classof(const AnnotatedDecl *decl) {
-    return classofKind(decl->getKind());
-  }
-  static constexpr bool classofKind(Kind kind) {
-    return kind == Kind::Constructor;
-  }
-};
-
-class AnnotatedFieldOrVarDecl : public AnnotatedNamedDecl {
-public:
-  bool readonly = false;
-  const clang::LambdaExpr *manual_bindings = nullptr;
-  bool postamble = false;
-
-  AnnotatedFieldOrVarDecl() : AnnotatedNamedDecl(Kind::Variable) {}
-
-  bool processAnnotation(const clang::Decl *decl,
-                         const annotations::Annotation &annotation) override;
-
-  bool equals(const AnnotatedDecl *other) const override;
-
-  static bool classof(const AnnotatedDecl *decl) {
-    return classofKind(decl->getKind());
-  }
-  static constexpr bool classofKind(Kind kind) {
-    return kind == Kind::Variable;
-  }
-};
+bool processAnnotation(const clang::NamedDecl *decl,
+                       const annotations::Annotation &annotation,
+                       FunctionDeclAttrs &attrs);
 
 /// Holds and owns annotations s.t. they do not have to be processed multiple
 /// times.  Currently only named declarations are checked for annotations.
 class AnnotationStorage {
-  llvm::DenseMap<const clang::NamedDecl *, std::unique_ptr<AnnotatedDecl>>
-      annotations;
+  template <typename T>
+  using Map = std::unordered_map<const clang::NamedDecl *, T>;
+  using AttrTypes =
+      std::tuple<NamedDeclAttrs, NamespaceDeclAttrs, EnumDeclAttrs,
+                 RecordDeclAttrs, TypedefNameDeclAttrs, FieldOrVarDeclAttrs,
+                 OperatorDeclAttrs, ConversionFunctionDeclAttrs,
+                 MethodDeclAttrs, ConstructorDeclAttrs, FunctionDeclAttrs>;
+
+  template <typename T> struct MapsOf;
+  template <typename... Ts> struct MapsOf<std::tuple<Ts...>> {
+    using type = std::tuple<Map<Ts>...>;
+  };
+
+  // clang-format off
+  MapsOf<AttrTypes>::type attrs_by_decl;
+  // clang-format on
 
 public:
-  /// Add an entry for the specified `declaration`.
-  /// If `declaration` is `nullptr` or unnamed, `nullptr` is returned.
-  AnnotatedDecl *getOrInsert(const clang::Decl *declaration);
+  void insert(const clang::NamedDecl *decl);
 
-  /// Return the entry for the specified `declaration`.
-  /// If `declaration` is `nullptr`, unnamed or there is no corresponding entry,
-  /// `nullptr` is returned.
-  const AnnotatedDecl *get(const clang::Decl *declaration) const;
+  template <typename T>
+  std::optional<T> get(const clang::NamedDecl *decl) const {
+    const auto &map = std::get<Map<T>>(attrs_by_decl);
+    if (auto it = map.find(decl); it != map.end()) {
+      return it->second;
+    }
+    return std::nullopt;
+  }
 
-  auto size() const { return annotations.size(); }
+  template <typename T, typename UpdateOp>
+  void update(const clang::NamedDecl *decl, UpdateOp op) {
+    assert(decl != nullptr && T::supports(decl));
+    op(std::get<Map<T>>(attrs_by_decl)[decl]);
+  }
+
+  template <typename T> T lookup(const clang::NamedDecl *decl) const {
+    assert(decl != nullptr && T::supports(decl));
+    if (auto attrs = get<T>(decl)) {
+      return *attrs;
+    }
+    return T();
+  }
+
+  bool equal(const clang::NamedDecl *left, const clang::NamedDecl *right) const;
+
+  auto has(const clang::NamedDecl *decl) const {
+    return std::get<Map<NamedDeclAttrs>>(attrs_by_decl).count(decl) != 0;
+  }
+
+  auto size() const {
+    return std::get<Map<NamedDeclAttrs>>(attrs_by_decl).size();
+  }
 };
 
 } // namespace genpybind

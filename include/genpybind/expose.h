@@ -31,10 +31,6 @@ template <typename T> class SmallVectorImpl;
 } // namespace llvm
 
 namespace genpybind {
-class AnnotatedEnumDecl;
-class AnnotatedNamedDecl;
-class AnnotatedNamespaceDecl;
-class AnnotatedRecordDecl;
 class AnnotationStorage;
 class DeclContextGraph;
 
@@ -56,11 +52,15 @@ public:
 };
 
 class DeclContextExposer {
+protected:
+  const AnnotationStorage &annotations;
+
 public:
+  DeclContextExposer(const AnnotationStorage &annotations);
   virtual ~DeclContextExposer() = default;
 
   static std::unique_ptr<DeclContextExposer>
-  create(const DeclContextGraph &graph, AnnotationStorage &annotations,
+  create(const DeclContextGraph &graph, const AnnotationStorage &annotations,
          const clang::DeclContext *decl_context);
 
   virtual std::optional<RecordInliningPolicy> inliningPolicy() const;
@@ -68,23 +68,20 @@ public:
   virtual void emitIntroducer(llvm::raw_ostream &os,
                               llvm::StringRef parent_identifier);
   void handleDecl(llvm::raw_ostream &os, const clang::NamedDecl *decl,
-                  const AnnotatedNamedDecl *annotation,
                   bool default_visibility);
   virtual void finalizeDefinition(llvm::raw_ostream &os);
 
 protected:
   virtual void handleDeclImpl(llvm::raw_ostream &os,
-                              const clang::NamedDecl *decl,
-                              const AnnotatedNamedDecl *annotation);
+                              const clang::NamedDecl *decl);
 };
 
 class NamespaceExposer : public DeclContextExposer {
   const clang::NamespaceDecl *namespace_decl;
-  const AnnotatedNamespaceDecl *annotated_decl;
 
 public:
   NamespaceExposer(const clang::NamespaceDecl *namespace_decl,
-                   const AnnotatedNamespaceDecl *annotated_decl);
+                   const AnnotationStorage &annotations);
 
   void emitIntroducer(llvm::raw_ostream &os,
                       llvm::StringRef parent_identifier) override;
@@ -92,11 +89,10 @@ public:
 
 class EnumExposer : public DeclContextExposer {
   const clang::EnumDecl *enum_decl;
-  const AnnotatedEnumDecl *annotated_decl;
 
 public:
   EnumExposer(const clang::EnumDecl *enum_decl,
-              const AnnotatedEnumDecl *annotated_decl);
+              const AnnotationStorage &annotations);
 
   void emitParameter(llvm::raw_ostream &os) override;
   void emitIntroducer(llvm::raw_ostream &os,
@@ -105,14 +101,13 @@ public:
 
 private:
   void emitType(llvm::raw_ostream &os);
-  void handleDeclImpl(llvm::raw_ostream &os, const clang::NamedDecl *decl,
-                      const AnnotatedNamedDecl *annotation) override;
+  void handleDeclImpl(llvm::raw_ostream &os,
+                      const clang::NamedDecl *decl) override;
 };
 
 class RecordExposer : public DeclContextExposer {
-  const DeclContextGraph &graph;
   const clang::CXXRecordDecl *record_decl;
-  const AnnotatedRecordDecl *annotated_decl;
+  const DeclContextGraph &graph;
   RecordInliningPolicy inlining_policy;
   struct Property {
     const clang::CXXMethodDecl *getter = nullptr;
@@ -121,9 +116,9 @@ class RecordExposer : public DeclContextExposer {
   std::map<std::string, Property> properties;
 
 public:
-  RecordExposer(const DeclContextGraph &graph,
-                const clang::CXXRecordDecl *record_decl,
-                const AnnotatedRecordDecl *annotated_decl,
+  RecordExposer(const clang::CXXRecordDecl *record_decl,
+                const DeclContextGraph &graph,
+                const AnnotationStorage &annotations,
                 RecordInliningPolicy inlining_policy);
 
   std::optional<RecordInliningPolicy> inliningPolicy() const override;
@@ -141,8 +136,8 @@ private:
       const llvm::SmallVectorImpl<clang::QualType> &parameter_types,
       clang::QualType return_type, bool reverse_parameters);
   void emitType(llvm::raw_ostream &os);
-  void handleDeclImpl(llvm::raw_ostream &os, const clang::NamedDecl *decl,
-                      const AnnotatedNamedDecl *annotation) override;
+  void handleDeclImpl(llvm::raw_ostream &os,
+                      const clang::NamedDecl *decl) override;
 };
 
 } // namespace genpybind
