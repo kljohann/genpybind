@@ -112,17 +112,19 @@ EXPOSED
 
 // -----------------------------------------------------------------------------
 
-namespace xyz::common GENPYBIND(module(xyz1)) {
+namespace xyz {
+namespace common GENPYBIND(module(xyz1)) {
 EXPOSED
+}
 }
 
 // TODO: It would be better to report these in the correct order (outer namespace first).
 // For 'common': module(xyz3) instead of module(xyz1)
 // CHECK: decls.h:[[# @LINE + 6]]:11: error: Annotations need to match those of the first declaration
-// CHECK: decls.h:[[# @LINE - 7]]:16: note: declared here
+// CHECK: decls.h:[[# @LINE - 8]]:11: note: declared here
 // For 'xyz': module(xyz2) instead of no annotation
 // CHECK: decls.h:[[# @LINE + 2]]:11: error: Annotations need to match those of the first declaration
-// CHECK: decls.h:[[# @LINE - 10]]:11: note: declared here
+// CHECK: decls.h:[[# @LINE - 12]]:11: note: declared here
 namespace xyz GENPYBIND(module(xyz2)) {
 namespace common GENPYBIND(module(xyz3)) {
   EXPOSED
@@ -139,13 +141,12 @@ namespace common GENPYBIND(module(abc1)) {
 
 // TODO: It would be better to report these in the correct order (outer namespace first).
 // For 'common': module(abc2) instead of module(abc1)
-// CHECK: decls.h:[[# @LINE + 5]]:16: error: Annotations need to match those of the first declaration
+// CHECK: decls.h:[[# @LINE + 3]]:11: error: Annotations need to match those of the first declaration
 // CHECK: decls.h:[[# @LINE - 8]]:11: note: declared here
-// For 'abc': module(abc2) instead of no annotation
-// CHECK: decls.h:[[# @LINE + 2]]:11: error: Annotations need to match those of the first declaration
-// CHECK: decls.h:[[# @LINE - 12]]:11: note: declared here
-namespace abc::common GENPYBIND(module(abc2)) {
+namespace abc {
+namespace common GENPYBIND(module(abc2)) {
 EXPOSED
 }
+}
 
-// CHECK: 7 errors generated.
+// CHECK: 6 errors generated.
