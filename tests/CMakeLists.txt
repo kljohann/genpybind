@@ -11,7 +11,7 @@ target_sources(genpybind-tests PRIVATE ${test_files})
 add_custom_target(genpybind-tests-run
   COMMAND $<TARGET_FILE:genpybind-tests>
   COMMENT "Running unit tests"
-  VERBATIM USES_TERMINAL
+  VERBATIM
 )
 add_dependencies(test genpybind-tests-run)
 
@@ -29,7 +29,7 @@ else()
     --param FileCheck=${FILECHECK_COMMAND}
     ${CMAKE_CURRENT_SOURCE_DIR}/lit
     COMMENT "Running lit tests"
-    VERBATIM USES_TERMINAL
+    VERBATIM
   )
   add_dependencies(test lit-tests-run)
 endif()
@@ -75,7 +75,7 @@ function(genpybind_add_module target_name)
     ARGS -p ${CMAKE_BINARY_DIR} ${ARG_HEADER}
     ${output_args}
     COMMENT "Analyzing ${ARG_HEADER}"
-    VERBATIM USES_TERMINAL
+    VERBATIM
   )
 
   pybind11_add_module(${target_name} ${bindings} ${ARG_UNPARSED_ARGUMENTS})
@@ -118,7 +118,7 @@ foreach(test_implementation IN LISTS integration_tests)
     ${CMAKE_CURRENT_SOURCE_DIR}/integration/${test_name}_test.py
     DEPENDS ${module_name}
     COMMENT "Running ${test_name}_test.py"
-    VERBATIM USES_TERMINAL
+    VERBATIM
   )
   add_dependencies(test ${test_target}-test)
   set_target_properties(${test_target} ${module_name}
