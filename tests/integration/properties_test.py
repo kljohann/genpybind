@@ -17,7 +17,7 @@ def test_readonly_property():
     inst = m.Example()
     assert not hasattr(inst, "getReadonly")
     assert inst.readonly == True
-    with pytest.raises(AttributeError, match="can't set attribute"):
+    with pytest.raises(AttributeError, match="can't set attribute|has no setter"):
         inst.readonly = False
 
 

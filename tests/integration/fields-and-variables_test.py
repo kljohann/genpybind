@@ -25,13 +25,13 @@ def test_static_variables_can_be_writable():
 
 
 def test_static_variables_can_be_readonly():
-    with pytest.raises(AttributeError, match="can't set attribute"):
+    with pytest.raises(AttributeError, match="can't set attribute|has no setter"):
         m.Example.static_const_variable = 2
-    with pytest.raises(AttributeError, match="can't set attribute"):
+    with pytest.raises(AttributeError, match="can't set attribute|has no setter"):
         m.Example.static_constexpr_variable = 3
-    with pytest.raises(AttributeError, match="can't set attribute"):
+    with pytest.raises(AttributeError, match="can't set attribute|has no setter"):
         m.Example.readonly_static_variable = 1
-    with pytest.raises(AttributeError, match="can't set attribute"):
+    with pytest.raises(AttributeError, match="can't set attribute|has no setter"):
         m.Example.readonly_static_const_variable = 2
 
 
@@ -46,11 +46,11 @@ def test_fields_can_be_writable():
 
 def test_fields_can_be_readonly():
     inst = m.Example()
-    with pytest.raises(AttributeError, match="can't set attribute"):
+    with pytest.raises(AttributeError, match="can't set attribute|has no setter"):
         inst.const_field = 2
-    with pytest.raises(AttributeError, match="can't set attribute"):
+    with pytest.raises(AttributeError, match="can't set attribute|has no setter"):
         inst.readonly_field = 3
-    with pytest.raises(AttributeError, match="can't set attribute"):
+    with pytest.raises(AttributeError, match="can't set attribute|has no setter"):
         inst.readonly_const_field = 4
 
 
