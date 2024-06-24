@@ -1,9 +1,8 @@
 #pragma once
 
-#include <llvm/ADT/None.h>
-#include <llvm/ADT/Optional.h>
 #include <llvm/ADT/SmallPtrSet.h>
 
+#include <optional>
 #include <vector>
 
 namespace clang {
@@ -55,6 +54,6 @@ private:
 /// declarations inherited from base classes should be included.
 std::vector<const clang::NamedDecl *> collectVisibleDeclsFromDeclContext(
     clang::Sema &sema, const clang::DeclContext *decl_context,
-    llvm::Optional<RecordInliningPolicy> inlining_policy = llvm::None);
+    std::optional<RecordInliningPolicy> inlining_policy = std::nullopt);
 
 } // namespace genpybind

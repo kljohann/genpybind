@@ -4,11 +4,11 @@
 #include "genpybind/visible_decls.h"
 
 #include <clang/Basic/OperatorKinds.h>
-#include <llvm/ADT/Optional.h>
 #include <llvm/ADT/StringRef.h>
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -63,7 +63,7 @@ public:
   create(const DeclContextGraph &graph, AnnotationStorage &annotations,
          const clang::DeclContext *decl_context);
 
-  virtual llvm::Optional<RecordInliningPolicy> inliningPolicy() const;
+  virtual std::optional<RecordInliningPolicy> inliningPolicy() const;
   virtual void emitParameter(llvm::raw_ostream &os);
   virtual void emitIntroducer(llvm::raw_ostream &os,
                               llvm::StringRef parent_identifier);
@@ -126,7 +126,7 @@ public:
                 const AnnotatedRecordDecl *annotated_decl,
                 RecordInliningPolicy inlining_policy);
 
-  llvm::Optional<RecordInliningPolicy> inliningPolicy() const override;
+  std::optional<RecordInliningPolicy> inliningPolicy() const override;
   void emitParameter(llvm::raw_ostream &os) override;
   void emitIntroducer(llvm::raw_ostream &os,
                       llvm::StringRef parent_identifier) override;

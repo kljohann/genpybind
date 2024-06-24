@@ -60,7 +60,8 @@ void PragmaGenpybindHandler::HandlePragma(clang::Preprocessor &preproc,
   if (lexer.LexFromRawLexer(token) || lexer.LexFromRawLexer(directive_token) ||
       !directive_token.isAnyIdentifier()) {
     preproc.Diag(handler_name_token.getEndLoc(),
-                 clang::diag::err_pp_invalid_directive);
+                 clang::diag::err_pp_invalid_directive)
+        << 0;
     return;
   }
 
@@ -78,7 +79,8 @@ void PragmaGenpybindHandler::HandlePragma(clang::Preprocessor &preproc,
     includes.push_back(argument);
   } else {
     preproc.Diag(directive_token.getLocation(),
-                 clang::diag::err_pp_invalid_directive);
+                 clang::diag::err_pp_invalid_directive)
+        << 0;
     return;
   }
 

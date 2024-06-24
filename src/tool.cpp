@@ -14,9 +14,11 @@
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/Decl.h>
 #include <clang/Basic/Diagnostic.h>
+#include <clang/Basic/FileEntry.h>
 #include <clang/Basic/FileManager.h>
 #include <clang/Basic/SourceManager.h>
 #include <clang/Basic/Version.inc> // IWYU pragma: keep
+#include <clang/Config/config.h>
 #include <clang/Driver/Driver.h>
 #include <clang/Frontend/CompilerInstance.h>
 #include <clang/Frontend/FrontendAction.h>
@@ -28,7 +30,6 @@
 #include <clang/Tooling/CompilationDatabase.h>
 #include <clang/Tooling/Tooling.h>
 #include <llvm/ADT/ArrayRef.h>
-#include <llvm/ADT/Optional.h>
 #include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/ADT/SmallVector.h>
@@ -47,7 +48,6 @@
 #include <initializer_list>
 #include <memory>
 #include <string>
-#include <system_error>
 #include <utility>
 #include <vector>
 
@@ -183,8 +183,8 @@ public:
 
     const auto &source_manager = context.getSourceManager();
     llvm::StringRef main_file = [&] {
-      const auto *main_file =
-          source_manager.getFileEntryForID(source_manager.getMainFileID());
+      clang::OptionalFileEntryRef main_file =
+          source_manager.getFileEntryRefForID(source_manager.getMainFileID());
       assert(main_file != nullptr);
       return main_file->getName();
     }();
@@ -197,7 +197,7 @@ public:
     DeclContextGraphBuilder builder(annotations,
                                     context.getTranslationUnitDecl());
     auto graph = builder.buildGraph();
-    if (!graph.hasValue())
+    if (!graph.has_value())
       return;
 
     auto visibilities = deriveEffectiveVisibility(*graph, annotations);
@@ -338,10 +338,8 @@ std::string findResourceDir() {
   if (clang_path.empty())
     return {};
 
-  // Unfortunately CLANG_RESOURCE_DIR is not exposed via the library,
-  // so it cannot be passed in here.  An alternative would be to construct a
-  // driver and use the resource path it deduces.
-  return clang::driver::Driver::GetResourcesPath(clang_path);
+  return clang::driver::Driver::GetResourcesPath(clang_path,
+                                                 CLANG_RESOURCE_DIR);
 }
 
 /// Add resource dir argument based on location of clang executable, if none has
@@ -402,7 +400,7 @@ clang::tooling::ArgumentsAdjuster getCpp17OrLaterAdjuster() {
         // HACK: Simplistic check to also allow, e.g., gnu++2a.
         auto parts = arg.split("++");
         language_standard_prefix = parts.first;
-        if (!(uses_later_standard = parts.second.startswith("2")))
+        if (!(uses_later_standard = parts.second.starts_with("2")))
           continue;
       }
 

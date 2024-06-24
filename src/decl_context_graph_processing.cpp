@@ -13,7 +13,6 @@
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/DepthFirstIterator.h>
 #include <llvm/ADT/GraphTraits.h>
-#include <llvm/ADT/Optional.h>
 #include <llvm/ADT/PostOrderIterator.h>
 #include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/SmallPtrSet.h>
@@ -119,7 +118,7 @@ genpybind::deriveEffectiveVisibility(const DeclContextGraph &graph,
     // Retrieve value from annotations, if specified explicitly.
     if (const auto *annotated =
             llvm::dyn_cast_or_null<AnnotatedNamedDecl>(annotations.get(decl)))
-      is_visible = annotated->visible.getValueOr(is_visible);
+      is_visible = annotated->visible.value_or(is_visible);
 
     result[decl_context] = is_visible;
   }
@@ -215,7 +214,7 @@ ConstDeclContextSet genpybind::declContextsWithVisibleNamedDecls(
       const auto *annotated =
           llvm::dyn_cast_or_null<AnnotatedNamedDecl>(annotations.get(decl));
       // An unannotated declaration in a "visible" context should be preserved.
-      if (annotated == nullptr || !annotated->visible.hasValue())
+      if (annotated == nullptr || !annotated->visible.has_value())
         return default_visibility;
       return *annotated->visible;
     };

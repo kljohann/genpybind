@@ -27,7 +27,7 @@ using namespace genpybind;
 namespace {
 
 class ExposableDeclConsumer : public clang::VisibleDeclConsumer {
-  llvm::Optional<RecordInliningPolicy> inlining_policy;
+  std::optional<RecordInliningPolicy> inlining_policy;
   std::vector<const clang::NamedDecl *> &decls;
 
   static bool isConstructor(const clang::Decl *decl) {
@@ -37,13 +37,13 @@ class ExposableDeclConsumer : public clang::VisibleDeclConsumer {
   }
 
 public:
-  ExposableDeclConsumer(llvm::Optional<RecordInliningPolicy> inlining_policy,
+  ExposableDeclConsumer(std::optional<RecordInliningPolicy> inlining_policy,
                         std::vector<const clang::NamedDecl *> &decls)
       : inlining_policy(std::move(inlining_policy)), decls(decls) {}
 
   bool shouldInlineDecl(clang::NamedDecl *proposed_decl) {
     // TODO: What about using declarations? Where should they be resolved?
-    if (!inlining_policy.hasValue() || isConstructor(proposed_decl) ||
+    if (!inlining_policy.has_value() || isConstructor(proposed_decl) ||
         llvm::isa<clang::CXXDestructorDecl>(proposed_decl))
       return false;
 
@@ -160,7 +160,7 @@ bool RecordInliningPolicy::shouldHide(const clang::TagDecl *decl) const {
 std::vector<const clang::NamedDecl *>
 genpybind::collectVisibleDeclsFromDeclContext(
     clang::Sema &sema, const clang::DeclContext *decl_context,
-    llvm::Optional<RecordInliningPolicy> inlining_policy) {
+    std::optional<RecordInliningPolicy> inlining_policy) {
   std::vector<const clang::NamedDecl *> decls;
   ExposableDeclConsumer consumer(std::move(inlining_policy), decls);
   // Include global scope *iff* looking up decls in the TU decl context.

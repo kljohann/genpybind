@@ -2,8 +2,6 @@
 
 #include <clang/Basic/CharInfo.h>
 #include <clang/Basic/SourceLocation.h>
-#include <llvm/ADT/None.h>
-#include <llvm/ADT/Optional.h>
 #include <llvm/ADT/Sequence.h>
 #include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringSwitch.h>
@@ -14,6 +12,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <optional>
 #include <type_traits>
 #include <utility>
 
@@ -143,8 +142,8 @@ auto Parser::parseAnnotations(llvm::StringRef text)
   return annotations;
 }
 
-auto Parser::parseAnnotations(llvm::StringRef text, Annotations &annotations)
-    -> llvm::Error {
+auto Parser::parseAnnotations(llvm::StringRef text,
+                              Annotations &annotations) -> llvm::Error {
   Tokenizer tokenizer(text);
   return Parser(&tokenizer).parseAnnotations(annotations);
 }
@@ -178,12 +177,12 @@ auto Parser::parseAnnotations(Annotations &annotations) -> llvm::Error {
 auto Parser::parseAnnotationKind() -> llvm::Expected<AnnotationKind> {
   Token token = tokenizer->consumeToken();
   assert(token.kind == Token::Kind::Identifier);
-  auto kind = llvm::StringSwitch<llvm::Optional<AnnotationKind>>(token.text)
+  auto kind = llvm::StringSwitch<std::optional<AnnotationKind>>(token.text)
 #define ANNOTATION_KIND(Enum, Spelling)                                        \
-  .Case(#Spelling, llvm::Optional<AnnotationKind>(AnnotationKind::Enum))
+  .Case(#Spelling, std::optional<AnnotationKind>(AnnotationKind::Enum))
 #include "genpybind/annotations/annotations.def"
-                  .Default(llvm::None);
-  if (kind.hasValue())
+                  .Default(std::nullopt);
+  if (kind.has_value())
     return *kind;
   return llvm::make_error<Error>(Error::Kind::InvalidAnnotation, token.text);
 }

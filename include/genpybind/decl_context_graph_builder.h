@@ -3,7 +3,8 @@
 #include "genpybind/decl_context_graph.h"
 
 #include <llvm/ADT/DenseMap.h>
-#include <llvm/ADT/Optional.h>
+
+#include <optional>
 
 namespace clang {
 class Decl;
@@ -59,7 +60,7 @@ public:
   /// Builds a graph of declaration contexts for the given translation unit.
   /// Annotations for all declarations are collected in the provided
   /// `AnnotationStorage` instance.
-  llvm::Optional<DeclContextGraph> buildGraph();
+  std::optional<DeclContextGraph> buildGraph();
 };
 
 } // namespace genpybind

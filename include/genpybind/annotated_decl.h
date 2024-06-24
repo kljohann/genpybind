@@ -5,7 +5,6 @@
 #include <clang/AST/Decl.h>
 #include <clang/AST/DeclCXX.h>
 #include <llvm/ADT/DenseMap.h>
-#include <llvm/ADT/Optional.h>
 #include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/ADT/SmallSet.h>
 #include <llvm/ADT/SmallVector.h>
@@ -14,6 +13,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -85,9 +85,9 @@ public:
   /// Alternative identifier to use when exposing the declaration.
   std::string spelling;
   /// Explicitly specified visibility of the declaration.
-  /// If this is `None` the effective visibility will be determined
+  /// If this is `std::nullopt` the effective visibility will be determined
   /// based on the visibility of the parent declaration.
-  llvm::Optional<bool> visible;
+  std::optional<bool> visible;
 
   AnnotatedNamedDecl() : AnnotatedDecl(Kind::Named) {}
 
@@ -127,7 +127,7 @@ public:
 class AnnotatedEnumDecl : public AnnotatedNamedDecl {
 public:
   bool arithmetic = false;
-  llvm::Optional<bool> export_values;
+  std::optional<bool> export_values;
 
   AnnotatedEnumDecl() : AnnotatedNamedDecl(Kind::Enum) {}
 

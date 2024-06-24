@@ -68,7 +68,7 @@ public:
     // Skip implementation namespaces like `std` and `__gnu_cxx`, as these
     // cannot have annotations in any case.
     return decl != nullptr &&
-           (decl->isStdNamespace() || decl->getName().startswith("__"));
+           (decl->isStdNamespace() || decl->getName().starts_with("__"));
   }
 
   bool VisitNamedDecl(const clang::NamedDecl *decl) {

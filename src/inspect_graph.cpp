@@ -7,7 +7,6 @@
 #include <clang/AST/Decl.h>
 #include <clang/AST/TextNodeDumper.h>
 #include <llvm/ADT/DenseMap.h>
-#include <llvm/ADT/Optional.h>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/ADT/iterator_range.h>
 #include <llvm/Support/Casting.h>
@@ -161,9 +160,9 @@ struct DOTGraphTraits<DeclContextGraphWithAnnotations>
     stream << R"(style=")";
     if (const auto *annotated = llvm::dyn_cast_or_null<AnnotatedNamedDecl>(
             graph.annotations.get(node->getDecl()))) {
-      if (!annotated->visible.hasValue()) {
+      if (!annotated->visible.has_value()) {
         stream << "dotted";
-      } else if (!annotated->visible.getValue()) {
+      } else if (!annotated->visible.value()) {
         stream << "dashed";
       }
     }

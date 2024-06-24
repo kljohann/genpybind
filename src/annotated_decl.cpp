@@ -21,7 +21,6 @@
 #include <clang/Basic/SourceLocation.h>
 #include <clang/Basic/SourceManager.h>
 #include <llvm/ADT/ArrayRef.h>
-#include <llvm/ADT/None.h>
 #include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/SmallString.h>
 #include <llvm/ADT/SmallVector.h>
@@ -59,7 +58,7 @@ bool genpybind::hasAnnotations(const clang::Decl *decl, bool allow_empty) {
   return llvm::any_of(
       decl->specific_attrs<clang::AnnotateAttr>(), [&](const auto *attr) {
         ::llvm::StringRef annotation_text = attr->getAnnotation();
-        if (!annotation_text.startswith(k_lozenge))
+        if (!annotation_text.starts_with(k_lozenge))
           return false;
         if (allow_empty)
           return true;
@@ -165,7 +164,7 @@ public:
       : decl(decl), annotation_kind(annotation.getKind()),
         arguments(annotation.getArguments()) {}
 
-  LLVM_NODISCARD bool checkMatch() const {
+  [[nodiscard]] bool checkMatch() const {
     if (state == State::Unmatched) {
       if (last_kind_mismatch != nullptr) {
         reportWrongArgumentTypeError(decl, annotation_kind,
@@ -346,7 +345,7 @@ bool AnnotatedNamedDecl::processAnnotation(const clang::Decl *decl,
   case AnnotationKind::Visible:
     return dispatch.nullary([&] { visible = true; })
         .unary(LiteralValue::Kind::Default,
-               [&](const LiteralValue &) { visible = llvm::None; })
+               [&](const LiteralValue &) { visible = std::nullopt; })
         .unary(LiteralValue::Kind::Boolean,
                [&](const LiteralValue &value) { visible = value.getBoolean(); })
         .checkMatch();
@@ -463,7 +462,7 @@ bool AnnotatedEnumDecl::processAnnotation(const clang::Decl *decl,
         .nullary([&]() { export_values = true; })
         // TODO: Remove "default"?
         .unary(LiteralValue::Kind::Default,
-               [&](const LiteralValue &) { export_values = llvm::None; })
+               [&](const LiteralValue &) { export_values = std::nullopt; })
         .unary(LiteralValue::Kind::Boolean,
                [&](const LiteralValue &value) {
                  export_values = value.getBoolean();
@@ -635,8 +634,8 @@ void AnnotatedTypedefNameDecl::propagateAnnotations(
   other->processAnnotation(
       target_decl,
       Annotation(AnnotationKind::Visible,
-                 {visible.hasValue() ? LiteralValue::createBoolean(*visible)
-                                     : LiteralValue::createDefault()}));
+                 {visible.has_value() ? LiteralValue::createBoolean(*visible)
+                                      : LiteralValue::createDefault()}));
 }
 
 const clang::TagDecl *
@@ -663,10 +662,10 @@ bool AnnotatedFunctionDecl::processAnnotation(const clang::Decl *decl,
       parameter_names.push_back(param->getName());
 
     return [names = std::move(parameter_names)](
-               llvm::StringRef name) -> llvm::Optional<unsigned> {
+               llvm::StringRef name) -> std::optional<unsigned> {
       auto it = llvm::find(names, name);
       if (it == names.end())
-        return llvm::None;
+        return std::nullopt;
 
       return static_cast<unsigned>(std::distance(names.begin(), it));
     };
@@ -698,11 +697,11 @@ bool AnnotatedFunctionDecl::processAnnotation(const clang::Decl *decl,
                       true, llvm::isa<clang::CXXMethodDecl>(function_decl));
                   auto first_idx = lookup(first.getString());
                   auto second_idx = lookup(second.getString());
-                  if (!first_idx.hasValue()) {
+                  if (!first_idx.has_value()) {
                     report_invalid_argument(first.getString());
                     return;
                   }
-                  if (!second_idx.hasValue()) {
+                  if (!second_idx.has_value()) {
                     report_invalid_argument(second.getString());
                     return;
                   }
@@ -717,7 +716,7 @@ bool AnnotatedFunctionDecl::processAnnotation(const clang::Decl *decl,
                   [&](const LiteralValue &value) {
                     auto lookup = make_parameter_indices_lookup(false, false);
                     auto idx = lookup(value.getString());
-                    if (!idx.hasValue()) {
+                    if (!idx.has_value()) {
                       report_invalid_argument(value.getString());
                       return;
                     }
@@ -731,7 +730,7 @@ bool AnnotatedFunctionDecl::processAnnotation(const clang::Decl *decl,
                   [&](const LiteralValue &value) {
                     auto lookup = make_parameter_indices_lookup(false, false);
                     auto idx = lookup(value.getString());
-                    if (!idx.hasValue()) {
+                    if (!idx.has_value()) {
                       report_invalid_argument(value.getString());
                       return;
                     }

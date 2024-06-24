@@ -33,7 +33,6 @@
 #include <clang/Sema/Sema.h>
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/ADT/DenseMap.h>
-#include <llvm/ADT/None.h>
 #include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/Sequence.h>
 #include <llvm/ADT/SmallSet.h>
@@ -869,9 +868,9 @@ DeclContextExposer::create(const DeclContextGraph &graph,
   llvm_unreachable("Unknown declaration context kind.");
 }
 
-llvm::Optional<RecordInliningPolicy>
+std::optional<RecordInliningPolicy>
 DeclContextExposer::inliningPolicy() const {
-  return llvm::None;
+  return std::nullopt;
 }
 
 void DeclContextExposer::emitParameter(llvm::raw_ostream &os) {
@@ -889,7 +888,7 @@ void DeclContextExposer::handleDecl(llvm::raw_ostream &os,
                                     bool default_visibility) {
   assert(decl != nullptr);
   assert(annotation != nullptr);
-  if (!annotation->visible.getValueOr(default_visibility))
+  if (!annotation->visible.value_or(default_visibility))
     return;
 
   return handleDeclImpl(os, decl, annotation);
@@ -907,7 +906,7 @@ void DeclContextExposer::handleDeclImpl(llvm::raw_ostream &os,
           llvm::dyn_cast<AnnotatedTypedefNameDecl>(annotation)) {
     // Type aliases are hidden by default and do not inherit the default
     // visibility, thus a second check is necessary here.
-    if (!annot->visible.hasValue())
+    if (!annot->visible.has_value())
       return;
     if (annot->expose_here)
       return;
@@ -1009,7 +1008,7 @@ void EnumExposer::emitIntroducer(llvm::raw_ostream &os,
 }
 
 void EnumExposer::finalizeDefinition(llvm::raw_ostream &os) {
-  if (annotated_decl->export_values.getValueOr(!enum_decl->isScoped()))
+  if (annotated_decl->export_values.value_or(!enum_decl->isScoped()))
     os << "context.export_values();\n";
 }
 
@@ -1037,7 +1036,7 @@ RecordExposer::RecordExposer(const DeclContextGraph &graph,
   assert(annotated_decl != nullptr);
 }
 
-llvm::Optional<RecordInliningPolicy> RecordExposer::inliningPolicy() const {
+std::optional<RecordInliningPolicy> RecordExposer::inliningPolicy() const {
   return inlining_policy;
 }
 

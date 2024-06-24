@@ -7,9 +7,11 @@
 GENPYBIND(noconvert(argument))
 void something(double argument, bool other);
 
-// CHECK: specifiers.h:[[# @LINE + 4]]:6: error: Invalid argument specifier in 'noconvert' annotation: 'oops'
-// CHECK-NEXT: void something(double argument, bool other);
-// CHECK-NEXT: ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// CHECK: specifiers.h:[[# @LINE + 6 ]]:6: error: Invalid argument specifier in 'noconvert' annotation: 'oops'
+// CHECK-NEXT: [[# @LINE + 4 ]] | GENPYBIND(noconvert(oops))
+// CHECK-NEXT:                  | ~~~~~~~~~~~~~~~~~~~~~~~~~~
+// CHECK-NEXT: [[# @LINE + 3 ]] | void something(double argument, bool other);
+// CHECK-NEXT:                  | ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 GENPYBIND(noconvert(oops))
 void something(double argument, bool other);
 

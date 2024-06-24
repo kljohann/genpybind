@@ -1,5 +1,5 @@
 // RUN: genpybind-tool %s -- 2>&1 \
-// RUN: | FileCheck %s --strict-whitespace
+// RUN: | FileCheck %s --match-full-lines
 #pragma once
 
 #include "genpybind.h"
@@ -8,17 +8,18 @@ template <typename T> struct Type {
   struct GENPYBIND(visible) Something {};
 };
 
-// CHECK: qualified-name.h:[[# @LINE + 3]]:23: warning: Declaration context 'Type<bool>' contains 'visible' declarations but is not exposed
-// CHECK-NEXT: extern template class Type<bool>;
-// CHECK-NEXT: ~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~
+// CHECK: {{.*}}qualified-name.h:[[# @LINE + 3 ]]:23: warning: Declaration context 'Type<bool>' contains 'visible' declarations but is not exposed
+// CHECK-NEXT: {{[0-9]*}} | extern template class Type<bool>;
+// CHECK-NEXT: {{[0-9]*}} | ~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~
 extern template class Type<bool>;
 
 // TODO: Is the following warning desirable?
 
 template <typename T>
-// CHECK: qualified-name.h:[[# @LINE + 3]]:8: warning: Declaration context 'Other<B>' contains 'visible' declarations but is not exposed
-// CHECK-NEXT: struct Other {
-// CHECK-NEXT: ~~~~~~~^~~~~~~
+// CHECK: {{.*}}qualified-name.h:[[# @LINE + 4 ]]:8: warning: Declaration context 'Other<B>' contains 'visible' declarations but is not exposed
+// CHECK-NEXT: {{[0-9]*}} | template <typename T>
+//      CHECK: {{[0-9]*}} | struct Other {
+// CHECK-NEXT: {{[0-9]*}} | ~~~~~~~^~~~~~~
 struct Other {
   struct GENPYBIND(visible) Something {};
   using Self GENPYBIND(visible) = Other<T>;

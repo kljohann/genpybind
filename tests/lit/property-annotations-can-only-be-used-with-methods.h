@@ -4,15 +4,19 @@
 
 #include "genpybind.h"
 
-// CHECK: methods.h:[[# @LINE + 4]]:5: error: Invalid annotation for free function: getter_for("something")
-// CHECK-NEXT: int free_function_cannot_be_getter();
-// CHECK-NEXT: ~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// CHECK: methods.h:[[# @LINE + 6 ]]:5: error: Invalid annotation for free function: getter_for("something")
+// CHECK-NEXT: [[# @LINE + 4 ]] | GENPYBIND(getter_for("something"))
+// CHECK-NEXT:                  | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// CHECK-NEXT: [[# @LINE + 3 ]] | int free_function_cannot_be_getter();
+// CHECK-NEXT:                  | ~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 GENPYBIND(getter_for("something"))
 int free_function_cannot_be_getter();
 
-// CHECK: methods.h:[[# @LINE + 4]]:6: error: Invalid annotation for free function: setter_for("something")
-// CHECK-NEXT: void free_function_cannot_be_setter(int value);
-// CHECK-NEXT: ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// CHECK: methods.h:[[# @LINE + 6 ]]:6: error: Invalid annotation for free function: setter_for("something")
+// CHECK-NEXT: [[# @LINE + 4 ]] | GENPYBIND(setter_for("something"))
+// CHECK-NEXT:                  | ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// CHECK-NEXT: [[# @LINE + 3 ]] | void free_function_cannot_be_setter(int value);
+// CHECK-NEXT:                  | ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 GENPYBIND(setter_for("something"))
 void free_function_cannot_be_setter(int value);
 
