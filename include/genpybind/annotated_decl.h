@@ -67,7 +67,7 @@ public:
   virtual bool processAnnotation(const clang::Decl *decl,
                                  const annotations::Annotation &annotation) = 0;
 
-  virtual bool equals(const AnnotatedDecl* other) const = 0;
+  virtual bool equals(const AnnotatedDecl *other) const = 0;
 
   Kind getKind() const { return kind; };
 
@@ -94,7 +94,7 @@ public:
   bool processAnnotation(const clang::Decl *decl,
                          const annotations::Annotation &annotation) override;
 
-  bool equals(const AnnotatedDecl* other) const override;
+  bool equals(const AnnotatedDecl *other) const override;
 
   static bool classof(const AnnotatedDecl *decl) {
     return classofKind(decl->getKind());
@@ -114,7 +114,7 @@ public:
   bool processAnnotation(const clang::Decl *decl,
                          const annotations::Annotation &annotation) override;
 
-  bool equals(const AnnotatedDecl* other) const override;
+  bool equals(const AnnotatedDecl *other) const override;
 
   static bool classof(const AnnotatedDecl *decl) {
     return classofKind(decl->getKind());
@@ -134,7 +134,7 @@ public:
   bool processAnnotation(const clang::Decl *decl,
                          const annotations::Annotation &annotation) override;
 
-  bool equals(const AnnotatedDecl* other) const override;
+  bool equals(const AnnotatedDecl *other) const override;
 
   static bool classof(const AnnotatedDecl *decl) {
     return classofKind(decl->getKind());
@@ -154,7 +154,7 @@ public:
   bool processAnnotation(const clang::Decl *decl,
                          const annotations::Annotation &annotation) override;
 
-  bool equals(const AnnotatedDecl* other) const override;
+  bool equals(const AnnotatedDecl *other) const override;
 
   static bool classof(const AnnotatedDecl *decl) {
     return classofKind(decl->getKind());
@@ -174,7 +174,7 @@ public:
   bool processAnnotation(const clang::Decl *decl,
                          const annotations::Annotation &annotation) override;
 
-  bool equals(const AnnotatedDecl* other) const override;
+  bool equals(const AnnotatedDecl *other) const override;
 
   /// Applies all annotations of this declaration to another declaration.
   /// This is used to propagate spelling and visibility in the case of
@@ -222,7 +222,7 @@ public:
   bool processAnnotation(const clang::Decl *decl,
                          const annotations::Annotation &annotation) override;
 
-  bool equals(const AnnotatedDecl* other) const override;
+  bool equals(const AnnotatedDecl *other) const override;
 
   static bool classof(const AnnotatedDecl *decl) {
     return classofKind(decl->getKind());
@@ -255,14 +255,12 @@ public:
   bool processAnnotation(const clang::Decl *decl,
                          const annotations::Annotation &annotation) override;
 
-  bool equals(const AnnotatedDecl* other) const override;
+  bool equals(const AnnotatedDecl *other) const override;
 
   static bool classof(const AnnotatedDecl *decl) {
     return classofKind(decl->getKind());
   }
-  static constexpr bool classofKind(Kind kind) {
-    return kind == Kind::Method;
-  }
+  static constexpr bool classofKind(Kind kind) { return kind == Kind::Method; }
 };
 
 class AnnotatedConstructorDecl : public AnnotatedFunctionDecl {
@@ -274,7 +272,7 @@ public:
   bool processAnnotation(const clang::Decl *decl,
                          const annotations::Annotation &annotation) override;
 
-  bool equals(const AnnotatedDecl* other) const override;
+  bool equals(const AnnotatedDecl *other) const override;
 
   static bool classof(const AnnotatedDecl *decl) {
     return classofKind(decl->getKind());
@@ -295,7 +293,7 @@ public:
   bool processAnnotation(const clang::Decl *decl,
                          const annotations::Annotation &annotation) override;
 
-  bool equals(const AnnotatedDecl* other) const override;
+  bool equals(const AnnotatedDecl *other) const override;
 
   static bool classof(const AnnotatedDecl *decl) {
     return classofKind(decl->getKind());

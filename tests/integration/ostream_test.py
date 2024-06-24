@@ -29,7 +29,7 @@ def test_can_be_exposed_as_str():
     assert str(inst) == "human readable"
     assert re.match("<ostream.ExposedAsStr object at .+?>", repr(inst))
     assert not hasattr(inst, "__lshift__")
-    assert not "std::ostream" in inst.__str__.__doc__
+    assert "std::ostream" not in inst.__str__.__doc__
     assert inspect.ismethod(inst.__str__)
     assert not inspect.ismethod(inst.__repr__)
 
@@ -39,6 +39,6 @@ def test_can_be_exposed_as_repr():
     assert repr(inst) == "ExposedAsRepr()"
     assert str(inst) == repr(inst)
     assert not hasattr(inst, "__lshift__")
-    assert not "std::ostream" in inst.__repr__.__doc__
+    assert "std::ostream" not in inst.__repr__.__doc__
     assert inspect.ismethod(inst.__repr__)
     assert not inspect.ismethod(inst.__str__)

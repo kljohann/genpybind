@@ -1,5 +1,3 @@
-import os
-
 import manual as m
 
 

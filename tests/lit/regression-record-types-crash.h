@@ -6,8 +6,10 @@
 // CHECK:      Adjusting command for file {{.*}}record-types-crash.h to
 // CHECK-NEXT: -xc++
 
-typedef union {} Union;
-typedef struct {} Struct;
+typedef union {
+} Union;
+typedef struct {
+} Struct;
 
 // CHECK:      Declaration context graph (unpruned) with visibility of all nodes:
 // CHECK-NEXT: |-CXXRecord 'Union': hidden

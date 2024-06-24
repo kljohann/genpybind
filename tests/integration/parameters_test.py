@@ -48,8 +48,8 @@ def test_cannot_pass_none_to_required_arguments():
 
 def test_overloading_works():
     for inst in [m, m.TakesDouble()]:
-        assert inst.overload_is_double(123) == False
-        assert inst.overload_is_double(1234.5) == True
+        assert inst.overload_is_double(123) is False
+        assert inst.overload_is_double(1234.5) is True
 
 
 def test_conversion_is_enabled_by_default():

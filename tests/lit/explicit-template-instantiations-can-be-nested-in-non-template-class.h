@@ -17,7 +17,8 @@ extern template struct GENPYBIND(visible) Outer::Type<float>;
 using InstantiationViaAlias GENPYBIND(expose_here) = Outer::Type<int>;
 
 extern template struct Outer::Type<void>;
-using InstantiationOfDeclaredViaAlias GENPYBIND(expose_here) = Outer::Type<void>;
+using InstantiationOfDeclaredViaAlias
+    GENPYBIND(expose_here) = Outer::Type<void>;
 
 struct GENPYBIND(visible) Stop {};
 

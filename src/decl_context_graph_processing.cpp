@@ -154,7 +154,8 @@ bool genpybind::reportExposeHereCycles(
     cycle_introducing_alias_decls.push_back(it->getSecond());
   }
 
-  llvm::sort(cycle_introducing_alias_decls, IsBeforeInTranslationUnit(source_manager));
+  llvm::sort(cycle_introducing_alias_decls,
+             IsBeforeInTranslationUnit(source_manager));
   for (const auto *alias_decl : cycle_introducing_alias_decls)
     Diagnostics::report(alias_decl, Diagnostics::Kind::ExposeHereCycleError);
 
@@ -252,8 +253,7 @@ ConstDeclContextSet genpybind::declContextsWithVisibleNamedDecls(
 void genpybind::hideNamespacesBasedOnExposeInAnnotation(
     const DeclContextGraph &graph, const AnnotationStorage &annotations,
     ConstDeclContextSet &contexts_with_visible_decls,
-    EffectiveVisibilityMap &visibilities,
-    llvm::StringRef module_name) {
+    EffectiveVisibilityMap &visibilities, llvm::StringRef module_name) {
   /// Allows to find all nodes dominated by a specific parent node marked
   /// during depth-first traversal.
   ///
@@ -368,7 +368,7 @@ void genpybind::reportUnreachableVisibleDeclContexts(
   }
 
   llvm::sort(unreachable_decls, IsBeforeInTranslationUnit(source_manager));
-  for (const auto* decl : unreachable_decls)
+  for (const auto *decl : unreachable_decls)
     Diagnostics::report(decl, Diagnostics::Kind::UnreachableDeclContextWarning)
         << getNameForDisplay(decl);
 }
@@ -487,7 +487,7 @@ genpybind::declContextsSortedByDependencies(
   }
   llvm::SmallVector<const clang::DeclContext *, 0> result;
   result.reserve(graph.size());
-  for (const DeclContextNode* node : nodes)
+  for (const DeclContextNode *node : nodes)
     result.push_back(node->getDeclContext());
   return result;
 }

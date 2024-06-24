@@ -43,7 +43,7 @@ def test_private_methods_are_absent():
 
 def test_deleted_methods_are_not_exposed():
     inst = m.Example()
-    assert not hasattr(m, "deleted_method")
+    assert not hasattr(inst, "deleted_method")
 
 
 def test_using_typedefs_for_member_functions_works():

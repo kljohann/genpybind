@@ -484,7 +484,8 @@ int main(int argc, const char **argv) {
     tool.appendArgumentsAdjuster(
         [](const CommandLineArguments &arguments,
            llvm::StringRef filename) -> CommandLineArguments {
-          llvm::errs() << "Adjusting command for file " << filename << " to\n  ";
+          llvm::errs() << "Adjusting command for file " << filename
+                       << " to\n  ";
           emitQuotedArguments(llvm::errs(), arguments);
           llvm::errs() << "\n";
           return arguments;

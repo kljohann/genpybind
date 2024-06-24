@@ -5,7 +5,7 @@
 struct GENPYBIND(visible) X {};
 
 namespace one GENPYBIND(module) {
-  using X GENPYBIND(visible) = ::X;
+using X GENPYBIND(visible) = ::X;
 }
 
 namespace two GENPYBIND(module(deux)) {

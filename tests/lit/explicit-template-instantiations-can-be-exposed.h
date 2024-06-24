@@ -4,19 +4,19 @@
 
 #include "genpybind.h"
 
-template <typename T>
-struct ExposeSomeInstantiations {};
+template <typename T> struct ExposeSomeInstantiations {};
 
-extern template struct GENPYBIND(expose_as(IntSomething)) ExposeSomeInstantiations<int>;
+extern template struct GENPYBIND(expose_as(IntSomething))
+    ExposeSomeInstantiations<int>;
 
-template struct GENPYBIND(expose_as(FloatSomething)) ExposeSomeInstantiations<float>;
+template struct GENPYBIND(expose_as(FloatSomething))
+    ExposeSomeInstantiations<float>;
 
 template struct GENPYBIND(visible) ExposeSomeInstantiations<bool>;
 
 template struct ExposeSomeInstantiations<double>; // not exposed
 
-template <typename T>
-struct GENPYBIND(visible) ExposeAll {};
+template <typename T> struct GENPYBIND(visible) ExposeAll {};
 
 extern template struct ExposeAll<int>;
 template struct ExposeAll<float>;

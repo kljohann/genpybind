@@ -22,9 +22,8 @@ struct GENPYBIND(visible) Example {
   GENPYBIND_MANUAL({ (void)parent; });
 
   // CHECK: annotations.h:[[# @LINE + 1]]:54: error: 'postamble' can only be used in global scope
-  static constexpr auto GENPYBIND(manual, postamble) almost_valid = [](auto &context) {
-    (void)context;
-  };
+  static constexpr auto GENPYBIND(manual, postamble) almost_valid =
+      [](auto &context) { (void)context; };
 
   // CHECK: annotations.h:[[# @LINE + 3]]:24: error: Invalid annotation for variable: manual()
   // CHECK: annotations.h:[[# @LINE + 2]]:24: error: Invalid annotation for variable: postamble()

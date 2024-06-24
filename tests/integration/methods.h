@@ -34,18 +34,12 @@ struct GENPYBIND(visible) Example {
 
   operator Other() const;
 
-  int operator()() const {
-    return 123;
-  }
+  int operator()() const { return 123; }
 
-  int operator()(int value) const {
-    return value;
-  }
+  int operator()(int value) const { return value; }
 
   GENPYBIND(expose_as(call))
-  float operator()(float value) const {
-    return value;
-  }
+  float operator()(float value) const { return value; }
 
 private:
   void private_method();

@@ -101,14 +101,14 @@ static unsigned getCustomDiagID(clang::DiagnosticsEngine &engine,
   llvm_unreachable("Unknown diagnostic.");
 }
 
-auto Diagnostics::report(const clang::Decl *decl, Kind kind)
-    -> clang::DiagnosticBuilder {
+auto Diagnostics::report(const clang::Decl *decl,
+                         Kind kind) -> clang::DiagnosticBuilder {
   clang::DiagnosticsEngine &engine = decl->getASTContext().getDiagnostics();
   return report(decl, getCustomDiagID(engine, kind));
 }
 
-auto Diagnostics::report(const clang::Decl *decl, unsigned diag_id)
-    -> clang::DiagnosticBuilder {
+auto Diagnostics::report(const clang::Decl *decl,
+                         unsigned diag_id) -> clang::DiagnosticBuilder {
   clang::DiagnosticsEngine &engine = decl->getASTContext().getDiagnostics();
   return engine.Report(decl->getLocation(), diag_id) << decl->getSourceRange();
 }

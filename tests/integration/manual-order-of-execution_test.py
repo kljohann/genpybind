@@ -1,6 +1,6 @@
 import os
 
-import manual_order_of_execution as m
+import manual_order_of_execution  # noqa: F401
 
 
 def test_order_of_execution_matches_context_graph_hierarchy():

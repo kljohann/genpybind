@@ -111,7 +111,7 @@ private:
 
 class RecordExposer : public DeclContextExposer {
   const DeclContextGraph &graph;
-  const clang::CXXRecordDecl* record_decl;
+  const clang::CXXRecordDecl *record_decl;
   const AnnotatedRecordDecl *annotated_decl;
   RecordInliningPolicy inlining_policy;
   struct Property {
@@ -122,7 +122,7 @@ class RecordExposer : public DeclContextExposer {
 
 public:
   RecordExposer(const DeclContextGraph &graph,
-                const clang::CXXRecordDecl* record_decl,
+                const clang::CXXRecordDecl *record_decl,
                 const AnnotatedRecordDecl *annotated_decl,
                 RecordInliningPolicy inlining_policy);
 

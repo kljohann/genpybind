@@ -323,7 +323,7 @@ static bool isPybind11ArgsType(clang::QualType parameter_type) {
 }
 
 static void emitParameters(llvm::raw_ostream &os,
-                           const clang::FunctionDecl* function,
+                           const clang::FunctionDecl *function,
                            const AnnotatedFunctionDecl *annotation) {
   const clang::ASTContext &context = function->getASTContext();
   auto printing_policy = getPrintingPolicyForExposedNames(context);
@@ -866,8 +866,7 @@ DeclContextExposer::create(const DeclContextGraph &graph,
   llvm_unreachable("Unknown declaration context kind.");
 }
 
-std::optional<RecordInliningPolicy>
-DeclContextExposer::inliningPolicy() const {
+std::optional<RecordInliningPolicy> DeclContextExposer::inliningPolicy() const {
   return std::nullopt;
 }
 

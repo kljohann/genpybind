@@ -1,0 +1,5 @@
+BasedOnStyle: InheritParentConfig
+# Misbehaves for namespaces with `GENPYBIND` annotations.
+FixNamespaceComments: false
+# Avoid messing up `FileCheck` comments.
+ReflowComments: false

@@ -1,9 +1,11 @@
 #pragma once
 
+// clang-format off
 #ifdef __GENPYBIND__
-#pragma genpybind include <pybind11/pybind11.h>
-#pragma genpybind include <pybind11/eval.h>
+#pragma genpybind include<pybind11/pybind11.h>
+#pragma genpybind include<pybind11/eval.h>
 #endif // __GENPYBIND__
+// clang-format on
 #include "genpybind.h"
 
 GENPYBIND_MANUAL({
@@ -25,7 +27,7 @@ GENPYBIND_MANUAL({
   ::pybind11::exec(R"(track_order("::reopened_namespace [first]"))");
 })
 
-}  // namespace reopened_namespace
+} // namespace reopened_namespace
 
 namespace nested {
 
@@ -49,11 +51,9 @@ GENPYBIND_MANUAL({
 
 namespace nested {
 
-GENPYBIND_MANUAL({
-  ::pybind11::exec(R"(track_order("::nested::nested"))");
-})
+GENPYBIND_MANUAL({ ::pybind11::exec(R"(track_order("::nested::nested"))"); })
 
-}  // namespace nested
+} // namespace nested
 
 } // namespace nested
 
@@ -63,12 +63,10 @@ GENPYBIND_MANUAL({
   ::pybind11::exec(R"(track_order("::reopened_namespace [second]"))");
 })
 
-}  // namespace reopened_namespace
+} // namespace reopened_namespace
 
 struct GENPYBIND(visible) Toplevel {
-  GENPYBIND_MANUAL({
-    ::pybind11::exec(R"(track_order("::Toplevel"))");
-  })
+  GENPYBIND_MANUAL({ ::pybind11::exec(R"(track_order("::Toplevel"))"); })
 };
 
 namespace reopened_namespace {
@@ -77,7 +75,7 @@ GENPYBIND_MANUAL({
   ::pybind11::exec(R"(track_order("::reopened_namespace [third]"))");
 })
 
-}  // namespace reopened_namespace
+} // namespace reopened_namespace
 
 GENPYBIND_MANUAL({
   ::pybind11::exec(R"(track_order(":: [before postamble]"))");

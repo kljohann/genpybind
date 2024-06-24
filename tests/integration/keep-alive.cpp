@@ -9,7 +9,7 @@ int Resource::alive = 0;
 
 Container::Container() { ++created, ++alive; }
 Container::~Container() { ++destroyed, --alive; }
-Container::Container(Resource *) :Container() {}
+Container::Container(Resource *) : Container() {}
 void Container::unannotated_sink(Resource *) {}
 void Container::keep_alive_sink(Resource *) {}
 Resource *Container::unannotated_source() { return new Resource(); }

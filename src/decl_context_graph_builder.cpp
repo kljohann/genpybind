@@ -25,7 +25,8 @@ findLookupContextDecl(const clang::DeclContext *decl_context) {
 bool DeclContextGraphBuilder::addEdgeForExposeHereAlias(
     const clang::TypedefNameDecl *decl) {
   const clang::Decl *parent = findLookupContextDecl(decl->getDeclContext());
-  const clang::TagDecl *target_decl = AnnotatedTypedefNameDecl::aliasTarget(decl);
+  const clang::TagDecl *target_decl =
+      AnnotatedTypedefNameDecl::aliasTarget(decl);
   assert(target_decl != nullptr);
 
   auto inserted = relocated_decls.try_emplace(target_decl, decl);
@@ -56,7 +57,8 @@ std::optional<DeclContextGraph> DeclContextGraphBuilder::buildGraph() {
   for (const clang::TypedefNameDecl *alias_decl : visitor.aliases) {
     const auto *annotated = llvm::dyn_cast_or_null<AnnotatedTypedefNameDecl>(
         annotations.get(alias_decl));
-    if (annotated == nullptr || (!annotated->encourage && !annotated->expose_here))
+    if (annotated == nullptr ||
+        (!annotated->encourage && !annotated->expose_here))
       continue;
     const clang::TagDecl *target_decl =
         AnnotatedTypedefNameDecl::aliasTarget(alias_decl);

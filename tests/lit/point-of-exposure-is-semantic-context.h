@@ -6,7 +6,7 @@
 
 namespace foo {
 namespace bar GENPYBIND(module) {
-  class X;
+class X;
 } // namespace )
 
 // The scope / point of exposure is determined by the semantic context of X's

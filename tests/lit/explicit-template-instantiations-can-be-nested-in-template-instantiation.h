@@ -4,8 +4,7 @@
 
 #include "genpybind.h"
 
-template <typename T>
-struct GENPYBIND(visible) Outer {
+template <typename T> struct GENPYBIND(visible) Outer {
   template <typename V> struct Inner {
     enum class Whatever { A, B, C };
   };
@@ -21,7 +20,8 @@ extern template struct GENPYBIND(visible) Outer<void>::Inner<float>;
 using InstantiationViaAlias GENPYBIND(expose_here) = Outer<bool>::Inner<int>;
 
 extern template struct Outer<double>::Inner<void>;
-using InstantiationOfDeclaredViaAlias GENPYBIND(expose_here) = Outer<double>::Inner<void>;
+using InstantiationOfDeclaredViaAlias
+    GENPYBIND(expose_here) = Outer<double>::Inner<void>;
 
 struct GENPYBIND(visible) Stop {};
 

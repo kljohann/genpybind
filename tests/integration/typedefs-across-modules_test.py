@@ -10,7 +10,9 @@ import typedefs_across_modules_definition as m_def
 
 def test_encourage_does_not_work_if_not_part_of_defining_modules_translation_unit():
     warning = warnings_recorder.pop()
-    assert len(warnings_recorder) == 0, f"unexpected warnings: {[str(m) for m in warnings_recorder]}"
+    assert (
+        len(warnings_recorder) == 0
+    ), f"unexpected warnings: {[str(m) for m in warnings_recorder]}"
     assert (
         "Reference to unknown type 'example::nested::EncouragedFromOtherModule'"
         in str(warning.message)

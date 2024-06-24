@@ -55,7 +55,7 @@ static const llvm::StringRef k_lozenge = "◊";
 bool genpybind::hasAnnotations(const clang::Decl *decl, bool allow_empty) {
   return llvm::any_of(
       decl->specific_attrs<clang::AnnotateAttr>(), [&](const auto *attr) {
-        ::llvm::StringRef annotation_text = attr->getAnnotation();
+        llvm::StringRef annotation_text = attr->getAnnotation();
         if (!annotation_text.starts_with(k_lozenge))
           return false;
         if (allow_empty)
@@ -64,17 +64,17 @@ bool genpybind::hasAnnotations(const clang::Decl *decl, bool allow_empty) {
       });
 }
 
-static Parser::Annotations parseAnnotations(const ::clang::Decl *decl) {
+static Parser::Annotations parseAnnotations(const clang::Decl *decl) {
   Parser::Annotations annotations;
 
-  for (const auto *attr : decl->specific_attrs<::clang::AnnotateAttr>()) {
-    ::llvm::StringRef annotation_text = attr->getAnnotation();
+  for (const auto *attr : decl->specific_attrs<clang::AnnotateAttr>()) {
+    llvm::StringRef annotation_text = attr->getAnnotation();
     if (!annotation_text.consume_front(k_lozenge))
       continue;
     handleAllErrors(Parser::parseAnnotations(annotation_text, annotations),
                     [attr, decl](const Parser::Error &error) {
-                      ::clang::ASTContext &context = decl->getASTContext();
-                      const ::clang::SourceLocation loc =
+                      clang::ASTContext &context = decl->getASTContext();
+                      const clang::SourceLocation loc =
                           context.getSourceManager().getExpansionLoc(
                               attr->getLocation());
                       error.report(loc, context.getDiagnostics());

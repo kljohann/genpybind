@@ -48,8 +48,7 @@ struct Something {
   ~Something();
 };
 
-template <typename T>
-struct Example {};
+template <typename T> struct Example {};
 
 // CHECK: methods.h:[[# @LINE + 3]]:1: error: Invalid annotation for named declaration: getter_for("property")
 // CHECK: methods.h:[[# @LINE + 2]]:1: error: Invalid annotation for named declaration: setter_for("property")

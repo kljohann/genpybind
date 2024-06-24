@@ -12,10 +12,10 @@
 // -----------------------------------------------------------------------------
 
 namespace okay GENPYBIND(visible) {
-  EXPOSED
+EXPOSED
 }
 namespace okay GENPYBIND(visible) {
-  EXPOSED
+EXPOSED
 }
 
 // -----------------------------------------------------------------------------
@@ -28,7 +28,7 @@ UNEXPOSED
 namespace something {
 // so it should not complain here:
 namespace common GENPYBIND(module(uiae)) {
-  EXPOSED
+EXPOSED
 }
 
 // nor here:
@@ -41,7 +41,7 @@ UNEXPOSED
 
 namespace other {
 namespace common GENPYBIND(module(nrtd)) {
-  EXPOSED
+EXPOSED
 }
 }
 
@@ -63,7 +63,7 @@ namespace not_pedantic GENPYBIND(visible,module(sloppy )) {
 // clang-format on
 
 namespace not_pedantic GENPYBIND(visible, module(sloppy)) {
-  EXPOSED
+EXPOSED
 }
 
 // -----------------------------------------------------------------------------
@@ -73,19 +73,19 @@ namespace not_pedantic GENPYBIND(visible, module(sloppy)) {
 // there needs to be an error because they cannot be treated the same.
 
 namespace oops GENPYBIND(visible) {
-  EXPOSED
+EXPOSED
 }
 
 // CHECK: decls.h:[[# @LINE + 2]]:11: error: Annotations need to match those of the first declaration
 // CHECK: decls.h:[[# @LINE - 5]]:11: note: declared here
 namespace oops GENPYBIND(visible, module(oopsie)) {
-  EXPOSED
+EXPOSED
 }
 
 // -----------------------------------------------------------------------------
 
 namespace only_original_is_annotated GENPYBIND(visible) {
-  EXPOSED
+EXPOSED
 }
 
 // CHECK: decls.h:[[# @LINE + 2]]:11: error: Annotations need to match those of the first declaration
@@ -103,7 +103,7 @@ EXPOSED
 // CHECK: decls.h:[[# @LINE + 2]]:11: error: Annotations need to match those of the first declaration
 // CHECK: decls.h:[[# @LINE - 5]]:11: note: declared here
 namespace only_annotated_later GENPYBIND(visible) {
-  EXPOSED
+EXPOSED
 }
 
 namespace only_annotated_later {
@@ -127,7 +127,7 @@ EXPOSED
 // CHECK: decls.h:[[# @LINE - 12]]:11: note: declared here
 namespace xyz GENPYBIND(module(xyz2)) {
 namespace common GENPYBIND(module(xyz3)) {
-  EXPOSED
+EXPOSED
 }
 }
 
@@ -135,7 +135,7 @@ namespace common GENPYBIND(module(xyz3)) {
 
 namespace abc {
 namespace common GENPYBIND(module(abc1)) {
-  EXPOSED
+EXPOSED
 }
 }
 

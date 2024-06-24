@@ -1,8 +1,6 @@
 #include "ostream.h"
 
-std::string Example::to_string() const {
-  return std::to_string(value);
-}
+std::string Example::to_string() const { return std::to_string(value); }
 
 std::ostream &operator<<(std::ostream &os, const Example &example) {
   return os << "Example(" << example.value << ")";

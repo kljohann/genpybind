@@ -50,6 +50,6 @@ def test_can_be_derived_from_abstract_base():
     assert isinstance(inst, m.Abstract)
     assert inst.abstract() == 7
     assert inst.defined_in_base() == 5
-    assert inst.overridden() == True
+    assert inst.overridden() is True
     assert m.Abstract.static_method() == m.DerivedFromAbstract.static_method()
-    assert m.Abstract.static_method() == True
+    assert m.Abstract.static_method() is True

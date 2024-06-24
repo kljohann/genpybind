@@ -6,15 +6,13 @@
 
 struct Encouraged {};
 
-template <typename X>
-struct Something {
+template <typename X> struct Something {
   typedef X x_type GENPYBIND(encourage);
 };
 
 typedef Something<Encouraged> Test GENPYBIND(expose_here);
 
-template <typename X>
-struct Outer {
+template <typename X> struct Outer {
   struct Inner {};
   typedef Something<Inner> y_type GENPYBIND(expose_here);
 };

@@ -53,8 +53,12 @@ enum class Enum { A, B, C };
 }
 
 // TODO: Non-type template parameters fail to be fully qualified.
-template <typename T> struct Type { static constexpr int value = 123; };
-template <int N> struct Integral { static constexpr int value = N; };
+template <typename T> struct Type {
+  static constexpr int value = 123;
+};
+template <int N> struct Integral {
+  static constexpr int value = N;
+};
 template <nested::Enum E> struct Enumeration {
   static constexpr int value = 123;
 };
@@ -78,7 +82,8 @@ int function_18(int value = Integral<123>::value) GENPYBIND(visible);
 int function_19(int value = Integral<N>::value) GENPYBIND(visible);
 int function_20(int value = Integral<count()>::value) GENPYBIND(visible);
 int function_21(int value = Integral<Holder::N>::value) GENPYBIND(visible);
-int function_22(int value = Integral<Holder::count()>::value) GENPYBIND(visible);
+int function_22(int value = Integral<Holder::count()>::value)
+    GENPYBIND(visible);
 int function_23(int value = Enumeration<Enum::A>::value) GENPYBIND(visible);
 // int function_24(int value = Reference<global_a>::value) GENPYBIND(visible);
 int function_25(int value = Pointer<&global_a>::value) GENPYBIND(visible);

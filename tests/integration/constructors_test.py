@@ -14,11 +14,11 @@ def test_can_have_docstring():
 def test_can_be_overloaded():
     inst = m.Example(12)
     assert inst.value == 12
-    assert inst.flag == False
+    assert inst.flag is False
 
     inst = m.Example(123, True)
     assert inst.value == 123
-    assert inst.flag == True
+    assert inst.flag is True
 
 
 def test_parameter_names_are_part_of_signature():
@@ -28,11 +28,11 @@ def test_parameter_names_are_part_of_signature():
 
 def test_accept_keyword_arguments():
     inst = m.Example(flag=True, value=42)
-    assert inst.flag == True
+    assert inst.flag is True
     assert inst.value == 42
 
     inst = m.Example(value=42)
-    assert inst.flag == False
+    assert inst.flag is False
     assert inst.value == 42
 
 

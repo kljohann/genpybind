@@ -78,7 +78,6 @@ def test_reverse_inline_friend_with_builtin_type_by_value():
 
 def test_inline_friend_with_builtin_type():
     inst = m.Number(5)
-    assert not inst == True
     assert not inst.__eq__(True)
 
 

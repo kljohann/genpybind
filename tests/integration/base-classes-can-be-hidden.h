@@ -35,8 +35,7 @@ struct GENPYBIND(visible, hide_base("::Base", "::Base2")) HideMultiple
       Base,
       Base2 {};
 
-template <typename T>
-struct GENPYBIND(visible) BaseTemplate {};
+template <typename T> struct GENPYBIND(visible) BaseTemplate {};
 
 struct GENPYBIND(visible, hide_base("::BaseTemplate")) HideTemplate
     : Base,
