@@ -8,7 +8,6 @@
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/StringRef.h>
 
-#include <algorithm>
 #include <vector>
 
 namespace clang {
@@ -45,11 +44,11 @@ public:
   LookupContextCollector(AnnotationStorage &annotations)
       : annotations(annotations) {}
 
-  bool shouldWalkTypesOfTypeLocs() const { return false; }
-  bool shouldVisitTemplateInstantiations() const { return true; }
-  bool shouldVisitImplicitCode() const { return false; }
+  static bool shouldWalkTypesOfTypeLocs() { return false; }
+  static bool shouldVisitTemplateInstantiations() { return true; }
+  static bool shouldVisitImplicitCode() { return false; }
 
-  bool TraverseStmt(clang::Stmt *) {
+  static bool TraverseStmt(clang::Stmt *) {
     // No need to visit statements and expressions.
     return true;
   }

@@ -1,7 +1,5 @@
 #include "genpybind/decl_context_graph.h"
 
-#include <type_traits>
-
 using namespace genpybind;
 
 DeclContextGraph::DeclContextGraph(const clang::TranslationUnitDecl *decl)

@@ -10,10 +10,8 @@
 #include <llvm/Support/ErrorHandling.h>
 #include <llvm/Support/raw_ostream.h>
 
-#include <algorithm>
 #include <cassert>
 #include <optional>
-#include <type_traits>
 #include <utility>
 
 using namespace genpybind::annotations;

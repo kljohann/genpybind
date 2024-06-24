@@ -396,11 +396,13 @@ clang::tooling::ArgumentsAdjuster getCpp17OrLaterAdjuster() {
       }
 
       // Skip language standard argument, if less than 2x.
+      // TODO: Take into account future changes to compiler's default values.
       if (arg.consume_front("-std=")) {
         // HACK: Simplistic check to also allow, e.g., gnu++2a.
         auto parts = arg.split("++");
         language_standard_prefix = parts.first;
-        if (!(uses_later_standard = parts.second.starts_with("2")))
+        uses_later_standard = parts.second.starts_with("2");
+        if (!uses_later_standard)
           continue;
       }
 

@@ -34,10 +34,8 @@
 
 #include <algorithm>
 #include <cassert>
-#include <cstddef>
 #include <iterator>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -177,7 +175,7 @@ public:
   }
 
   template <class NullaryF>
-  const ArgumentsDispatcher &onMatch(NullaryF handler) const {
+  [[nodiscard]] const ArgumentsDispatcher &onMatch(NullaryF handler) const {
     if (state == State::Matched)
       handler();
     return *this;

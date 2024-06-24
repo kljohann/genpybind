@@ -5,7 +5,7 @@
 #include "genpybind.h"
 
 GENPYBIND(noconvert(argument))
-void something(double argument, bool other);
+void example(double argument, bool other);
 
 // CHECK: specifiers.h:[[# @LINE + 6 ]]:6: error: Invalid argument specifier in 'noconvert' annotation: 'oops'
 // CHECK-NEXT: [[# @LINE + 4 ]] | GENPYBIND(noconvert(oops))

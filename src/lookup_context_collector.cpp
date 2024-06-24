@@ -1,7 +1,6 @@
 #include "genpybind/lookup_context_collector.h"
 
 #include "genpybind/annotated_decl.h"
-#include "genpybind/annotations/literal_value.h"
 #include "genpybind/diagnostics.h"
 
 #include <clang/AST/Type.h>

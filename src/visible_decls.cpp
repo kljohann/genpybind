@@ -1,7 +1,6 @@
 #include "genpybind/visible_decls.h"
 
 #include "genpybind/annotated_decl.h"
-#include "genpybind/annotations/literal_value.h"
 #include "genpybind/decl_context_graph.h"
 
 #include <clang/AST/ASTContext.h>
@@ -55,6 +54,7 @@ public:
     return inlining_policy->shouldInline(parent_decl);
   }
 
+  // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
   void FoundDecl(clang::NamedDecl *proposed_decl, clang::NamedDecl *hiding,
                  clang::DeclContext *, bool in_base_class) override {
     bool is_visible_in_scope = hiding == nullptr;

@@ -1,7 +1,6 @@
 #include "genpybind/decl_context_graph_builder.h"
 
 #include "genpybind/annotated_decl.h"
-#include "genpybind/annotations/annotation.h"
 #include "genpybind/diagnostics.h"
 #include "genpybind/lookup_context_collector.h"
 
@@ -12,9 +11,7 @@
 #include <llvm/Support/Casting.h>
 
 #include <cassert>
-#include <type_traits>
 #include <utility>
-#include <vector>
 
 using namespace genpybind;
 

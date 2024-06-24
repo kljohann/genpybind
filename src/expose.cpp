@@ -46,13 +46,11 @@
 #include <llvm/Support/ErrorHandling.h>
 #include <llvm/Support/raw_ostream.h>
 
-#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <initializer_list>
 #include <iterator>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -80,8 +78,8 @@ public:
 /// Where successful, the global namespace specifier (`::`) is prepended to all
 /// nested name specifiers.
 /// Many useful facilities are not exposed in the clang API, e.g. the helper
-/// functions in `QualTypeNames.cpp` and parts of `TreeTransform.h`.  If they
-/// are at some point, this hack should be replaced altogether.
+/// functions in `QualTypeNames.cpp` and parts of `TreeTransform.h`.
+/// TODO: If they are at some point, this hack should be replaced altogether.
 struct AttemptFullQualificationPrinter : clang::PrinterHelper {
   const clang::ASTContext &context;
   clang::PrintingPolicy printing_policy;

@@ -12,7 +12,6 @@
 #include <clang/Lex/Token.h>
 #include <llvm/ADT/StringRef.h>
 
-#include <algorithm>
 #include <cassert>
 #include <utility>
 

@@ -268,7 +268,7 @@ void genpybind::hideNamespacesBasedOnExposeInAnnotation(
 
     /// Returns whether the current node is dominated by a previously
     /// marked node.
-    bool isDominated() const { return dominator != nullptr; }
+    [[nodiscard]] bool isDominated() const { return dominator != nullptr; }
     void setDominator(NodeRef node) {
       assert(dominator == nullptr);
       dominator = node;

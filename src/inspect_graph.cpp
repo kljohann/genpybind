@@ -15,8 +15,6 @@
 #include <llvm/Support/raw_ostream.h>
 
 #include <string>
-#include <type_traits>
-#include <utility>
 
 namespace llvm {
 template <class GraphType> struct GraphTraits;
