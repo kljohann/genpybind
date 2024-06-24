@@ -17,19 +17,11 @@
 using namespace genpybind::annotations;
 
 static inline bool isIdentifierStart(char c) {
-#if LLVM_VERSION_MAJOR >= 14
   return clang::isAsciiIdentifierStart(static_cast<unsigned char>(c));
-#else
-  return clang::isIdentifierHead(static_cast<unsigned char>(c));
-#endif
 }
 
 static inline bool isIdentifierContinue(char c) {
-#if LLVM_VERSION_MAJOR >= 14
   return clang::isAsciiIdentifierContinue(static_cast<unsigned char>(c));
-#else
-  return clang::isIdentifierBody(static_cast<unsigned char>(c));
-#endif
 }
 
 auto Parser::Tokenizer::tokenize() -> Token {

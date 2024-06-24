@@ -231,16 +231,9 @@ public:
       bool remove_file_on_signal = true; // not thread-safe
       bool use_temporary = true;
       bool create_missing_directories = false;
-#if LLVM_VERSION_MAJOR >= 12
       auto stream =
           compiler.createOutputFile(output_path, binary, remove_file_on_signal,
                                     use_temporary, create_missing_directories);
-#else
-      llvm::StringRef base_input, extension;
-      auto stream = compiler.createOutputFile(
-          output_path, binary, remove_file_on_signal, base_input, extension,
-          use_temporary, create_missing_directories);
-#endif
       if (stream == nullptr)
         return;
       output_streams.push_back(std::move(stream));
