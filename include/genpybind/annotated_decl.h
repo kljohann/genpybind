@@ -51,12 +51,8 @@ struct NamedDeclAttrs {
   std::optional<bool> visible;
 
   static bool supports(const clang::NamedDecl *decl);
-  friend bool operator==(NamedDeclAttrs const &lhs, NamedDeclAttrs const &rhs) {
-    return lhs.spelling == rhs.spelling && lhs.visible == rhs.visible;
-  }
-  friend bool operator!=(NamedDeclAttrs const &lhs, NamedDeclAttrs const &rhs) {
-    return !(lhs == rhs);
-  }
+  friend bool operator==(NamedDeclAttrs const &,
+                         NamedDeclAttrs const &) = default;
 };
 
 bool processAnnotation(const clang::NamedDecl *decl,
@@ -68,14 +64,8 @@ struct NamespaceDeclAttrs {
   std::vector<std::string> only_expose_in;
 
   static bool supports(const clang::NamedDecl *decl);
-  friend bool operator==(NamespaceDeclAttrs const &lhs,
-                         NamespaceDeclAttrs const &rhs) {
-    return lhs.module == rhs.module && lhs.only_expose_in == rhs.only_expose_in;
-  }
-  friend bool operator!=(NamespaceDeclAttrs const &lhs,
-                         NamespaceDeclAttrs const &rhs) {
-    return !(lhs == rhs);
-  }
+  friend bool operator==(NamespaceDeclAttrs const &,
+                         NamespaceDeclAttrs const &) = default;
 };
 
 bool processAnnotation(const clang::NamedDecl *decl,
@@ -87,13 +77,8 @@ struct EnumDeclAttrs {
   std::optional<bool> export_values;
 
   static bool supports(const clang::NamedDecl *decl);
-  friend bool operator==(EnumDeclAttrs const &lhs, EnumDeclAttrs const &rhs) {
-    return lhs.arithmetic == rhs.arithmetic &&
-           lhs.export_values == rhs.export_values;
-  }
-  friend bool operator!=(EnumDeclAttrs const &lhs, EnumDeclAttrs const &rhs) {
-    return !(lhs == rhs);
-  }
+  friend bool operator==(EnumDeclAttrs const &,
+                         EnumDeclAttrs const &) = default;
 };
 
 bool processAnnotation(const clang::NamedDecl *decl,
@@ -107,17 +92,8 @@ struct RecordDeclAttrs {
   std::string holder_type;
 
   static bool supports(const clang::NamedDecl *decl);
-  friend bool operator==(RecordDeclAttrs const &lhs,
-                         RecordDeclAttrs const &rhs) {
-    return lhs.dynamic_attr == rhs.dynamic_attr &&
-           lhs.hide_base == rhs.hide_base &&
-           lhs.inline_base == rhs.inline_base &&
-           lhs.holder_type == rhs.holder_type;
-  }
-  friend bool operator!=(RecordDeclAttrs const &lhs,
-                         RecordDeclAttrs const &rhs) {
-    return !(lhs == rhs);
-  }
+  friend bool operator==(RecordDeclAttrs const &,
+                         RecordDeclAttrs const &) = default;
 };
 
 bool processAnnotation(const clang::NamedDecl *decl,
@@ -131,14 +107,8 @@ struct TypedefNameDeclAttrs {
   bool expose_here = false;
 
   static bool supports(const clang::NamedDecl *decl);
-  friend bool operator==(TypedefNameDeclAttrs const &lhs,
-                         TypedefNameDeclAttrs const &rhs) {
-    return lhs.encourage == rhs.encourage && lhs.expose_here == rhs.expose_here;
-  }
-  friend bool operator!=(TypedefNameDeclAttrs const &lhs,
-                         TypedefNameDeclAttrs const &rhs) {
-    return !(lhs == rhs);
-  }
+  friend bool operator==(TypedefNameDeclAttrs const &,
+                         TypedefNameDeclAttrs const &) = default;
 };
 
 bool processAnnotation(const clang::NamedDecl *decl,
@@ -151,16 +121,8 @@ struct FieldOrVarDeclAttrs {
   bool postamble = false;
 
   static bool supports(const clang::NamedDecl *decl);
-  friend bool operator==(FieldOrVarDeclAttrs const &lhs,
-                         FieldOrVarDeclAttrs const &rhs) {
-    return lhs.readonly == rhs.readonly &&
-           lhs.manual_bindings == rhs.manual_bindings && lhs.postamble &&
-           rhs.postamble;
-  }
-  friend bool operator!=(FieldOrVarDeclAttrs const &lhs,
-                         FieldOrVarDeclAttrs const &rhs) {
-    return !(lhs == rhs);
-  }
+  friend bool operator==(FieldOrVarDeclAttrs const &,
+                         FieldOrVarDeclAttrs const &) = default;
 };
 
 bool processAnnotation(const clang::NamedDecl *decl,
@@ -172,14 +134,8 @@ bool processAnnotation(const clang::NamedDecl *decl,
 /// using `MethodDeclAttrs`s.
 struct OperatorDeclAttrs {
   static bool supports(const clang::NamedDecl *decl);
-  friend bool operator==(OperatorDeclAttrs const & /*lhs*/,
-                         OperatorDeclAttrs const & /*rhs*/) {
-    return true;
-  }
-  friend bool operator!=(OperatorDeclAttrs const &lhs,
-                         OperatorDeclAttrs const &rhs) {
-    return !(lhs == rhs);
-  }
+  friend bool operator==(OperatorDeclAttrs const &,
+                         OperatorDeclAttrs const &) = default;
 };
 
 bool processAnnotation(const clang::NamedDecl *decl,
@@ -188,14 +144,8 @@ bool processAnnotation(const clang::NamedDecl *decl,
 
 struct ConversionFunctionDeclAttrs {
   static bool supports(const clang::NamedDecl *decl);
-  friend bool operator==(ConversionFunctionDeclAttrs const & /*lhs*/,
-                         ConversionFunctionDeclAttrs const & /*rhs*/) {
-    return true;
-  }
-  friend bool operator!=(ConversionFunctionDeclAttrs const &lhs,
-                         ConversionFunctionDeclAttrs const &rhs) {
-    return !(lhs == rhs);
-  }
+  friend bool operator==(ConversionFunctionDeclAttrs const &,
+                         ConversionFunctionDeclAttrs const &) = default;
 };
 
 bool processAnnotation(const clang::NamedDecl *decl,
@@ -207,14 +157,8 @@ struct MethodDeclAttrs {
   llvm::SmallSet<std::string, 1> setter_for;
 
   static bool supports(const clang::NamedDecl *decl);
-  friend bool operator==(MethodDeclAttrs const &lhs,
-                         MethodDeclAttrs const &rhs) {
-    return lhs.getter_for == rhs.getter_for && lhs.setter_for == rhs.setter_for;
-  }
-  friend bool operator!=(MethodDeclAttrs const &lhs,
-                         MethodDeclAttrs const &rhs) {
-    return !(lhs == rhs);
-  }
+  friend bool operator==(MethodDeclAttrs const &,
+                         MethodDeclAttrs const &) = default;
 };
 
 bool processAnnotation(const clang::NamedDecl *decl,
@@ -225,14 +169,8 @@ struct ConstructorDeclAttrs {
   bool implicit_conversion = false;
 
   static bool supports(const clang::NamedDecl *decl);
-  friend bool operator==(ConstructorDeclAttrs const &lhs,
-                         ConstructorDeclAttrs const &rhs) {
-    return lhs.implicit_conversion == rhs.implicit_conversion;
-  }
-  friend bool operator!=(ConstructorDeclAttrs const &lhs,
-                         ConstructorDeclAttrs const &rhs) {
-    return !(lhs == rhs);
-  }
+  friend bool operator==(ConstructorDeclAttrs const &,
+                         ConstructorDeclAttrs const &) = default;
 };
 
 bool processAnnotation(const clang::NamedDecl *decl,
@@ -246,16 +184,8 @@ struct FunctionDeclAttrs {
   std::string return_value_policy;
 
   static bool supports(const clang::NamedDecl *decl);
-  friend bool operator==(FunctionDeclAttrs const &lhs,
-                         FunctionDeclAttrs const &rhs) {
-    return lhs.keep_alive == rhs.keep_alive && lhs.noconvert == rhs.noconvert &&
-           lhs.required == rhs.required &&
-           lhs.return_value_policy == rhs.return_value_policy;
-  }
-  friend bool operator!=(FunctionDeclAttrs const &lhs,
-                         FunctionDeclAttrs const &rhs) {
-    return !(lhs == rhs);
-  }
+  friend bool operator==(FunctionDeclAttrs const &,
+                         FunctionDeclAttrs const &) = default;
 };
 
 bool processAnnotation(const clang::NamedDecl *decl,
@@ -311,7 +241,7 @@ public:
   bool equal(const clang::NamedDecl *left, const clang::NamedDecl *right) const;
 
   auto has(const clang::NamedDecl *decl) const {
-    return std::get<Map<NamedDeclAttrs>>(attrs_by_decl).count(decl) != 0;
+    return std::get<Map<NamedDeclAttrs>>(attrs_by_decl).contains(decl);
   }
 
   auto size() const {
