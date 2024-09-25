@@ -1,6 +1,6 @@
-import only_expose_in_b as m
-
 import inspect
+
+import only_expose_in_b as m
 
 
 def test_only_expected_decls_are_exposed():

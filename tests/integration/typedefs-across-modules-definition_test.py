@@ -1,6 +1,6 @@
-import typedefs_across_modules_definition as m
-
 import inspect
+
+import typedefs_across_modules_definition as m
 
 
 def test_only_expected_decls_are_available():

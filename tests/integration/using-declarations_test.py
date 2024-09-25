@@ -1,6 +1,5 @@
-import using_declarations as m
-
 import pytest
+import using_declarations as m
 
 
 @pytest.mark.xfail(reason="bug: uses address of base variable")

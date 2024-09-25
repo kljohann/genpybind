@@ -1,5 +1,4 @@
 import methods as m
-
 import pytest
 
 
@@ -80,7 +79,7 @@ def test_conversion_function_does_not_imply_implicit_conversion():
 
 def test_call_operator_is_exposed():
     inst = m.Example()
-    assert hasattr(inst, "__call__")
+    assert callable(inst)
     assert inst() == 123
     assert inst(321) == 321
 

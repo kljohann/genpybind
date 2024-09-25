@@ -1,5 +1,5 @@
 import inline_base as m
-from helpers import get_user_mro, get_proper_members
+from helpers import get_proper_members, get_user_mro
 
 
 def test_inlining_preserves_decls_but_not_inheritance():

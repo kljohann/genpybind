@@ -1,7 +1,5 @@
 import default_arguments as m
-
 import pytest
-
 
 EXPECTED = {
     1: 123,

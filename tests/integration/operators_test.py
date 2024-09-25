@@ -1,11 +1,8 @@
-import operators as m
-
 import operator
 
+import operators as m
 import pytest
-
 from helpers import get_proper_members
-
 
 assert (not NotImplemented) is False
 

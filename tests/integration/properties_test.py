@@ -1,5 +1,4 @@
 import properties as m
-
 import pytest
 
 

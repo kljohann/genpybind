@@ -1,6 +1,6 @@
-import expose_here_propagates_visibility_to_nested_contexts as m
-
 import inspect
+
+import expose_here_propagates_visibility_to_nested_contexts as m
 
 
 def test_complete_hierarchy_is_present():

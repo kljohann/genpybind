@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 
-import pytest
-
 import keep_alive as m
+import pytest
 
 
 @dataclass

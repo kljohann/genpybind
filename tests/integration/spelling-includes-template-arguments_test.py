@@ -12,9 +12,7 @@ def test_expected_instantiations_are_present():
         "WithType_with_types_arguments_X_",
         "WithType_with_types_arguments_Y_",
     }
-    names = set(
-        name for name in dir(m) if name[0].isupper() and not name.startswith("__")
-    )
+    names = {name for name in dir(m) if name[0].isupper() and not name.startswith("__")}
     assert names == expected
 
 

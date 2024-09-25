@@ -1,7 +1,7 @@
 import re
-import pytest
 
 import args_and_kwargs as m
+import pytest
 
 
 def test_accepts_arbitrary_number_of_arguments():

@@ -1,6 +1,5 @@
-import pytest
-
 import enums_can_be_arithmetic as m
+import pytest
 
 
 def test_arithmetic_can_use_bitwise_operators():

@@ -8,11 +8,14 @@ def test_last_name_wins():
     assert m.drei.X is m.X
     assert not hasattr(m, "three")
     assert m.quatre.X is m.X
-    assert not hasattr(m, "four") and not hasattr(m, "vier")
+    assert not hasattr(m, "four")
+    assert not hasattr(m, "vier")
     assert m.cinq.X is m.X
-    assert not hasattr(m, "five") and not hasattr(m, "fuenf")
+    assert not hasattr(m, "five")
+    assert not hasattr(m, "fuenf")
     assert m.seis.X is m.X
-    assert not hasattr(m, "six") and not hasattr(m, "sechs")
+    assert not hasattr(m, "six")
+    assert not hasattr(m, "sechs")
 
 
 def test_can_be_reopened():

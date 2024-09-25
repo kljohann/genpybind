@@ -1,7 +1,7 @@
-import ostream as m
-
 import inspect
 import re
+
+import ostream as m
 
 
 def test_example_has_repr_and_str():
