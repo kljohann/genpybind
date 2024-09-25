@@ -9,6 +9,10 @@ class args;
 class kwargs;
 } // namespace pybind11
 
+// This is fine: `args` implies `kw_only` for all remaining arguments.
+GENPYBIND(visible)
+void foo(const pybind11::args &args, bool oops);
+
 // CHECK: parameters.h:[[# @LINE + 2]]:48: error: cannot be followed by other parameters
 GENPYBIND(visible)
 void foo(pybind11::args args, pybind11::kwargs kwargs, bool oops);

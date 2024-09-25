@@ -310,16 +310,16 @@ static void emitParameterTypes(llvm::raw_ostream &os,
   }
 }
 
-static bool isPybind11ArgsType(clang::QualType parameter_type) {
-  const clang::CXXRecordDecl *record = nullptr;
-  if ((record = parameter_type->getAsCXXRecordDecl()) == nullptr &&
-      (record = parameter_type->getPointeeCXXRecordDecl()) == nullptr) {
-    return false;
-  }
-  assert(record != nullptr);
-  clang::ast_matchers::internal::HasNameMatcher matcher(
+static llvm::StringRef getPybind11ArgsType(clang::QualType parameter_type) {
+  static const clang::ast_matchers::internal::HasNameMatcher matcher(
       {"::pybind11::args", "::pybind11::kwargs"});
-  return matcher.matchesNode(*record);
+  const clang::CXXRecordDecl *record = parameter_type->getAsCXXRecordDecl();
+  if (record == nullptr)
+    record = parameter_type->getPointeeCXXRecordDecl();
+  if (record == nullptr || !matcher.matchesNode(*record))
+    return {};
+  assert(record->getIdentifier());
+  return record->getName();
 }
 
 static void emitParameters(llvm::raw_ostream &os,
@@ -329,16 +329,19 @@ static void emitParameters(llvm::raw_ostream &os,
   auto printing_policy = getPrintingPolicyForExposedNames(context);
   AttemptFullQualificationPrinter printer_helper{context, printing_policy};
   unsigned index = 0;
-  const clang::ParmVarDecl *last_args_or_kwargs_param_decl = nullptr;
+  const clang::ParmVarDecl *last_kwargs_param = nullptr;
   for (const clang::ParmVarDecl *param : function->parameters()) {
-    // `arg()` should not be emitted for `pybind11:args` or `pybind11::kwargs`
-    // parameters and they need to be the last parameters of the function.
-    if (isPybind11ArgsType(param->getType())) {
-      last_args_or_kwargs_param_decl = param;
+    // `arg()` should not be emitted for `pybind11::args` or `pybind11::kwargs`
+    // parameters.  `kwargs` needs to be the last parameter of the function.
+    if (llvm::StringRef kind = getPybind11ArgsType(param->getType());
+        kind == "kwargs") {
+      last_kwargs_param = param;
+      continue;
+    } else if (!kind.empty()) {
       continue;
     }
-    if (last_args_or_kwargs_param_decl != nullptr) {
-      Diagnostics::report(last_args_or_kwargs_param_decl,
+    if (last_kwargs_param != nullptr) {
+      Diagnostics::report(last_kwargs_param,
                           Diagnostics::Kind::TrailingParametersError);
       break;
     }
@@ -350,11 +353,9 @@ static void emitParameters(llvm::raw_ostream &os,
     if (attrs.required.count(index) != 0)
       os << ".none(false)";
     if (const clang::Expr *expr = param->getDefaultArg()) {
-      // os << "/* = ";
       os << " = ";
       expr->printPretty(os, &printer_helper, printing_policy, /*Indentation=*/0,
                         /*NewlineSymbol=*/"\n", &context);
-      // os << " */";
     }
     ++index;
   }
