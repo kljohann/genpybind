@@ -5,7 +5,6 @@ def test_values_are_exported():
     for name in [
         "Unscoped",
         "UnscopedExport",
-        "UnscopedExportDefault",
         "UnscopedExportTrue",
     ]:
         enum = getattr(m, name)

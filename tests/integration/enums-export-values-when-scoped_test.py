@@ -9,7 +9,7 @@ def test_values_are_exported():
 
 
 def test_values_are_not_exported():
-    for name in ["Scoped", "ScopedExportDefault", "ScopedExportFalse"]:
+    for name in ["Scoped", "ScopedExportFalse"]:
         enum = getattr(m, name)
         for suffix in ["A", "B", "C"]:
             assert not hasattr(m, f"{name}{suffix}")

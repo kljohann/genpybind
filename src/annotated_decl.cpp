@@ -380,9 +380,7 @@ bool genpybind::processAnnotation(const clang::NamedDecl *decl,
     return false;
 
   case AnnotationKind::Arithmetic:
-    return dispatch
-        .nullary([&]() { attrs.arithmetic = true; })
-        // TODO: "default"?
+    return dispatch.nullary([&]() { attrs.arithmetic = true; })
         .unary(LiteralValue::Kind::Boolean,
                [&](const LiteralValue &value) {
                  attrs.arithmetic = value.getBoolean();
@@ -390,12 +388,7 @@ bool genpybind::processAnnotation(const clang::NamedDecl *decl,
         .checkMatch();
 
   case AnnotationKind::ExportValues:
-    return dispatch
-        .nullary([&]() { attrs.export_values = true; })
-        // TODO: Remove "default"?
-        .unary(
-            LiteralValue::Kind::Default,
-            [&](const LiteralValue &) { attrs.export_values = std::nullopt; })
+    return dispatch.nullary([&]() { attrs.export_values = true; })
         .unary(LiteralValue::Kind::Boolean,
                [&](const LiteralValue &value) {
                  attrs.export_values = value.getBoolean();
@@ -420,9 +413,7 @@ bool genpybind::processAnnotation(const clang::NamedDecl *decl,
     return false;
 
   case AnnotationKind::DynamicAttr:
-    return dispatch
-        .nullary([&]() { attrs.dynamic_attr = true; })
-        // TODO: "default"?
+    return dispatch.nullary([&]() { attrs.dynamic_attr = true; })
         .unary(LiteralValue::Kind::Boolean,
                [&](const LiteralValue &value) {
                  attrs.dynamic_attr = value.getBoolean();

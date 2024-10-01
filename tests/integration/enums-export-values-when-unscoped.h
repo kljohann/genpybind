@@ -10,12 +10,6 @@ enum GENPYBIND(export_values) UnscopedExport {
   UnscopedExportC,
 };
 
-enum GENPYBIND(export_values(default)) UnscopedExportDefault {
-  UnscopedExportDefaultA,
-  UnscopedExportDefaultB,
-  UnscopedExportDefaultC,
-};
-
 enum GENPYBIND(export_values(true)) UnscopedExportTrue {
   UnscopedExportTrueA,
   UnscopedExportTrueB,
