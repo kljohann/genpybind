@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15.5)
+cmake_minimum_required(VERSION 3.20.0)
 project(genpybind LANGUAGES C CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS YES)
@@ -16,11 +16,12 @@ add_compile_options(
   -Wall -Wextra -Wconversion -pedantic -pedantic-errors
 )
 
-find_package(Clang REQUIRED
-  HINTS "/usr/lib64/cmake/clang"
-)
+find_package(Clang REQUIRED HINTS "/usr/lib64/cmake/clang")
+message(STATUS "Found Clang ${Clang_VERSION}; using ClangConfig.cmake in: ${Clang_DIR}")
 
-list(APPEND CMAKE_MODULE_PATH "${LLVM_CMAKE_DIR}")
+find_package(LLVM REQUIRED CONFIG)
+message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}; using LLVMConfig.cmake in: ${LLVM_DIR}")
+
 include(AddLLVM)
 
 find_program(IWYU_PATH NAMES include-what-you-use iwyu)
@@ -30,8 +31,7 @@ if(NOT IWYU_PATH STREQUAL "IWYU_PATH-NOTFOUND")
     -Xiwyu --mapping_file=${CMAKE_CURRENT_SOURCE_DIR}/genpybind.imp
     -Xiwyu --transitive_includes_only
     -Xiwyu --quoted_includes_first
-    # TODO: Use ${CLANG_VERSION} instead
-    -resource-dir=${LLVM_LIBRARY_DIR}/clang/${LLVM_PACKAGE_VERSION}
+    -resource-dir=${LLVM_LIBRARY_DIR}/clang/${Clang_VERSION}
   )
 endif()
 
@@ -58,7 +58,14 @@ add_library(genpybind SHARED
 # Use same compiler flags as LLVM.
 llvm_update_compile_flags(genpybind)
 
-target_link_libraries(genpybind PUBLIC LLVM clang-cpp)
+# Link against libLLVM.so, if available.
+if(LLVM_LINK_LLVM_DYLIB)
+  set(llvm_libs LLVM)
+else()
+  llvm_map_components_to_libnames(llvm_libs support)
+endif()
+
+target_link_libraries(genpybind PUBLIC ${llvm_libs} clang-cpp)
 target_include_directories(genpybind
   PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   # PUBLIC $<INSTALL_INTERFACE:...>
@@ -73,6 +80,8 @@ target_compile_definitions(genpybind
 add_executable(genpybind-tool
   src/tool.cpp
 )
+
+llvm_update_compile_flags(genpybind-tool)
 
 target_link_libraries(genpybind-tool PRIVATE genpybind)
 

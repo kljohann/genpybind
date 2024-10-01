@@ -3,6 +3,7 @@ find_package(GTest 1.10 REQUIRED CONFIG)
 set(CMAKE_CXX_STANDARD 17)
 
 add_executable(genpybind-tests)
+llvm_update_compile_flags(genpybind-tests)
 target_link_libraries(genpybind-tests
   PRIVATE genpybind GTest::gmock GTest::gmock_main)
 file(GLOB_RECURSE test_files CONFIGURE_DEPENDS "*_test.cpp")
