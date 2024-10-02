@@ -9,18 +9,16 @@
 #include <llvm/ADT/SmallPtrSet.h>
 #include <llvm/ADT/SmallSet.h>
 #include <llvm/ADT/SmallVector.h>
-#include <llvm/ADT/StringRef.h>
-#include <llvm/Support/Casting.h>
 
+#include <cassert>
 #include <optional>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 namespace clang {
-class CXXConstructorDecl;
-class CXXMethodDecl;
 class Decl;
 class NamedDecl;
 class TypedefNameDecl;

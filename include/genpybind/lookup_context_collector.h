@@ -5,12 +5,12 @@
 #pragma once
 
 #include "genpybind/annotated_decl.h"
-#include "genpybind/diagnostics.h"
 
 #include <clang/AST/Decl.h>
 #include <clang/AST/RecursiveASTVisitor.h>
 #include <llvm/ADT/DenseMap.h>
 #include <llvm/ADT/StringRef.h>
+#include <llvm/Support/Casting.h>
 
 #include <vector>
 

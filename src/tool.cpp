@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: MIT
 
 #include "genpybind/annotated_decl.h"
-#include "genpybind/annotations/literal_value.h"
 #include "genpybind/decl_context_graph.h"
 #include "genpybind/decl_context_graph_builder.h"
 #include "genpybind/decl_context_graph_processing.h"
@@ -19,7 +18,6 @@
 #include <clang/AST/Decl.h>
 #include <clang/Basic/Diagnostic.h>
 #include <clang/Basic/FileEntry.h>
-#include <clang/Basic/FileManager.h>
 #include <clang/Basic/SourceManager.h>
 #include <clang/Basic/Version.inc> // IWYU pragma: keep
 #include <clang/Config/config.h>
@@ -36,7 +34,6 @@
 #include <llvm/ADT/ArrayRef.h>
 #include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/SmallString.h>
-#include <llvm/ADT/SmallVector.h>
 #include <llvm/ADT/StringRef.h>
 #include <llvm/ADT/Twine.h>
 #include <llvm/Support/CommandLine.h>
@@ -49,6 +46,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <initializer_list>
 #include <memory>
 #include <string>

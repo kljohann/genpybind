@@ -7,7 +7,6 @@
 #include "genpybind/decl_context_graph_processing.h"
 #include "genpybind/visible_decls.h"
 
-#include <clang/Basic/OperatorKinds.h>
 #include <llvm/ADT/StringRef.h>
 
 #include <map>
@@ -28,6 +27,7 @@ class NamespaceDecl;
 class QualType;
 class Sema;
 class TypeDecl;
+enum OverloadedOperatorKind : int;
 } // namespace clang
 namespace llvm {
 class raw_ostream;

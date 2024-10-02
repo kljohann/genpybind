@@ -12,7 +12,6 @@
 
 namespace clang {
 class Decl;
-class TagDecl;
 class TranslationUnitDecl;
 class TypedefNameDecl;
 } // namespace clang

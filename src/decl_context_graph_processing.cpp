@@ -299,7 +299,7 @@ void genpybind::hideNamespacesBasedOnExposeInAnnotation(
           llvm::dyn_cast<clang::NamespaceDecl>(it->getDecl());
       const auto attrs = annotations.get<NamespaceDeclAttrs>(namespace_decl);
       return attrs.has_value() && !attrs->only_expose_in.empty() &&
-             !llvm::any_of(attrs->only_expose_in, [&](const std::string &name) {
+             !llvm::any_of(attrs->only_expose_in, [&](llvm::StringRef name) {
                return name == module_name;
              });
     };

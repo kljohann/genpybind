@@ -2,4 +2,4 @@
 //
 // SPDX-License-Identifier: MIT
 
-#include "only-expose-in-a.h"
+#include "only-expose-in-a.h" // IWYU pragma: keep

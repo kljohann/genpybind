@@ -10,7 +10,6 @@
 
 #include <clang/AST/ASTContext.h>
 #include <clang/AST/Decl.h>
-#include <clang/AST/Type.h>
 #include <clang/Basic/Diagnostic.h>
 #include <llvm/Support/Casting.h>
 
