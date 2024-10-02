@@ -1,1 +1,1 @@
-../lit/genpybind.h
+../../genpybind.h

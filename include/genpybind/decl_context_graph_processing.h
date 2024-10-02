@@ -67,7 +67,7 @@ declContextsWithVisibleNamedDecls(clang::Sema &sema,
                                   const AnnotationStorage &annotations,
                                   const EffectiveVisibilityMap &visibilities);
 
-/// Change visibility of namespaces, s.t. namespaces with an `expose_in`
+/// Change visibility of namespaces, s.t. namespaces with an `only_expose_in`
 /// annotation are only included, if it matches the `module_name`.
 /// This also affects the visibility of nested declarations.
 void hideNamespacesBasedOnExposeInAnnotation(
