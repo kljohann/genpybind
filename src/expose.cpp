@@ -784,8 +784,10 @@ void TranslationUnitExposer::emitModule(
         *ostreams[index++ * ostreams.size() / worklist.size()];
     // Also emit declaration to this stream, in order to avoid
     // `-Wmissing-declarations` warnings.
-    emit_expose_declarator(os, item);
-    os << ";\n";
+    if (&os != &main_stream) {
+      emit_expose_declarator(os, item);
+      os << ";\n";
+    }
     emit_expose_declarator(os, item);
     os << " {\n";
 
