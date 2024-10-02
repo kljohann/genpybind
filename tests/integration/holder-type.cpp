@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+//
+// SPDX-License-Identifier: MIT
+
 #include "holder-type.h"
 
 std::shared_ptr<Shared> Shared::clone() { return shared_from_this(); }

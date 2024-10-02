@@ -1,6 +1,11 @@
+// SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+//
+// SPDX-License-Identifier: MIT
+//
 // RUN: genpybind-tool --verbose %s -- 2>&1 \
 // RUN: -DEXAMPLE_MARKER \
 // RUN: | FileCheck %s --strict-whitespace
+
 #pragma once
 
 // NOTE: The trailing `--` above should prevent genpybind to infer the command from

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+#
+# SPDX-License-Identifier: MIT
+
 import explicit_function_template_instantiation as m
 import pytest
 

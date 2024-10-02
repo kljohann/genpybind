@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+#
+# SPDX-License-Identifier: MIT
+
 import base_classes as m
 from helpers import get_user_mro
 

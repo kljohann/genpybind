@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+//
+// SPDX-License-Identifier: MIT
+
 #include "default-arguments.h"
 
 const nested::A nested::global_a = nested::A(1234);

@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+//
+// SPDX-License-Identifier: MIT
+
 #include "fields-and-variables.h"
 
 int global_variable = 123;

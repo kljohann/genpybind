@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+#
+# SPDX-License-Identifier: MIT
+
 [submodule "pybind11"]
 	path = extern/pybind11
 	url = https://github.com/pybind/pybind11

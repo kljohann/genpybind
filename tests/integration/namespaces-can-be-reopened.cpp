@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+//
+// SPDX-License-Identifier: MIT
+
 #include "namespaces-can-be-reopened.h"
 
 bool example::hidden_in_first() { return true; }

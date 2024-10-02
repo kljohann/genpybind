@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+#
+# SPDX-License-Identifier: MIT
+
 import enumerators_can_have_annotations as m
 
 

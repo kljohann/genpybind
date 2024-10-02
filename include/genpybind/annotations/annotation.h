@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+//
+// SPDX-License-Identifier: MIT
+
 #pragma once
 
 #include "genpybind/annotations/literal_value.h" // IWYU pragma: keep

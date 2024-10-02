@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+//
+// SPDX-License-Identifier: MIT
+
 #include "genpybind/annotations/annotation.h"
 
 #include <llvm/Support/ErrorHandling.h>

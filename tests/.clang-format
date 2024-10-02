@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+#
+# SPDX-License-Identifier: MIT
+
 BasedOnStyle: InheritParentConfig
 # Misbehaves for namespaces with `GENPYBIND` annotations.
 FixNamespaceComments: false

@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+
+SPDX-License-Identifier: MIT
+-->
+
 # genpybind
 
 *Autogeneration of Python bindings from manually annotated C++ headers*

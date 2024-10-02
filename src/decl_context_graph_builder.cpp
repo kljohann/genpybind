@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+//
+// SPDX-License-Identifier: MIT
+
 #include "genpybind/decl_context_graph_builder.h"
 
 #include "genpybind/annotated_decl.h"

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+#
+# SPDX-License-Identifier: MIT
+
 find_package(GTest 1.10 REQUIRED CONFIG)
 
 set(CMAKE_CXX_STANDARD 17)

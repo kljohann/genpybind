@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+//
+// SPDX-License-Identifier: MIT
+
 #include "genpybind/lookup_context_collector.h"
 
 #include "genpybind/annotated_decl.h"

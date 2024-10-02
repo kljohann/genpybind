@@ -1,6 +1,11 @@
+// SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+//
+// SPDX-License-Identifier: MIT
+//
 // RUN: genpybind-tool %s -- 2>&1 \
 // RUN: | FileCheck %s --strict-whitespace
 // XFAIL: *
+
 #pragma once
 
 // TODO: Non-type template parameters are not properly expanded to a fully

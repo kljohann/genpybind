@@ -1,5 +1,11 @@
+// SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+//
+// SPDX-License-Identifier: MIT
+//
 // RUN: genpybind-tool --dump-graph=visibility --verbose %s -- -xc 2>&1 \
 // RUN: | FileCheck %s --strict-whitespace
+
+#pragma once
 
 // NOTE: This file used to be parsed as C code, so records weren't CXXRecordDecls.
 

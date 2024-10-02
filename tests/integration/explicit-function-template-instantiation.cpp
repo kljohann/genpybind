@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+//
+// SPDX-License-Identifier: MIT
+
 #include "explicit-function-template-instantiation.h"
 
 template <typename T> T identity(const T &value) { return value; }

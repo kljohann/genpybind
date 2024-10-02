@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+#
+# SPDX-License-Identifier: MIT
+
 import base_classes_can_be_hidden as m
 
 BASE_CLASSES = frozenset([m.NestedBase, m.Base, m.Base2])

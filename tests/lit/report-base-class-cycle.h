@@ -1,5 +1,10 @@
+// SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+//
+// SPDX-License-Identifier: MIT
+//
 // RUN: genpybind-tool --xfail %s -- 2>&1 \
 // RUN: | FileCheck %s --strict-whitespace
+
 #pragma once
 
 #include "genpybind.h"

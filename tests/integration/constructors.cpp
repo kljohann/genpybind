@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+//
+// SPDX-License-Identifier: MIT
+
 #include "constructors.h"
 
 Example::Example(int value, bool flag) : value(value), flag(flag) {}
