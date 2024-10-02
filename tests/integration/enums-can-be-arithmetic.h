@@ -18,6 +18,7 @@ enum GENPYBIND(arithmetic(false)) ExplicitFalse {
   Three = 3,
 };
 
+/// Docstrings are also supported.
 enum GENPYBIND(arithmetic(true)) ExplicitTrue {
   Four = 4,
   Five = 5,

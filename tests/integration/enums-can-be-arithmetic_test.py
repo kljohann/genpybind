@@ -24,3 +24,7 @@ def test_arithmetic_true_can_use_bitwise_operators():
 def test_enums_arent_arithmetic_by_default():
     with pytest.raises(TypeError, match="unsupported operand type"):
         m.Default.Seven | m.Default.Eight
+
+
+def test_arithmetic_enums_support_docstrings():
+    assert m.ExplicitTrue.__doc__.startswith("Docstrings are also supported.")

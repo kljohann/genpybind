@@ -999,6 +999,10 @@ void EnumExposer::emitIntroducer(llvm::raw_ostream &os,
   emitType(os);
   os << "(" << parent_identifier << ", ";
   emitSpelling(os, enum_decl, annotations.lookup<NamedDeclAttrs>(enum_decl));
+  if (llvm::StringRef doc = getBriefText(enum_decl); !doc.empty()) {
+    os << ", ";
+    emitStringLiteral(os, doc);
+  }
   if (const auto attrs = annotations.get<EnumDeclAttrs>(enum_decl);
       attrs.has_value() && attrs->arithmetic) {
     os << ", ::pybind11::arithmetic()";
@@ -1024,7 +1028,12 @@ void EnumExposer::handleDeclImpl(llvm::raw_ostream &os,
     const std::string scope = getFullyQualifiedName(enum_decl);
     os << "context.value(";
     emitSpelling(os, decl, annotations.lookup<NamedDeclAttrs>(decl));
-    os << ", " << scope << "::" << enumerator->getName() << ");\n";
+    os << ", " << scope << "::" << enumerator->getName();
+    if (llvm::StringRef doc = getBriefText(decl); !doc.empty()) {
+      os << ", ";
+      emitStringLiteral(os, doc);
+    }
+    os << ");\n";
   }
 }
 
@@ -1050,6 +1059,10 @@ void RecordExposer::emitIntroducer(llvm::raw_ostream &os,
   os << "(" << parent_identifier << ", ";
   emitSpelling(os, record_decl,
                annotations.lookup<NamedDeclAttrs>(record_decl));
+  if (llvm::StringRef doc = getBriefText(record_decl); !doc.empty()) {
+    os << ", ";
+    emitStringLiteral(os, doc);
+  }
   if (const auto attrs = annotations.get<RecordDeclAttrs>(record_decl);
       attrs.has_value() && attrs->dynamic_attr) {
     os << ", ::pybind11::dynamic_attr()";
@@ -1059,9 +1072,6 @@ void RecordExposer::emitIntroducer(llvm::raw_ostream &os,
 
 void RecordExposer::finalizeDefinition(llvm::raw_ostream &os) {
   emitProperties(os);
-  os << "context.doc() = ";
-  emitStringLiteral(os, getBriefText(record_decl));
-  os << ";\n";
 }
 
 void RecordExposer::emitProperties(llvm::raw_ostream &os) {
