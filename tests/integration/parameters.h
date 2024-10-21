@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "genpybind.h"
+#include <genpybind/genpybind.h>
 
 GENPYBIND(visible)
 void parameter_names(bool are, int part, unsigned of, double the_signature);

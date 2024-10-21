@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 //
-// RUN: genpybind-tool --verbose %s -- 2>&1 \
+// RUN: genpybind-tool --verbose %s -- %INCLUDES% 2>&1 \
 // RUN: -DEXAMPLE_MARKER \
 // RUN: | FileCheck %s --strict-whitespace
 

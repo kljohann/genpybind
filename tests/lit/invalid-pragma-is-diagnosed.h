@@ -2,11 +2,12 @@
 //
 // SPDX-License-Identifier: MIT
 //
-// RUN: genpybind-tool --xfail %s -- 2>&1 \
+// RUN: genpybind-tool --xfail %s -- %INCLUDES% 2>&1 \
 // RUN: | FileCheck %s --strict-whitespace
 
 #pragma once
 
+// clang-format off
 // CHECK:      diagnosed.h:[[# @LINE + 3]]:26: error: expected "FILENAME" or <FILENAME>
 // CHECK-NEXT: #pragma genpybind include
 // CHECK-NEXT:                          ^
@@ -15,16 +16,16 @@
 // CHECK-NEXT: #pragma genpybind include UIAE
 // CHECK-NEXT:                           ^
 #pragma genpybind include UIAE
-#define SOMETHING "genpybind.h"
+#define SOMETHING <genpybind/genpybind.h>
 // CHECK:      diagnosed.h:[[# @LINE + 3]]:27: error: expected "FILENAME" or <FILENAME>
 // CHECK-NEXT: #pragma genpybind include SOMETHING
 // CHECK-NEXT:                           ^
 #pragma genpybind include SOMETHING
 #define SPURIOUS
-// CHECK:      diagnosed.h:[[# @LINE + 3]]:41: error: expected end of line in preprocessor expression
-// CHECK-NEXT: #pragma genpybind include "genpybind.h" SPURIOUS
-// CHECK-NEXT:                                         ^
-#pragma genpybind include "genpybind.h" SPURIOUS
+// CHECK:      diagnosed.h:[[# @LINE + 3]]:51: error: expected end of line in preprocessor expression
+// CHECK-NEXT: #pragma genpybind include <genpybind/genpybind.h> SPURIOUS
+// CHECK-NEXT:                                                   ^
+#pragma genpybind include <genpybind/genpybind.h> SPURIOUS
 // CHECK:      diagnosed.h:[[# @LINE + 3]]:18: error: invalid preprocessing directive
 // CHECK-NEXT: #pragma genpybind
 // CHECK-NEXT:                  ^
@@ -42,3 +43,4 @@
 // CHECK-NEXT:                  ^
 // CHECK: 8 errors generated.
 #pragma genpybind
+// clang-format on

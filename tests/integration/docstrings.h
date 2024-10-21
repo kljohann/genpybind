@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "genpybind.h"
+#include <genpybind/genpybind.h>
 
 /// Describes how the output will taste.
 enum class GENPYBIND(visible) Flavor {

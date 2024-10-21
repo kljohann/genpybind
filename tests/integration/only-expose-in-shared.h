@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "genpybind.h"
+#include <genpybind/genpybind.h>
 
 #define GENPYBIND_ONLY_IN_A GENPYBIND(only_expose_in(only_expose_in_a))
 #define GENPYBIND_ONLY_IN_B GENPYBIND(only_expose_in(only_expose_in_b))

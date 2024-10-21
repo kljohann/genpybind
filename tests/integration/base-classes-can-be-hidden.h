@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "genpybind.h"
+#include <genpybind/genpybind.h>
 
 namespace deeply {
 namespace nested {

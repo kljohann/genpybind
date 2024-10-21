@@ -15,4 +15,10 @@ repos:
   hooks: [id: clang-format]
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.4.10
-  hooks: [id: ruff, id: ruff-format]
+  hooks:
+  - id: ruff
+  - id: ruff-format
+  - id: ruff-format
+    types: [file]
+    types_or: [file]
+    files: lit\.cfg$

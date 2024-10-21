@@ -11,7 +11,7 @@
 #pragma genpybind include<pybind11/stl.h>
 #endif // __GENPYBIND__
 // clang-format on
-#include "genpybind.h"
+#include <genpybind/genpybind.h>
 
 std::optional<int> example(std::optional<int> value = std::nullopt)
     GENPYBIND(visible);

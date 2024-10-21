@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "genpybind.h"
+#include <genpybind/genpybind.h>
 
 /// \brief Expose instantiations of a function template.
 template <typename T> T identity(const T &value) GENPYBIND(visible);

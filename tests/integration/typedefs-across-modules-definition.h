@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "genpybind.h"
+#include <genpybind/genpybind.h>
 
 namespace example
 GENPYBIND(only_expose_in(typedefs_across_modules_definition)) {

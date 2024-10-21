@@ -2,12 +2,12 @@
 //
 // SPDX-License-Identifier: MIT
 //
-// RUN: genpybind-tool -dump-graph=visibility %s -- 2>&1 \
+// RUN: genpybind-tool -dump-graph=visibility %s -- %INCLUDES% 2>&1 \
 // RUN: | FileCheck %s --strict-whitespace
 
 #pragma once
 
-#include "genpybind.h"
+#include <genpybind/genpybind.h>
 
 namespace example_1 GENPYBIND(module) {}
 

@@ -250,7 +250,7 @@ public:
     {
       llvm::raw_string_ostream stream(includes);
       stream << "#include \"" << main_file << "\"\n"
-             << "#include <genpybind/runtime.h>\n"
+             << "#include <genpybind/binding-helpers.h>\n"
              << "#include <pybind11/pybind11.h>\n";
 
       if (pragma_handler != nullptr) {

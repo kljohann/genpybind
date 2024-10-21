@@ -2,11 +2,11 @@
 //
 // SPDX-License-Identifier: MIT
 //
-// RUN: genpybind-tool %s -- 2>&1
+// RUN: genpybind-tool %s -- %INCLUDES% 2>&1
 
 #pragma once
 
-#include "genpybind.h"
+#include <genpybind/genpybind.h>
 
 template <typename T> class value {
 public:

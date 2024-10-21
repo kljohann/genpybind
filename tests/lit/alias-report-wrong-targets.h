@@ -2,12 +2,12 @@
 //
 // SPDX-License-Identifier: MIT
 //
-// RUN: genpybind-tool --xfail %s -- 2>&1 \
+// RUN: genpybind-tool --xfail %s -- %INCLUDES% 2>&1 \
 // RUN: | FileCheck %s --strict-whitespace
 
 #pragma once
 
-#include "genpybind.h"
+#include <genpybind/genpybind.h>
 
 // CHECK: wrong-targets.h:[[# @LINE + 1]]:7: error: Annotated alias has unsupported target kind
 using something GENPYBIND(expose_here) = bool;

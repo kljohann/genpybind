@@ -6,7 +6,7 @@
 
 // TODO: Add additional mixed-type and reversed-parameters test cases
 
-#include "genpybind.h"
+#include <genpybind/genpybind.h>
 
 namespace example {
 

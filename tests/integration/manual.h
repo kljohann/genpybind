@@ -10,7 +10,7 @@
 #pragma genpybind include<pybind11/eval.h>
 #endif // __GENPYBIND__
 // clang-format on
-#include "genpybind.h"
+#include <genpybind/genpybind.h>
 
 namespace nested {
 

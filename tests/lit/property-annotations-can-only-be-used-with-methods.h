@@ -2,12 +2,12 @@
 //
 // SPDX-License-Identifier: MIT
 //
-// RUN: genpybind-tool --xfail %s -- 2>&1 \
+// RUN: genpybind-tool --xfail %s -- %INCLUDES% 2>&1 \
 // RUN: | FileCheck %s --strict-whitespace
 
 #pragma once
 
-#include "genpybind.h"
+#include <genpybind/genpybind.h>
 
 // CHECK: methods.h:[[# @LINE + 6 ]]:5: error: Invalid annotation for free function: getter_for("something")
 // CHECK-NEXT: [[# @LINE + 4 ]] | GENPYBIND(getter_for("something"))

@@ -2,12 +2,12 @@
 //
 // SPDX-License-Identifier: MIT
 //
-// RUN: genpybind-tool --xfail %s -- 2>&1 \
+// RUN: genpybind-tool --xfail %s -- %INCLUDES% 2>&1 \
 // RUN: | FileCheck %s --strict-whitespace
 
 #pragma once
 
-#include "genpybind.h"
+#include <genpybind/genpybind.h>
 
 // CHECK: arguments.h:[[# @LINE + 1]]:54: error: Wrong number of arguments for 'expose_as' annotation
 struct GENPYBIND(expose_as("too_many", "arguments")) X1 {};

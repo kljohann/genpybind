@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "genpybind.h"
+#include <genpybind/genpybind.h>
 
 enum class GENPYBIND(visible) Example {
   Hidden GENPYBIND(hidden),

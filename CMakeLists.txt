@@ -32,14 +32,14 @@ find_program(IWYU_PATH NAMES include-what-you-use iwyu)
 if(NOT IWYU_PATH STREQUAL "IWYU_PATH-NOTFOUND")
   set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE
     ${IWYU_PATH}
-    -Xiwyu --mapping_file=${CMAKE_CURRENT_SOURCE_DIR}/genpybind.imp
+    -Xiwyu --mapping_file=${CMAKE_CURRENT_SOURCE_DIR}/.iwyu-mapping-file.yaml
     -Xiwyu --transitive_includes_only
     -Xiwyu --quoted_includes_first
     -resource-dir=${LLVM_LIBRARY_DIR}/clang/${Clang_VERSION}
   )
 endif()
 
-add_library(genpybind SHARED
+add_library(genpybind-impl STATIC
   src/annotated_decl.cpp
   src/annotations/annotation.cpp
   src/annotations/literal_value.cpp
@@ -60,7 +60,7 @@ add_library(genpybind SHARED
 )
 
 # Use same compiler flags as LLVM.
-llvm_update_compile_flags(genpybind)
+llvm_update_compile_flags(genpybind-impl)
 
 # Link against libLLVM.so, if available.
 if(LLVM_LINK_LLVM_DYLIB)
@@ -69,33 +69,59 @@ else()
   llvm_map_components_to_libnames(llvm_libs support)
 endif()
 
-target_link_libraries(genpybind PUBLIC ${llvm_libs} clang-cpp)
-target_include_directories(genpybind
+target_link_libraries(genpybind-impl PUBLIC ${llvm_libs} clang-cpp)
+target_include_directories(genpybind-impl
   PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  # PUBLIC $<INSTALL_INTERFACE:...>
 )
-target_include_directories(genpybind
+target_include_directories(genpybind-impl
   SYSTEM PUBLIC ${LLVM_INCLUDE_DIRS} ${CLANG_INCLUDE_DIRS}
 )
-target_compile_definitions(genpybind
+target_compile_definitions(genpybind-impl
   PUBLIC LLVM_VERSION_MAJOR=${LLVM_VERSION_MAJOR}
 )
 
-add_executable(genpybind-tool
-  src/tool.cpp
-)
-
+add_executable(genpybind-tool src/tool.cpp)
+add_executable(genpybind::genpybind-tool ALIAS genpybind-tool)
 llvm_update_compile_flags(genpybind-tool)
+target_link_libraries(genpybind-tool PRIVATE genpybind-impl)
 
-target_link_libraries(genpybind-tool PRIVATE genpybind)
-
-find_package(pybind11 2.10 CONFIG REQUIRED)
-
-add_library(genpybind-runtime INTERFACE)
-target_include_directories(genpybind-runtime
-  INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/runtime>
-  # INTERFACE $<INSTALL_INTERFACE:...>
+install(TARGETS genpybind-tool
+  EXPORT genpybindTargets
+  RUNTIME
 )
 
+add_library(genpybind INTERFACE)
+add_library(genpybind::genpybind ALIAS genpybind)
+target_include_directories(genpybind
+  INTERFACE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/public>
+  INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+install(
+  TARGETS genpybind
+  EXPORT genpybindTargets
+)
+install(
+  DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/public/genpybind
+  TYPE INCLUDE
+)
+
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+  tools/genpybindConfig.cmake.in
+  "${CMAKE_CURRENT_BINARY_DIR}/genpybindConfig.cmake"
+  INSTALL_DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/cmake/genpybind)
+install(
+  EXPORT genpybindTargets
+  FILE genpybindTargets.cmake
+  NAMESPACE genpybind::
+  DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/cmake/genpybind
+)
+install(
+  FILES
+  "${CMAKE_CURRENT_BINARY_DIR}/genpybindConfig.cmake"
+  tools/genpybind.cmake
+  DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/cmake/genpybind")
+
+include("tools/genpybind.cmake")
 add_custom_target(test)
 add_subdirectory(tests)

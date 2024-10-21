@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "genpybind.h"
+#include <genpybind/genpybind.h>
 
 extern int global_variable GENPYBIND(visible);
 extern const int global_const_variable GENPYBIND(visible);

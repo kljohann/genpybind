@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 //
-// RUN: genpybind-tool %s -- 2>&1 \
+// RUN: genpybind-tool %s -- %INCLUDES% 2>&1 \
 // RUN: | FileCheck %s --strict-whitespace
 // XFAIL: *
 
@@ -13,7 +13,7 @@
 // CHECK-NOT: Template<Abc::N>
 // CHECK: ::nested::Template<::nested::Abc::N>
 
-#include "genpybind.h"
+#include <genpybind/genpybind.h>
 
 namespace nested {
 template <int N> struct Template {};

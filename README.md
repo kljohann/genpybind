@@ -44,7 +44,7 @@ to the C++ declarations:
 ```cpp
 #pragma once
 
-#include "genpybind.h"
+#include <genpybind/genpybind.h>
 
 namespace readme GENPYBIND(visible) {
 
@@ -207,7 +207,7 @@ instructions to other distributions.
 3. Set up the build: `cmake -B build -G Ninja .`
 4. Build and run the tests: `PYTHONPATH=$PWD/build/tests ninja -C build test`
 
-See `genpybind_add_module` in [`tests/CMakeLists.txt`](./tests/CMakeLists.txt)
+See `genpybind_add_module` in [`tools/genpybind.cmake`](./tools/genpybind.cmake)
 for how to integrate genpybind into your build.
 
 # Annotations

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "genpybind.h"
+#include <genpybind/genpybind.h>
 
 // NOTE: pybind11 only exposes a limited set of operations for scoped enums (see
 // https://github.com/pybind/pybind11/issues/2221), which is why this example

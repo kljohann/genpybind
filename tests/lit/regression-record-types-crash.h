@@ -2,7 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 //
-// RUN: genpybind-tool --dump-graph=visibility --verbose %s -- -xc 2>&1 \
+// RUN: genpybind-tool --dump-graph=visibility --verbose %s -- %INCLUDES% -xc 2>&1 \
 // RUN: | FileCheck %s --strict-whitespace
 
 #pragma once

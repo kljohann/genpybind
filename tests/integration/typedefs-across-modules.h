@@ -9,8 +9,9 @@
 #pragma genpybind include<pybind11/pybind11.h>
 #endif // __GENPYBIND__
 // clang-format on
-#include "genpybind.h"
+
 #include "typedefs-across-modules-definition.h"
+#include <genpybind/genpybind.h>
 
 GENPYBIND_MANUAL({
   ::pybind11::module::import("typedefs_across_modules_definition");

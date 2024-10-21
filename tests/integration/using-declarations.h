@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "genpybind.h"
+#include <genpybind/genpybind.h>
 
 struct GENPYBIND(visible) Base {
   int m_public = 123;

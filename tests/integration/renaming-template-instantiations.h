@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "genpybind.h"
+#include <genpybind/genpybind.h>
 
 template <int Value> struct GENPYBIND(expose_as(_Renamed)) Renamed {};
 // NOTE: All instantiations will be exposed as `_Renamed` (i.e., have the exact
