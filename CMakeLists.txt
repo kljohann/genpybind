@@ -89,7 +89,7 @@ llvm_update_compile_flags(genpybind-tool)
 
 target_link_libraries(genpybind-tool PRIVATE genpybind)
 
-add_subdirectory(extern/pybind11)
+find_package(pybind11 2.10 CONFIG REQUIRED)
 
 add_library(genpybind-runtime INTERFACE)
 target_include_directories(genpybind-runtime
