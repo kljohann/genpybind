@@ -11,6 +11,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED YES)
 set(CMAKE_CXX_EXTENSIONS NO)
 
 option(ENABLE_ASSERTIONS "Enable assertions" ON)
+option(GENPYBIND_USE_BUNDLED_PYBIND11 "Enable use of bundled pybind11" ON)
 string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
 if(ENABLE_ASSERTIONS AND NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
   add_definitions(-UNDEBUG)
@@ -89,7 +90,11 @@ llvm_update_compile_flags(genpybind-tool)
 
 target_link_libraries(genpybind-tool PRIVATE genpybind)
 
-add_subdirectory(extern/pybind11)
+if(GENPYBIND_USE_BUNDLED_PYBIND11)
+  add_subdirectory(extern/pybind11)
+else
+  find_package(pybind11 REQUIRED)
+fi
 
 add_library(genpybind-runtime INTERFACE)
 target_include_directories(genpybind-runtime
