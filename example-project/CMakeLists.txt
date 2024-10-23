@@ -15,5 +15,5 @@ genpybind_add_module(
   readme MODULE
   LINK_LIBRARIES readme-impl
   NUM_BINDING_FILES 1
-  HEADER ${CMAKE_CURRENT_SOURCE_DIR}/src/readme.h
+  HEADER src/readme.h
 )

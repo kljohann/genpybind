@@ -16,6 +16,7 @@ endif()
 # Creates a pybind11 module target based on auto-generated bindings for
 # the given header file.  If specified, the generated code is split into
 # several intermediate files to take advantage of parallel builds.
+# <header-file> is evaluated relative to the source directory.
 function(genpybind_add_module target_name)
   set(flag_opts "")
   set(value_opts HEADER)
@@ -28,6 +29,11 @@ function(genpybind_add_module target_name)
     set(ARG_NUM_BINDING_FILES 1)
   endif()
   math(EXPR index_range "${ARG_NUM_BINDING_FILES} - 1")
+
+  get_filename_component(
+    ARG_HEADER ${ARG_HEADER} ABSOLUTE
+    BASE_DIR ${CMAKE_CURRENT_SOURCE_DIR}
+  )
 
   set(bindings "")
   foreach(idx RANGE ${index_range})
