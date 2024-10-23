@@ -2,6 +2,10 @@
 //
 // SPDX-License-Identifier: MIT
 
+// We use numeric releases with optional PEP 440 suffixes:
+// https://peps.python.org/pep-0440/#summary-of-permitted-suffixes-and-relative-ordering
+#define GENPYBIND_VERSION_STRING "0.5.0.dev1"
+
 #include "genpybind/annotated_decl.h"
 #include "genpybind/decl_context_graph.h"
 #include "genpybind/decl_context_graph_builder.h"
@@ -419,12 +423,17 @@ clang::tooling::ArgumentsAdjuster getCpp17OrLaterAdjuster() {
   };
 }
 
+void printVersion(llvm::raw_ostream &os) {
+  os << "genpybind version " GENPYBIND_VERSION_STRING << "\n";
+}
+
 } // namespace
 
 int main(int argc, const char **argv) {
   using namespace ::clang::tooling;
 
   llvm::cl::extrahelp common_help(CommonOptionsParser::HelpMessage);
+  llvm::cl::SetVersionPrinter(printVersion);
 
   llvm::cl::opt<bool> expect_failure("xfail",
                                      llvm::cl::cat(g_genpybind_category),

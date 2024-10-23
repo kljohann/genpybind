@@ -3,7 +3,13 @@
 # SPDX-License-Identifier: MIT
 
 cmake_minimum_required(VERSION 3.20.0)
-project(genpybind LANGUAGES C CXX)
+
+file(STRINGS "src/tool.cpp" PROJECT_VERSION REGEX "^#define GENPYBIND_VERSION_STRING \"[0-9.]+")
+# CMake only supports integer components in version numbers, so ignore any suffix.
+string(REGEX MATCH "[0-9]+(\\.[0-9])*" PROJECT_VERSION ${PROJECT_VERSION})
+
+project(genpybind LANGUAGES C CXX VERSION ${PROJECT_VERSION})
+message(STATUS "Configuring ${PROJECT_NAME} version ${PROJECT_VERSION}")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS YES)
 set(CMAKE_CXX_STANDARD 20)
@@ -110,6 +116,11 @@ configure_package_config_file(
   tools/genpybindConfig.cmake.in
   "${CMAKE_CURRENT_BINARY_DIR}/genpybindConfig.cmake"
   INSTALL_DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/cmake/genpybind)
+write_basic_package_version_file(
+  "${CMAKE_CURRENT_BINARY_DIR}/genpybindConfigVersion.cmake"
+  VERSION ${PROJECT_VERSION}
+  COMPATIBILITY SameMajorVersion
+)
 install(
   EXPORT genpybindTargets
   FILE genpybindTargets.cmake
@@ -119,6 +130,7 @@ install(
 install(
   FILES
   "${CMAKE_CURRENT_BINARY_DIR}/genpybindConfig.cmake"
+  "${CMAKE_CURRENT_BINARY_DIR}/genpybindConfigVersion.cmake"
   tools/genpybind.cmake
   DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/cmake/genpybind")
 
