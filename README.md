@@ -197,7 +197,9 @@ instructions to other distributions.
 1. Check out the repo, the following commands should be run from the repo root.
 2. Install dependencies:
    ```
-   dnf install llvm-devel clang-devel gtest-devel gmock-devel cmake ninja-build
+   dnf install \
+     llvm-devel clang-devel gtest-devel gmock-devel cmake ninja-build \
+     python3-devel python3-pip pybind11-devel
    ```
 3. Set up the build:
    ```
