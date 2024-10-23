@@ -199,16 +199,42 @@ instructions to other distributions.
    ```
    dnf install llvm-devel clang-devel gtest-devel gmock-devel cmake ninja-build
    ```
-   Inside a virtual environment (e.g., via [direnv][] with `layout python`),
+3. Set up the build:
+   ```
+   cmake -B ./build -G Ninja .
+   ```
+4. Build and install (adapt the prefix accordingly):
+   ```
+   cmake --build ./build
+   cmake --install ./build --prefix ~/.local
+   ```
+
+See `genpybind_add_module` in [`tools/genpybind.cmake`](./tools/genpybind.cmake)
+and how it's [used in an example project](./example-project/CMakeLists.txt) for
+how to integrate genpybind into your build.  Depending on the prefix you used
+during installation, you might need to specify the location of
+`genpybindConfig.cmake` explicitly in downstream builds, e.g.:
+`cmake … -Dgenpybind_DIR="$HOME/.local/share/cmake/genpybind" …`.
+
+## Extra steps (for development)
+1. Inside a virtual environment (e.g., via [direnv][] with `layout python`),
    install the Python dependencies (used in tests):
    ```
    pip install -r requirements.txt
    ```
-3. Set up the build: `cmake -B build -G Ninja .`
-4. Build and run the tests: `PYTHONPATH=$PWD/build/tests ninja -C build test`
+2. Set up [pre-commit][]:
+   ```
+   pip install pre-commit
+   pre-commit install
+   ```
+3. Build and run the tests:
+   ```
+   PYTHONPATH=$PWD/build/tests ninja -C build test
+   ```
+   If you use direnv, it's convenient to add `path_add PYTHONPATH build/tests`
+   to your `.envrc`.
 
-See `genpybind_add_module` in [`tools/genpybind.cmake`](./tools/genpybind.cmake)
-for how to integrate genpybind into your build.
+[pre-commit]: https://pre-commit.com/
 
 # Annotations
 
