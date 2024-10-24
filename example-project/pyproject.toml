@@ -1,0 +1,11 @@
+# SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+#
+# SPDX-License-Identifier: MIT
+
+[build-system]
+requires = ["scikit-build-core", "pybind11", "genpybind"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "genpybind-example"
+version = "0.0.0"

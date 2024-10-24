@@ -2,4 +2,13 @@
 #
 # SPDX-License-Identifier: MIT
 
-/.cache/
+.cache/
+.clangd/
+.direnv/
+.envrc
+.lit_test_times.txt
+.pytest_cache/
+build/
+compile_commands.json
+dist/
+install/

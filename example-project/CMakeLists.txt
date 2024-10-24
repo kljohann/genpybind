@@ -3,17 +3,19 @@
 # SPDX-License-Identifier: MIT
 
 cmake_minimum_required(VERSION 3.20.0)
-project(genpybind-example LANGUAGES C CXX)
+project(${SKBUILD_PROJECT_NAME} LANGUAGES CXX)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS YES)
 
-find_package(genpybind REQUIRED CONFIG)
+set(PYBIND11_NEWPYTHON ON)
+find_package(pybind11 CONFIG REQUIRED)
+find_package(genpybind CONFIG REQUIRED)
 
-add_library(readme-impl SHARED src/readme.cpp)
-target_link_libraries(readme-impl PUBLIC genpybind::genpybind)
 genpybind_add_module(
-  readme MODULE
-  LINK_LIBRARIES readme-impl
-  NUM_BINDING_FILES 1
-  HEADER src/readme.h
+  genpybind_example MODULE
+  HEADER include/readme.h
+  src/readme.cpp
 )
+target_include_directories(genpybind_example PUBLIC include)
+
+install(TARGETS genpybind_example LIBRARY DESTINATION .)

@@ -1,0 +1,49 @@
+# SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+#
+# SPDX-License-Identifier: MIT
+
+[build-system]
+requires = ["scikit-build-core"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "genpybind"
+dynamic = ["version"]
+authors = [{name = "Johann Klähn", email = "genpybind@jklaehn.de"}]
+description = "Autogeneration of pybind11 Python bindings from manually annotated C++ headers"
+readme = "README.md"
+keywords = ["C++", "Python bindings", "pybind11"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+
+  "License :: OSI Approved :: MIT License",
+
+  "Intended Audience :: Developers",
+
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Utilities",
+
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: C++",
+]
+
+[project.urls]
+Homepage = "https://github.com/kljohann/genpybind"
+Repository = "https://github.com/kljohann/genpybind"
+Issues = "https://github.com/kljohann/genpybind/issues"
+
+[project.scripts]
+"genpybind-tool" = "genpybind:tool"
+
+[tool.scikit-build]
+build.targets = ["genpybind-tool"]
+build.verbose = true
+sdist.exclude = ["/.github/"]
+wheel.license-files = ["LICENSE", "LICENSES/*.txt"]
+wheel.packages = ["python/genpybind"]
+wheel.py-api = "py3"
+
+[tool.scikit-build.metadata.version]
+provider = "scikit_build_core.metadata.regex"
+input = "src/tool.cpp"
+regex = "#define\\s+GENPYBIND_VERSION_STRING\\s+\"(?P<value>.+?)\".*?"

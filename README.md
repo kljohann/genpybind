@@ -9,7 +9,7 @@ SPDX-License-Identifier: MIT
 *Autogeneration of Python bindings from manually annotated C++ headers*
 
 Genpybind is a tool based on [clang][] that automatically generates code to
-expose a C++ API as a Python extension via [pybind11][].  Say goodbye to the
+expose a C++ API as a Python extension module via [pybind11][].  Say goodbye to the
 tedious task of writing and updating binding code by hand!  Genpybind ensures
 that your Python bindings always stay in sync with your C++ API, complete with
 docstrings, parameter names, and default arguments.  This is especially valuable
@@ -147,6 +147,84 @@ void expose_context_readme_Example(py::class_<readme::Example>& context) {
 }
 ```
 
+# Getting started
+
+To use genpybind in your project, the simplest approach is through
+[scikit-build-core][].  Since genpybind is [available on PyPI][pypi], setup is
+similar to a standard pybind11 extension module, except that you need to:
+
+1. add genpybind as an additional build dependency, and
+2. use `genpybind_add_module` instead of `pybind11_add_module`
+   (see [`tools/genpybind.cmake`](./tools/genpybind.cmake)).
+
+```toml
+# In pyproject.toml:
+
+[build-system]
+requires = ["scikit-build-core", "pybind11", "genpybind"]
+```
+
+```cmake
+# In CMakeLists.txt:
+
+set(PYBIND11_NEWPYTHON ON)
+find_package(pybind11 CONFIG REQUIRED)
+find_package(genpybind CONFIG REQUIRED)
+
+genpybind_add_module(
+  your_module MODULE
+  HEADER include/your_module.h
+  src/a.cpp src/b.cpp src/c.cpp
+)
+```
+
+See the [example project](./example-project) for a complete implementation.
+
+<details>
+<summary>Using genpybind without a separate header file</summary>
+
+```cpp
+// In your_module.cpp:
+
+#include <genpybind/genpybind.h>
+
+double square(double x) GENPYBIND(visible) { return x * x; }
+```
+
+```cmake
+# In CMakeLists.txt:
+
+genpybind_add_module(
+  your_module MODULE
+  HEADER your_module.cpp
+  your_module.cpp
+)
+```
+
+</details>
+
+<details>
+<summary>Link against existing library (which might also be consumed by other C++ targets)</summary>
+
+```cmake
+# In CMakeLists.txt:
+
+add_library(some_library SHARED src/a.cpp src/b.cpp src/c.cpp)
+# Add dependency to allow `#include <genpybind/genpybind.h>`
+target_link_libraries(some_library PUBLIC genpybind::genpybind)
+genpybind_add_module(
+  py_some_library MODULE
+  LINK_LIBRARIES some_library
+  NUM_BINDING_FILES 1
+  HEADER include/some_library.h
+)
+```
+
+</details>
+
+[scikit-build-core]: https://scikit-build-core.readthedocs.io/
+[pypi]: https://pypi.org/project/genpybind/
+
 # Implementation
 
 The current implementation is a prototype based on clang's `libtooling` API.
@@ -185,7 +263,7 @@ error messages.  As a small price to pay there are several breaking changes:
 - `accessor_for` is no longer supported, use `getter_for`/`setter_for` instead.
 - `writeable` is no longer supported, use `readonly` instead.
 
-# Installation
+# Building from source
 
 So far, the only tested platform is [Fedora Workstation][fedora] 40, though
 at least Debian has been tested in the past.  You should be able to adapt the
@@ -737,6 +815,17 @@ struct GENPYBIND(visible) Example {
   int readonly_field = 0;
 };
 ```
+
+# License
+
+genpybind is provided under the MIT license.  By using, distributing, or
+contributing to this project, you agree to the terms and conditions of this
+license.  See the [license file](LICENSES/MIT.txt) for details.
+
+genpybind links against the LLVM and clang projects, which are licensed under
+the Apache License v2.0 with LLVM Exceptions.  For details, see the included
+[license file](LICENSES/LicenseRef-LLVM.txt).  Binary distributions of genpybind
+may incorporate unmodified parts of LLVM and/or clang through static linking.
 
 ---
 

@@ -58,6 +58,6 @@ function(genpybind_add_module target_name)
 
   pybind11_add_module(${target_name} ${bindings} ${ARG_UNPARSED_ARGUMENTS})
   target_link_libraries(
-    ${target_name} PUBLIC ${ARG_LINK_LIBRARIES} genpybind::genpybind
+    ${target_name} PRIVATE ${ARG_LINK_LIBRARIES} genpybind::genpybind
   )
 endfunction()

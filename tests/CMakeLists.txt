@@ -40,7 +40,7 @@ else()
   add_dependencies(test lit-tests-run)
 endif()
 
-find_package(Python 3.9 COMPONENTS Interpreter Development)
+find_package(Python 3.9 COMPONENTS Interpreter Development.Module)
 find_package(pybind11 2.10 CONFIG)
 
 if(NOT Python_FOUND)
