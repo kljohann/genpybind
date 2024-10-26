@@ -643,7 +643,7 @@ TranslationUnitExposer::TranslationUnitExposer(
       annotations(annotations) {}
 
 void TranslationUnitExposer::emitModule(
-    std::vector<llvm::raw_ostream *> ostreams, llvm::StringRef name) {
+    std::vector<llvm::raw_ostream *> ostreams, llvm::StringRef module_name) {
   assert(!ostreams.empty());
 
   const EnclosingScopeMap parents = findEnclosingScopes(graph, annotations);
@@ -737,7 +737,7 @@ void TranslationUnitExposer::emitModule(
   main_stream << '\n';
 
   // Emit module definition
-  main_stream << "PYBIND11_MODULE(" << name << ", root) {\n";
+  main_stream << "PYBIND11_MODULE(" << module_name << ", root) {\n";
 
   // Emit context introducers
   for (const auto &item : worklist) {

@@ -16,7 +16,9 @@ endif()
 # Creates a pybind11 module target based on auto-generated bindings for
 # the given header file.  If specified, the generated code is split into
 # several intermediate files to take advantage of parallel builds.
-# <header-file> is evaluated relative to the source directory.
+# <header-file> is evaluated relative to the source directory.  Note that its
+# “stem” (final path component without suffix) is taken as the module name and
+# thus has to match <target-name>.
 function(genpybind_add_module target_name)
   set(flag_opts "")
   set(value_opts HEADER)
@@ -24,6 +26,13 @@ function(genpybind_add_module target_name)
   cmake_parse_arguments(
     ARG "${flag_opts}" "${value_opts}" "${multi_opts}" ${ARGN}
   )
+
+  get_filename_component(module_name ${ARG_HEADER} NAME_WE)
+  string(MAKE_C_IDENTIFIER ${module_name} module_name)
+  if(NOT target_name STREQUAL module_name)
+    message(WARNING "genpybind_add_module: Target name ${target_name} \
+                     does not match stem of HEADER argument ${module_name}")
+  endif()
 
   if(NOT DEFINED ARG_NUM_BINDING_FILES OR ARG_NUM_BINDING_FILES LESS 1)
     set(ARG_NUM_BINDING_FILES 1)

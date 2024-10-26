@@ -52,7 +52,7 @@ public:
                          AnnotationStorage &annotations);
 
   void emitModule(std::vector<llvm::raw_ostream *> ostreams,
-                  llvm::StringRef name);
+                  llvm::StringRef module_name);
 };
 
 class DeclContextExposer {
