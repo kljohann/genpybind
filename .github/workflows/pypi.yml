@@ -1,0 +1,46 @@
+# SPDX-FileCopyrightText: 2024 Johann Klähn <johann@jklaehn.de>
+#
+# SPDX-License-Identifier: MIT
+
+name: Build Python package
+
+on:
+  push: {branches: [main]}
+  pull_request: {branches: [main]}
+  workflow_dispatch: {}
+  release: {types: [published]}
+
+jobs:
+  build-wheels:
+    name: Build PyPI package for ${{ matrix.platform }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          # TODO: Add other platforms
+          - os: ubuntu-latest
+            platform: manylinux_x86_64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.21.3
+        env:
+          CIBW_ARCHS: auto64
+          CIBW_BUILD: cp3*-${{ matrix.platform }}
+          CIBW_SKIP: cp3{5,6,7,8}*
+          CIBW_MANYLINUX_X86_64_IMAGE: ghcr.io/kljohann/genpybind-manylinux_2_28_x86_64:llvm-18
+          CIBW_TEST_COMMAND: genpybind-tool --version
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.platform }}
+          path: ./wheelhouse/*.whl

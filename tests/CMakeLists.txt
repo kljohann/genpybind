@@ -2,23 +2,24 @@
 #
 # SPDX-License-Identifier: MIT
 
-find_package(GTest 1.10 REQUIRED CONFIG)
+find_package(GTest 1.10 CONFIG)
+if(NOT GTest_FOUND)
+  message(WARNING "GTest not found, skipping unit tests")
+else()
+  add_executable(genpybind-tests)
+  llvm_update_compile_flags(genpybind-tests)
+  target_link_libraries(genpybind-tests
+    PRIVATE genpybind-impl GTest::gmock GTest::gmock_main)
+  file(GLOB_RECURSE test_files CONFIGURE_DEPENDS "*_test.cpp")
+  target_sources(genpybind-tests PRIVATE ${test_files})
 
-set(CMAKE_CXX_STANDARD 17)
-
-add_executable(genpybind-tests)
-llvm_update_compile_flags(genpybind-tests)
-target_link_libraries(genpybind-tests
-  PRIVATE genpybind-impl GTest::gmock GTest::gmock_main)
-file(GLOB_RECURSE test_files CONFIGURE_DEPENDS "*_test.cpp")
-target_sources(genpybind-tests PRIVATE ${test_files})
-
-add_custom_target(genpybind-tests-run
-  COMMAND $<TARGET_FILE:genpybind-tests>
-  COMMENT "Running unit tests"
-  VERBATIM
-)
-add_dependencies(test genpybind-tests-run)
+  add_custom_target(genpybind-tests-run
+    COMMAND $<TARGET_FILE:genpybind-tests>
+    COMMENT "Running unit tests"
+    VERBATIM
+  )
+  add_dependencies(test genpybind-tests-run)
+endif()
 
 find_program(LIT_COMMAND NAMES lit.py lit)
 find_program(FILECHECK_COMMAND NAMES FileCheck)
