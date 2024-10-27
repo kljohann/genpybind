@@ -125,6 +125,13 @@ llvm::cl::opt<bool> g_keep_output_files(
     llvm::cl::desc("Don't erase the output files if compiler errors occurred."),
     llvm::cl::init(false), llvm::cl::Hidden);
 
+llvm::cl::opt<std::string> g_module_name(
+    "module-name", llvm::cl::cat(g_genpybind_category),
+    llvm::cl::desc("Name of the generated Python extension module. "
+                   "If not specified, defaults to a valid C identifier derived "
+                   "from the main input filename."),
+    llvm::cl::Optional);
+
 const char *graphTitle(InspectGraphStage stage) {
   switch (stage) {
   case InspectGraphStage::Visibility:
@@ -188,17 +195,18 @@ public:
       context.getTranslationUnitDecl()->dump();
 
     const auto &source_manager = context.getSourceManager();
-    llvm::StringRef main_file = [&] {
+    const llvm::StringRef main_file = [&] {
       clang::OptionalFileEntryRef main_file =
           source_manager.getFileEntryRefForID(source_manager.getMainFileID());
       assert(main_file != nullptr);
       return main_file->getName();
     }();
-    const auto module_name = [&] {
+
+    if (g_module_name.empty()) {
       llvm::SmallString<128> name = llvm::sys::path::stem(main_file);
       makeValidIdentifier(name);
-      return name;
-    }();
+      g_module_name = name.str().str();
+    }
 
     DeclContextGraphBuilder builder(annotations,
                                     context.getTranslationUnitDecl());
@@ -212,7 +220,7 @@ public:
                                builder.getRelocatedDecls(), source_manager))
       return;
 
-    inspectGraph(*graph, annotations, visibilities, module_name,
+    inspectGraph(*graph, annotations, visibilities, g_module_name,
                  InspectGraphStage::Visibility);
 
     auto contexts_with_visible_decls = declContextsWithVisibleNamedDecls(
@@ -220,7 +228,7 @@ public:
 
     hideNamespacesBasedOnExposeInAnnotation(*graph, annotations,
                                             contexts_with_visible_decls,
-                                            visibilities, module_name);
+                                            visibilities, g_module_name);
 
     graph = pruneGraph(*graph, contexts_with_visible_decls, visibilities);
 
@@ -228,7 +236,7 @@ public:
                                          builder.getRelocatedDecls(),
                                          source_manager);
 
-    inspectGraph(*graph, annotations, visibilities, module_name,
+    inspectGraph(*graph, annotations, visibilities, g_module_name,
                  InspectGraphStage::Pruned);
 
     std::vector<std::unique_ptr<llvm::raw_pwrite_stream>> output_streams;
@@ -270,7 +278,7 @@ public:
       (*stream) << includes;
       streams.push_back(stream.get());
     }
-    exposer.emitModule(streams, module_name);
+    exposer.emitModule(streams, g_module_name);
   }
 };
 
