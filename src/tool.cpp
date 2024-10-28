@@ -4,7 +4,7 @@
 
 // We use numeric releases with optional PEP 440 suffixes:
 // https://peps.python.org/pep-0440/#summary-of-permitted-suffixes-and-relative-ordering
-#define GENPYBIND_VERSION_STRING "0.5.0"
+#define GENPYBIND_VERSION_STRING "0.5.1.dev1"
 
 #include "genpybind/annotated_decl.h"
 #include "genpybind/decl_context_graph.h"
