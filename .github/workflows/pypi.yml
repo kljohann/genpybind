@@ -42,5 +42,37 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: wheels-${{ matrix.platform }}
+          name: pypi-wheels-${{ matrix.platform }}
           path: ./wheelhouse/*.whl
+
+  build-sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build sdist
+        run: pipx run build --sdist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pypi-sdist
+          path: dist/*.tar.gz
+
+  publish:
+    name: Upload to PyPI
+    runs-on: ubuntu-latest
+    needs: [build-wheels, build-sdist]
+    environment: pypi
+    permissions: {id-token: write}  # for “trusted publishing” on PyPI
+    if: github.event_name == 'release' && github.event.action == 'published'
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: pypi-*
+          path: dist
+          merge-multiple: true
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        # with:
+        #   repository-url: https://test.pypi.org/legacy/
