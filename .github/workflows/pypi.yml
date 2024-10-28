@@ -38,7 +38,12 @@ jobs:
           CIBW_BUILD: cp3*-${{ matrix.platform }}
           CIBW_SKIP: cp3{5,6,7,8}*
           CIBW_MANYLINUX_X86_64_IMAGE: ghcr.io/kljohann/genpybind-manylinux_2_28_x86_64:llvm-18
-          CIBW_TEST_COMMAND: genpybind-tool --version
+          CIBW_TEST_COMMAND: >-
+            genpybind-tool --version &&
+            pip install build scikit-build-core pybind11 cmake ninja &&
+            python -m build --wheel --no-isolation {package}/example-project --outdir ./dist &&
+            pip install dist/*.whl &&
+            python -c "from genpybind_example import Example; print(Example.__doc__)"
 
       - uses: actions/upload-artifact@v4
         with:
