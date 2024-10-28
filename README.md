@@ -6,6 +6,11 @@ SPDX-License-Identifier: MIT
 
 # genpybind
 
+[![PyPI](https://img.shields.io/pypi/v/genpybind.svg)](https://pypi.org/project/genpybind/)
+[![Releases](https://img.shields.io/github/v/release/kljohann/genpybind?include_prereleases&label=latest%20release)](https://github.com/kljohann/genpybind/releases)
+[![Build + Tests](https://github.com/kljohann/genpybind/actions/workflows/build.yml/badge.svg)](https://github.com/kljohann/genpybind/actions/workflows/build.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/kljohann/genpybind/blob/main/LICENSES/MIT.txt)
+
 *Autogeneration of Python bindings from manually annotated C++ headers*
 
 Genpybind is a tool based on [clang][] that automatically generates code to

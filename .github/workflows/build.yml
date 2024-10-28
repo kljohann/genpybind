@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: MIT
 
-name: Fedora
+name: Build + Tests
 on:
   push: {branches: [main]}
   pull_request: {branches: [main]}
@@ -23,7 +23,7 @@ env:
     python3-pip
 
 jobs:
-  fedora:
+  build-and-test:
     runs-on: ubuntu-latest
     container: fedora:latest
 
