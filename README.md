@@ -833,5 +833,7 @@ may incorporate unmodified parts of LLVM and/or clang through static linking.
   to be empty.  The annotation system is implemented using the `annotate` attribute specifier, which
   is available as a GNU language extension via `__attribute__((...))`.  As the annotation macros
   only have to be parsed by clang and are empty during normal compilation the annotated code can
-  still be compiled by any C++ compiler.  See [genpybind.h](./genpybind.h) for the definition of
+  still be compiled by any C++ compiler.  See [genpybind.h][genpybind.h] for the definition of
   the macros.
+
+[genpybind.h]: ./public/genpybind/genpybind.h
