@@ -8,7 +8,7 @@
 
 // clang-format off
 #ifdef __GENPYBIND__
-#pragma genpybind include<pybind11/stl.h>
+#pragma genpybind include <pybind11/stl.h>
 #endif // __GENPYBIND__
 // clang-format on
 #include <genpybind/genpybind.h>

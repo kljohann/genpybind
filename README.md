@@ -466,6 +466,31 @@ Note that `parent` can be used to refer to the corresponding `pybind11::module`.
 In general, different `GENPYBIND_MANUAL` blocks are emitted in the order in
 which they were defined.
 
+### Extra includes in generated bindings
+
+If you need to include additional headers in the generated bindings, you can use
+`#pragma genpybind include`.  This is useful when you want to, e.g., enable
+[transparent conversion for STL data types][pybind11-stl] or need a specific
+header for a `GENPYBIND_MANUAL` block.  Any included header will be parsed
+during genpybind's analysis phase, and a corresponding include directive will be
+added to the generated code.  (This functions like a regular include directive
+gated behind `#ifdef __GENPYBIND__`, with the added effect of emitting the
+include directive to the generated code.)
+
+```cpp
+// clang-format off
+#ifdef __GENPYBIND__
+#pragma genpybind include <pybind11/stl.h>
+#endif // __GENPYBIND__
+// clang-format on
+```
+
+Unfortunately, clang-format badly mangles angle brackets inside genpybind
+include pragmas by inserting unwanted whitespace, hence it's turned off
+locally here.
+
+[pybind11-stl]: https://pybind11.readthedocs.io/en/stable/advanced/cast/stl.html
+
 ## Namespaces
 
 For all accessible headers, the annotations of a particular header have to
