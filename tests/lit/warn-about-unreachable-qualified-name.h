@@ -21,8 +21,7 @@ extern template class Type<bool>;
 // TODO: Is the following warning desirable?
 
 template <typename T>
-// CHECK: {{.*}}qualified-name.h:[[# @LINE + 4 ]]:8: warning: Declaration context 'Other<B>' contains 'visible' declarations but is not exposed
-// CHECK-NEXT: {{[0-9]*}} | template <typename T>
+// CHECK: {{.*}}qualified-name.h:[[# @LINE + 3 ]]:8: warning: Declaration context 'Other<B>' contains 'visible' declarations but is not exposed
 //      CHECK: {{[0-9]*}} | struct Other {
 // CHECK-NEXT: {{[0-9]*}} | ~~~~~~~^~~~~~~
 struct Other {
