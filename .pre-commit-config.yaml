@@ -22,3 +22,6 @@ repos:
     types: [file]
     types_or: [file]
     files: lit\.cfg$
+- repo: https://github.com/fsfe/reuse-tool
+  rev: v5.0.2
+  hooks: [id: reuse-lint-file]
