@@ -684,8 +684,8 @@ void TranslationUnitExposer::emitModule(
       // lookup mechanism below, it's sufficient to visit every loookup context
       // once, instead of e.g. visiting each re-opened namespace.
       if (const auto *ns = llvm::dyn_cast<clang::NamespaceDecl>(decl_context)) {
-        auto inserted = covered_namespaces.try_emplace(
-            ns->getOriginalNamespace(), decl_context);
+        auto inserted = covered_namespaces.try_emplace(ns->getCanonicalDecl(),
+                                                       decl_context);
         if (!inserted.second) {
           auto existing_identifier =
               context_identifiers.find(inserted.first->getSecond());
