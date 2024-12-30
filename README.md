@@ -586,6 +586,39 @@ enum class GENPYBIND(export_values) Level { HIGH, MEDIUM, LOW };
 
 ## Structs and classes
 
+### Aggregate initialization
+
+For aggregate class types, genpybind automatically generates a constructor that
+accepts values for all base classes and members in declaration order (following
+C++17's rules for [aggregate initialization][]).  This enables initialization
+using positional or keyword arguments:
+
+```cpp
+struct GENPYBIND(visible) Point {
+  int x = 5;
+  int y = 0;
+};
+```
+
+```python
+>>> p = Point(1, 2)      # positional arguments
+>>> p = Point(2)         # partially specified, y=0
+>>> p = Point(x=1, y=2)  # keyword arguments
+>>> p = Point(y=2)       # partially specified, x=5
+```
+
+Keyword arguments use the identifier of the field or base class.  For example,
+in `struct Derived : Base { int field; };` the constructor accepts `Base` and
+`field` as keyword arguments.
+
+Unspecified base classes are default-initialized.  Unspecified fields use
+their default member initializers (if present) or a default-constructed value.
+
+Note: This feature is currently limited to aggregate types without `inline_base`
+or `hide_base` annotations.
+
+[aggregate initialization]: https://en.cppreference.com/w/cpp/language/aggregate_initialization
+
 ### `dynamic_attr` (dynamic attributes)
 
 The `dynamic_attr` modifier can be used to allow additional attributes to be set

@@ -133,6 +133,7 @@ public:
 
 private:
   void emitProperties(llvm::raw_ostream &os);
+  void emitAggegateConstructor(llvm::raw_ostream &os);
   void emitOperator(llvm::raw_ostream &os, const clang::FunctionDecl *function);
   static void emitOperatorDefinition(
       llvm::raw_ostream &os, const clang::ASTContext &ast_context,

@@ -116,6 +116,8 @@ struct AttemptFullQualificationPrinter : clang::PrinterHelper {
     }();
 
     if (should_prepend_qualified_type_to_braced_initializer) {
+      // NOTE: For array types, e.g., `bool[2]`, this will not work, as
+      // `bool[2]{…}` isn't valid.
       os << clang::TypeName::getFullyQualifiedName(expr->getType(), context,
                                                    printing_policy,
                                                    /*WithGlobalNsPrefix=*/true);
@@ -1077,6 +1079,26 @@ void RecordExposer::emitIntroducer(llvm::raw_ostream &os,
 
 void RecordExposer::finalizeDefinition(llvm::raw_ostream &os) {
   emitProperties(os);
+  // For now, only emit aggregate constructors for aggregate types without
+  // `inline_base` or `hide_base` annotations, as these can be exposed using the
+  // regular `init<…>()` constructor binding form. [^1]
+  // Similarly, aggregates with invisible/hidden bases are not supported.
+  //
+  // [^1]: Inlined bases would need extra constructor parameters for the extra
+  //       inlined fields and hidden bases could use a default-constructed value
+  //       in place of the respective parameter.  This could be accomplished via
+  //       pybind11's “custom constructors” feature.
+  if (record_decl->isAggregate() &&
+      !llvm::any_of(record_decl->bases(),
+                    [&](const clang::CXXBaseSpecifier &base) {
+                      const clang::TagDecl *base_decl =
+                          base.getType()->getAsTagDecl()->getDefinition();
+                      return inlining_policy.shouldInline(base_decl) ||
+                             inlining_policy.shouldHide(base_decl) ||
+                             graph.getNode(base_decl) == nullptr;
+                    })) {
+    emitAggegateConstructor(os);
+  }
 }
 
 void RecordExposer::emitProperties(llvm::raw_ostream &os) {
@@ -1103,6 +1125,74 @@ void RecordExposer::emitProperties(llvm::raw_ostream &os) {
     }
     os << ");\n";
   }
+}
+
+void RecordExposer::emitAggegateConstructor(llvm::raw_ostream &os) {
+  assert(record_decl->isAggregate());
+  const clang::ASTContext &context = record_decl->getASTContext();
+  auto printing_policy = getPrintingPolicyForExposedNames(context);
+  AttemptFullQualificationPrinter printer_helper{context, printing_policy};
+
+  std::vector<std::string> types;
+  std::vector<std::string> args;
+  auto add_aggregate_element = [&](clang::QualType elem_type,
+                                   const clang::IdentifierInfo *identifier,
+                                   const clang::Expr *initializer = nullptr) {
+    std::string type = clang::TypeName::getFullyQualifiedName(
+        elem_type, context, printing_policy,
+        /*WithGlobalNsPrefix=*/true);
+    types.push_back(type);
+
+    llvm::SmallString<128> arg(", ::pybind11::arg(");
+    llvm::raw_svector_ostream arg_os(arg);
+    // TODO: Consider converting base class names via, e.g.,
+    // `llvm::convertToSnakeFromCamelCase` from `StringExtras.h`.
+    // TODO: Base identifiers could conflict in the case of templates.
+    emitStringLiteral(arg_os, identifier->getName());
+    // Always emit default argument values to emulate implicitly initialized
+    // elements in aggregate initialization.
+    if (initializer == nullptr) {
+      arg_os << ") = " << type << "{}";
+    } else {
+      arg_os << ") = ";
+      initializer->printPretty(arg_os, &printer_helper, printing_policy,
+                               /*Indentation=*/0,
+                               /*NewlineSymbol=*/"\n", &context);
+    }
+    args.push_back(arg.str().str());
+  };
+
+  // aggregate initialization since C++17: all bases followed by all fields
+  for (const clang::CXXBaseSpecifier &base : record_decl->bases()) {
+    // Bail out before emitting anything if any base doesn't have a public
+    // default constructor, since we use that as the default argument.
+    if (const auto *rd = llvm::dyn_cast<clang::CXXRecordDecl>(
+            base.getType()->getAsTagDecl());
+        rd != nullptr &&
+        (!rd->hasDefaultConstructor() ||
+         !llvm::any_of(rd->ctors(), [&](const clang::CXXConstructorDecl *ctor) {
+           return ctor->isDefaultConstructor() &&
+                  ctor->getAccess() == clang::AS_public;
+         })))
+      return;
+
+    add_aggregate_element(base.getType(),
+                          base.getType()->getAsTagDecl()->getIdentifier());
+  }
+
+  for (const clang::FieldDecl *field : record_decl->fields()) {
+    clang::QualType elem_type = field->getType();
+    // C-style array types aren't supported, bail out before emitting anything.
+    if (elem_type->isArrayType())
+      return;
+
+    add_aggregate_element(elem_type, field->getIdentifier(),
+                          field->getInClassInitializer());
+  }
+
+  os << "context.def(::pybind11::init<" << llvm::join(types, ", ") << ">(), ";
+  emitStringLiteral(os, "aggregate initialization");
+  os << llvm::join(args, "") << ");\n";
 }
 
 void RecordExposer::emitOperator(llvm::raw_ostream &os,
