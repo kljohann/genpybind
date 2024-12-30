@@ -28,6 +28,7 @@ def get_proper_members(cls, predicate=None, *, depth=None):
         for attr in inspect.classify_class_attrs(cls)
         if attr.defining_class in mro[:depth]
         and (predicate is None or predicate(attr.object))
+        and attr.name not in ["_pybind11_conduit_v1_"]
     }
 
 
