@@ -134,8 +134,8 @@ auto Parser::parseAnnotations(llvm::StringRef text)
   return annotations;
 }
 
-auto Parser::parseAnnotations(llvm::StringRef text,
-                              Annotations &annotations) -> llvm::Error {
+auto Parser::parseAnnotations(llvm::StringRef text, Annotations &annotations)
+    -> llvm::Error {
   Tokenizer tokenizer(text);
   return Parser(&tokenizer).parseAnnotations(annotations);
 }
