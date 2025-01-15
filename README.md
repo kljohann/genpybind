@@ -590,26 +590,28 @@ enum class GENPYBIND(export_values) Level { HIGH, MEDIUM, LOW };
 
 For aggregate class types, genpybind automatically generates a constructor that
 accepts values for all base classes and members in declaration order (following
-C++17's rules for [aggregate initialization][]).  This enables initialization
-using positional or keyword arguments:
+C++17's rules for [aggregate initialization][]).  Base classes are passed as
+positional arguments in declaration order, while fields use keyword-only
+arguments matching their identifiers.  This enables initialization as follows:
 
 ```cpp
 struct GENPYBIND(visible) Point {
   int x = 5;
   int y = 0;
 };
+
+struct GENPYBIND(visible) Derived : Point { int field; };
 ```
 
 ```python
->>> p = Point(1, 2)      # positional arguments
->>> p = Point(2)         # partially specified, y=0
->>> p = Point(x=1, y=2)  # keyword arguments
->>> p = Point(y=2)       # partially specified, x=5
-```
+# Field arguments are keyword-only
+>>> p = Point(x=1, y=2)
+>>> p = Point(y=2)  # uses default value (5) for x
 
-Keyword arguments use the identifier of the field or base class.  For example,
-in `struct Derived : Base { int field; };` the constructor accepts `Base` and
-`field` as keyword arguments.
+# Base class arguments are position-only
+>>> d = Derived(Point(x=2, y=3), field=123)
+>>> d = Derived(field=123)  # uses default-initialized base
+```
 
 Unspecified base classes are default-initialized.  Unspecified fields use
 their default member initializers (if present) or a default-constructed value.

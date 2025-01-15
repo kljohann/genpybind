@@ -1145,8 +1145,6 @@ void RecordExposer::emitAggegateConstructor(llvm::raw_ostream &os) {
 
     llvm::SmallString<128> arg(", ::pybind11::arg(");
     llvm::raw_svector_ostream arg_os(arg);
-    // TODO: Consider converting base class names via, e.g.,
-    // `llvm::convertToSnakeFromCamelCase` from `StringExtras.h`.
     // TODO: Base identifiers could conflict in the case of templates.
     emitStringLiteral(arg_os, identifier->getName());
     // Always emit default argument values to emulate implicitly initialized
@@ -1163,6 +1161,7 @@ void RecordExposer::emitAggegateConstructor(llvm::raw_ostream &os) {
   };
 
   // aggregate initialization since C++17: all bases followed by all fields
+
   for (const clang::CXXBaseSpecifier &base : record_decl->bases()) {
     // Bail out before emitting anything if any base doesn't have a public
     // default constructor, since we use that as the default argument.
@@ -1179,6 +1178,17 @@ void RecordExposer::emitAggegateConstructor(llvm::raw_ostream &os) {
     add_aggregate_element(base.getType(),
                           base.getType()->getAsTagDecl()->getIdentifier());
   }
+
+  // Parameters for bases are pos-only for now.  This allows us to change
+  // the naming convention in the future without introducing breaking changes.
+  // TODO: Consider converting base class names via, e.g.,
+  // `llvm::convertToSnakeFromCamelCase` from `StringExtras.h`.
+  if (!record_decl->bases().empty())
+    args.emplace_back(", ::pybind11::pos_only()");
+
+  // Parameters for fields are kw-only, as that makes calls more readable.
+  if (!record_decl->fields().empty())
+    args.emplace_back(", ::pybind11::kw_only()");
 
   for (const clang::FieldDecl *field : record_decl->fields()) {
     clang::QualType elem_type = field->getType();
