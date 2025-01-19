@@ -28,6 +28,7 @@ foreach(test_implementation IN LISTS integration_tests)
   endif()
   genpybind_add_module(
     ${module_name} MODULE
+    EXTRA_ARGS --all-experiments
     LINK_LIBRARIES ${test_target}
     NUM_BINDING_FILES ${num_files}
     HEADER ${test_header}

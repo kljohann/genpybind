@@ -60,6 +60,7 @@ add_library(genpybind-impl STATIC
   src/instantiate_annotated_templates.cpp
   src/instantiate_default_arguments.cpp
   src/lookup_context_collector.cpp
+  src/options.cpp
   src/pragmas.cpp
   src/sort_decls.cpp
   src/string_utils.cpp

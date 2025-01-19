@@ -616,8 +616,9 @@ struct GENPYBIND(visible) Derived : Point { int field; };
 Unspecified base classes are default-initialized.  Unspecified fields use
 their default member initializers (if present) or a default-constructed value.
 
-Note: This feature is currently limited to aggregate types without `inline_base`
-or `hide_base` annotations.
+Note: This feature is experimental and needs to be enabled using the
+`--experiment=aggregates` flag.  It's also currently limited to aggregate types
+without `inline_base` or `hide_base` annotations.
 
 [aggregate initialization]: https://en.cppreference.com/w/cpp/language/aggregate_initialization
 

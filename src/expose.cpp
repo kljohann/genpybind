@@ -8,6 +8,7 @@
 #include "genpybind/decl_context_graph.h"
 #include "genpybind/decl_context_graph_processing.h"
 #include "genpybind/diagnostics.h"
+#include "genpybind/options.h"
 #include "genpybind/sort_decls.h"
 #include "genpybind/string_utils.h"
 #include "genpybind/visible_decls.h"
@@ -46,6 +47,7 @@
 #include <llvm/ADT/StringMap.h>
 #include <llvm/ADT/iterator.h>
 #include <llvm/Support/Casting.h>
+#include <llvm/Support/CommandLine.h>
 #include <llvm/Support/ErrorHandling.h>
 #include <llvm/Support/raw_ostream.h>
 
@@ -1088,7 +1090,7 @@ void RecordExposer::finalizeDefinition(llvm::raw_ostream &os) {
   //       inlined fields and hidden bases could use a default-constructed value
   //       in place of the respective parameter.  This could be accomplished via
   //       pybind11's “custom constructors” feature.
-  if (record_decl->isAggregate() &&
+  if (isEnabled(Experiment::Aggregates) && record_decl->isAggregate() &&
       !llvm::any_of(record_decl->bases(),
                     [&](const clang::CXXBaseSpecifier &base) {
                       const clang::TagDecl *base_decl =

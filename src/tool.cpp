@@ -14,6 +14,7 @@
 #include "genpybind/inspect_graph.h"
 #include "genpybind/instantiate_annotated_templates.h"
 #include "genpybind/instantiate_default_arguments.h"
+#include "genpybind/options.h"
 #include "genpybind/pragmas.h"
 #include "genpybind/string_utils.h"
 
@@ -65,8 +66,6 @@ class Sema;
 
 namespace {
 
-llvm::cl::OptionCategory g_genpybind_category("Genpybind Options");
-
 enum class InspectGraphStage {
   Visibility,
   Pruned,
@@ -81,19 +80,19 @@ llvm::cl::ValuesClass getInspectGraphValues() {
 }
 
 llvm::cl::list<InspectGraphStage>
-    g_inspect_graph("inspect-graph", llvm::cl::cat(g_genpybind_category),
+    g_inspect_graph("inspect-graph", llvm::cl::cat(getGenpybindCategory()),
                     llvm::cl::desc("Show the declaration context graph."),
                     getInspectGraphValues(), llvm::cl::ZeroOrMore,
                     llvm::cl::Hidden);
 
 llvm::cl::list<InspectGraphStage>
-    g_dump_graph("dump-graph", llvm::cl::cat(g_genpybind_category),
+    g_dump_graph("dump-graph", llvm::cl::cat(getGenpybindCategory()),
                  llvm::cl::desc("Print the declaration context graph."),
                  getInspectGraphValues(), llvm::cl::ZeroOrMore,
                  llvm::cl::Hidden);
 
 llvm::cl::opt<bool>
-    g_dump_ast("dump-ast", llvm::cl::cat(g_genpybind_category),
+    g_dump_ast("dump-ast", llvm::cl::cat(getGenpybindCategory()),
                llvm::cl::desc("Debug dump the AST after initial augmentation"),
                llvm::cl::init(false), llvm::cl::Hidden);
 
@@ -114,19 +113,19 @@ struct OutputFilenameParser : public llvm::cl::parser<std::string> {
 };
 
 llvm::cl::list<std::string, bool, OutputFilenameParser> g_output_files(
-    "o", llvm::cl::cat(g_genpybind_category),
+    "o", llvm::cl::cat(getGenpybindCategory()),
     llvm::cl::desc(
         "Path to the output file (\"-\" for stdout); Can be specified multiple "
         "times\nto spread the generated code over several files."),
     llvm::cl::ZeroOrMore);
 
 llvm::cl::opt<bool> g_keep_output_files(
-    "keep-output-files", llvm::cl::cat(g_genpybind_category),
+    "keep-output-files", llvm::cl::cat(getGenpybindCategory()),
     llvm::cl::desc("Don't erase the output files if compiler errors occurred."),
     llvm::cl::init(false), llvm::cl::Hidden);
 
 llvm::cl::opt<std::string> g_module_name(
-    "module-name", llvm::cl::cat(g_genpybind_category),
+    "module-name", llvm::cl::cat(getGenpybindCategory()),
     llvm::cl::desc("Name of the generated Python extension module. "
                    "If not specified, defaults to a valid C identifier derived "
                    "from the main input filename."),
@@ -448,18 +447,18 @@ int main(int argc, const char **argv) {
   llvm::cl::SetVersionPrinter(printVersion);
 
   llvm::cl::opt<bool> expect_failure("xfail",
-                                     llvm::cl::cat(g_genpybind_category),
+                                     llvm::cl::cat(getGenpybindCategory()),
                                      llvm::cl::desc("Reverse the exit status."),
                                      llvm::cl::init(false), llvm::cl::Hidden);
 
-  llvm::cl::opt<bool> verbose("verbose", llvm::cl::cat(g_genpybind_category),
+  llvm::cl::opt<bool> verbose("verbose", llvm::cl::cat(getGenpybindCategory()),
                               llvm::cl::desc("Use verbose output"),
                               llvm::cl::init(false));
 
   // Only accept one source path, since the current implementation only allows
   // one set of output files.
   auto expected_parser =
-      CommonOptionsParser::create(argc, argv, g_genpybind_category,
+      CommonOptionsParser::create(argc, argv, getGenpybindCategory(),
                                   /*OccurrencesFlag=*/llvm::cl::Required);
   if (!expected_parser) {
     // unsupported options

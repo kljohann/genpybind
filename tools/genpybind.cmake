@@ -12,6 +12,7 @@ endif()
 #                      HEADER <header-file>
 #                      [LINK_LIBRARIES <targets>...]
 #                      [NUM_BINDING_FILES <count>]
+#                      [EXTRA_ARGS <extra-genpybind-tool-args>...]
 #                      <pybind11_add_module-args>...)
 # Creates a pybind11 module target based on auto-generated bindings for
 # the given header file.  If specified, the generated code is split into
@@ -20,7 +21,7 @@ endif()
 function(genpybind_add_module target_name)
   set(flag_opts "")
   set(value_opts HEADER)
-  set(multi_opts LINK_LIBRARIES NUM_BINDING_FILES)
+  set(multi_opts EXTRA_ARGS LINK_LIBRARIES NUM_BINDING_FILES)
   cmake_parse_arguments(
     ARG "${flag_opts}" "${value_opts}" "${multi_opts}" ${ARGN}
   )
@@ -51,7 +52,7 @@ function(genpybind_add_module target_name)
     IMPLICIT_DEPENDS CXX ${ARG_HEADER}
     COMMAND $<TARGET_FILE:genpybind::genpybind-tool>
     ARGS -p ${CMAKE_BINARY_DIR} --module-name ${target_name} ${ARG_HEADER}
-    ${output_args}
+    ${output_args} ${ARG_EXTRA_ARGS}
     COMMENT "Analyzing ${ARG_HEADER}"
     VERBATIM
   )
