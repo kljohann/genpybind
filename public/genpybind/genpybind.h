@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include <type_traits>
-
 #ifdef __GENPYBIND__
 
 #define GENPYBIND__PRIVATE_CONCAT_EXPANDED__(x, y) x##y
@@ -21,7 +19,13 @@
   static constexpr auto __attribute__((unused)) GENPYBIND(manual)              \
       GENPYBIND__PRIVATE_UNIQUE__(genpybind_) = [](auto &parent) __VA_ARGS__;
 #define GENPYBIND_PARENT_TYPE                                                  \
-  typename std::remove_reference_t<decltype(parent)>::type
+  typename genpybind_extract_parent_type<decltype(parent)>::type
+
+// Note: `decltype(parent)` is `pybind11::class_<T>`, whose `type` alias is `T`.
+template <typename T> struct genpybind_extract_parent_type;
+template <typename T> struct genpybind_extract_parent_type<T &> {
+  using type = T::type;
+};
 
 #else // __GENPYBIND__
 

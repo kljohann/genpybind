@@ -8,6 +8,7 @@
 
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <typeinfo>
 
 namespace genpybind {
@@ -38,3 +39,6 @@ template <typename T> std::string string_from_lshift(const T &obj) {
 }
 
 } // namespace genpybind
+
+template <typename T>
+using genpybind_extract_parent_type = std::remove_reference_t<T>;
