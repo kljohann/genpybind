@@ -28,17 +28,22 @@ extern template int oops<321>();
 extern template GENPYBIND(expose_as(oops_42)) int oops<42>();
 
 struct GENPYBIND(visible) Example {
-  template <typename T> T plus_one(T val);
+  template <typename T> T plus_one(T val) const;
+
+  template <typename T>
+  T explicit_object_parameter(this const auto &self, T val);
 };
 
-extern template int Example::plus_one(int);
-extern template double Example::plus_one(double);
+extern template int Example::plus_one(int) const;
+extern template double Example::plus_one(double) const;
+extern template int Example::explicit_object_parameter(this const Example &self,
+                                                       int val);
 
 struct GENPYBIND(visible) TemplatedConstructor {
   template <typename T> TemplatedConstructor(T value);
 
   int value = 0;
-  int getValue() { return value; }
+  int getValue() const { return value; }
 };
 
 extern template TemplatedConstructor::TemplatedConstructor(int);

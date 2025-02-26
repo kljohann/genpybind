@@ -93,6 +93,32 @@ struct GENPYBIND(visible) Args {
       return Args(value, other.value);                                         \
     }                                                                          \
   };                                                                           \
+                                                                               \
+  struct GENPYBIND(visible) has_explicit_object_param_member_##OP_NAME         \
+      : public Exhaustive {                                                    \
+    has_explicit_object_param_member_##OP_NAME(int value)                      \
+        : Exhaustive(value) {}                                                 \
+    Args operator OP_SPELLING(                                                 \
+        this const has_explicit_object_param_member_##OP_NAME &self,           \
+        const has_explicit_object_param_member_##OP_NAME &other) {             \
+      return Args(self.value, other.value);                                    \
+    }                                                                          \
+  };                                                                           \
+                                                                               \
+  struct GENPYBIND(visible) has_tpl_explicit_object_param_member_##OP_NAME     \
+      : public Exhaustive {                                                    \
+    has_tpl_explicit_object_param_member_##OP_NAME(int value)                  \
+        : Exhaustive(value) {}                                                 \
+    template <typename Self>                                                   \
+    Args operator OP_SPELLING(this Self &&self, Self &&other) {                \
+      return Args(self.value, other.value);                                    \
+    }                                                                          \
+  };                                                                           \
+  template Args                                                                \
+      has_tpl_explicit_object_param_member_##OP_NAME::operator OP_SPELLING(    \
+          this const has_tpl_explicit_object_param_member_##OP_NAME & self,    \
+          const has_tpl_explicit_object_param_member_##OP_NAME & other);       \
+                                                                               \
   struct GENPYBIND(visible) has_nonconst_member_##OP_NAME                      \
       : public Exhaustive {                                                    \
     has_nonconst_member_##OP_NAME(int value) : Exhaustive(value) {}            \
@@ -100,6 +126,7 @@ struct GENPYBIND(visible) Args {
       return Args(value, other.value);                                         \
     }                                                                          \
   };                                                                           \
+                                                                               \
   struct GENPYBIND(visible) has_private_member_##OP_NAME : public Exhaustive { \
     has_private_member_##OP_NAME(int value) : Exhaustive(value) {}             \
                                                                                \
@@ -109,6 +136,7 @@ struct GENPYBIND(visible) Args {
       return Args(value, other.value);                                         \
     }                                                                          \
   };                                                                           \
+                                                                               \
   struct GENPYBIND(visible) has_hidden_member_##OP_NAME : public Exhaustive {  \
     has_hidden_member_##OP_NAME(int value) : Exhaustive(value) {}              \
     Args operator OP_SPELLING(const has_hidden_member_##OP_NAME &other) const  \
@@ -116,6 +144,7 @@ struct GENPYBIND(visible) Args {
       return Args(value, other.value);                                         \
     }                                                                          \
   };                                                                           \
+                                                                               \
   struct GENPYBIND(visible) has_friend_##OP_NAME : public Exhaustive {         \
     has_friend_##OP_NAME(int value) : Exhaustive(value) {}                     \
     friend Args operator OP_SPELLING(const has_friend_##OP_NAME &lhs,          \
@@ -123,6 +152,7 @@ struct GENPYBIND(visible) Args {
       return Args(lhs.value, rhs.value);                                       \
     }                                                                          \
   };                                                                           \
+                                                                               \
   struct GENPYBIND(visible) has_hidden_friend_##OP_NAME : public Exhaustive {  \
     has_hidden_friend_##OP_NAME(int value) : Exhaustive(value) {}              \
     friend Args operator OP_SPELLING(const has_hidden_friend_##OP_NAME &lhs,   \
@@ -131,6 +161,7 @@ struct GENPYBIND(visible) Args {
       return Args(lhs.value, rhs.value);                                       \
     }                                                                          \
   };                                                                           \
+                                                                               \
   struct GENPYBIND(visible) has_associated_##OP_NAME : public Exhaustive {     \
     has_associated_##OP_NAME(int value) : Exhaustive(value) {}                 \
   };                                                                           \
@@ -138,6 +169,7 @@ struct GENPYBIND(visible) Args {
                                    const has_associated_##OP_NAME &rhs) {      \
     return Args(lhs.value, rhs.value);                                         \
   }                                                                            \
+                                                                               \
   struct GENPYBIND(visible) has_hidden_associated_##OP_NAME                    \
       : public Exhaustive {                                                    \
     has_hidden_associated_##OP_NAME(int value) : Exhaustive(value) {}          \
@@ -184,6 +216,31 @@ BINARY_OPERATOR_TEST(ge, >=)
       return {OP_SPELLING value};                                              \
     }                                                                          \
   };                                                                           \
+                                                                               \
+  struct GENPYBIND(visible) has_explicit_object_param_member_##OP_NAME         \
+      : public Exhaustive {                                                    \
+    has_explicit_object_param_member_##OP_NAME(int value)                      \
+        : Exhaustive(value) {}                                                 \
+    has_explicit_object_param_member_##OP_NAME operator OP_SPELLING(           \
+        this const has_explicit_object_param_member_##OP_NAME &self) {         \
+      return {OP_SPELLING self.value};                                         \
+    }                                                                          \
+  };                                                                           \
+                                                                               \
+  struct GENPYBIND(visible) has_tpl_explicit_object_param_member_##OP_NAME     \
+      : public Exhaustive {                                                    \
+    has_tpl_explicit_object_param_member_##OP_NAME(int value)                  \
+        : Exhaustive(value) {}                                                 \
+    template <typename Self>                                                   \
+    has_tpl_explicit_object_param_member_##OP_NAME                             \
+    operator OP_SPELLING(this Self &&self) {                                   \
+      return {OP_SPELLING self.value};                                         \
+    }                                                                          \
+  };                                                                           \
+  template has_tpl_explicit_object_param_member_##OP_NAME                      \
+      has_tpl_explicit_object_param_member_##OP_NAME::operator OP_SPELLING(    \
+          this const has_tpl_explicit_object_param_member_##OP_NAME & self);   \
+                                                                               \
   struct GENPYBIND(visible) has_nonconst_member_##OP_NAME                      \
       : public Exhaustive {                                                    \
     has_nonconst_member_##OP_NAME(int value) : Exhaustive(value) {}            \
@@ -191,6 +248,7 @@ BINARY_OPERATOR_TEST(ge, >=)
       return {OP_SPELLING value};                                              \
     }                                                                          \
   };                                                                           \
+                                                                               \
   struct GENPYBIND(visible) has_private_member_##OP_NAME : public Exhaustive { \
     has_private_member_##OP_NAME(int value) : Exhaustive(value) {}             \
                                                                                \
@@ -199,6 +257,7 @@ BINARY_OPERATOR_TEST(ge, >=)
       return {OP_SPELLING value};                                              \
     }                                                                          \
   };                                                                           \
+                                                                               \
   struct GENPYBIND(visible) has_hidden_member_##OP_NAME : public Exhaustive {  \
     has_hidden_member_##OP_NAME(int value) : Exhaustive(value) {}              \
     has_hidden_member_##OP_NAME operator OP_SPELLING() const                   \
@@ -206,6 +265,7 @@ BINARY_OPERATOR_TEST(ge, >=)
       return {OP_SPELLING value};                                              \
     }                                                                          \
   };                                                                           \
+                                                                               \
   struct GENPYBIND(visible) has_friend_##OP_NAME : public Exhaustive {         \
     has_friend_##OP_NAME(int value) : Exhaustive(value) {}                     \
     friend has_friend_##OP_NAME                                                \
@@ -213,6 +273,7 @@ BINARY_OPERATOR_TEST(ge, >=)
       return {OP_SPELLING lhs.value};                                          \
     }                                                                          \
   };                                                                           \
+                                                                               \
   struct GENPYBIND(visible) has_hidden_friend_##OP_NAME : public Exhaustive {  \
     has_hidden_friend_##OP_NAME(int value) : Exhaustive(value) {}              \
     friend has_hidden_friend_##OP_NAME                                         \
@@ -221,6 +282,7 @@ BINARY_OPERATOR_TEST(ge, >=)
       return {OP_SPELLING lhs.value};                                          \
     }                                                                          \
   };                                                                           \
+                                                                               \
   struct GENPYBIND(visible) has_associated_##OP_NAME : public Exhaustive {     \
     has_associated_##OP_NAME(int value) : Exhaustive(value) {}                 \
   };                                                                           \
@@ -228,6 +290,7 @@ BINARY_OPERATOR_TEST(ge, >=)
       const has_associated_##OP_NAME &lhs) {                                   \
     return {OP_SPELLING lhs.value};                                            \
   }                                                                            \
+                                                                               \
   struct GENPYBIND(visible) has_hidden_associated_##OP_NAME                    \
       : public Exhaustive {                                                    \
     has_hidden_associated_##OP_NAME(int value) : Exhaustive(value) {}          \
@@ -244,3 +307,9 @@ UNARY_OPERATOR_TEST(invert, ~)
 #undef UNARY_OPERATOR_TEST
 
 } // namespace exhaustive
+
+struct GENPYBIND(visible) explicit_object_param_without_explicit_instantiation {
+  template <typename Self> bool operator==(this Self &&, Self &&) {
+    return true;
+  }
+};

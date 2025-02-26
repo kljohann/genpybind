@@ -40,6 +40,11 @@ def test_templated_member_function():
     assert inst.plus_one(2.5) == 3.5
 
 
+def test_templated_member_function_with_explicit_object_parameter():
+    inst = m.Example()
+    assert inst.explicit_object_parameter(123) == 123
+
+
 def test_templated_constructor():
     inst = m.TemplatedConstructor(3)
     assert inst.getValue() == 3

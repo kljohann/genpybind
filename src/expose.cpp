@@ -337,6 +337,11 @@ static void emitParameters(llvm::raw_ostream &os,
   unsigned index = 0;
   const clang::ParmVarDecl *last_kwargs_param = nullptr;
   for (const clang::ParmVarDecl *param : function->parameters()) {
+    // Do not emit `arg()` for explicit object parameters.  Note that we still
+    // need to emit the type in `overload_cast`, since these are effectively
+    // static member functions.
+    if (param->isExplicitObjectParameter())
+      continue;
     // `arg()` should not be emitted for `pybind11::args` or `pybind11::kwargs`
     // parameters.  `kwargs` needs to be the last parameter of the function.
     if (llvm::StringRef kind = getPybind11ArgsType(param->getType());
@@ -812,11 +817,13 @@ void TranslationUnitExposer::emitModule(
                                            item.exposer->inliningPolicy());
     llvm::sort(decls, IsBeforeInTranslationUnit(sema.getSourceManager()));
 
+    const auto *record =
+        llvm::dyn_cast<clang::CXXRecordDecl>(item.decl_context);
+
     // Inject operators from a record's associated namespace (found via ADL),
     // as these need to be exposed as methods of the record.  Only user-defined
     // operators that can be called without conversions are considered.
-    if (const auto *record =
-            llvm::dyn_cast<clang::CXXRecordDecl>(item.decl_context)) {
+    if (record != nullptr) {
       std::vector<const clang::NamedDecl *> associated_decls =
           collectOperatorDeclsViaArgumentDependentLookup(sema, record);
       llvm::copy(associated_decls, std::back_inserter(decls));
@@ -828,7 +835,28 @@ void TranslationUnitExposer::emitModule(
       // processed unconditionally.
       if (const auto *tpl =
               llvm::dyn_cast<clang::FunctionTemplateDecl>(proposed_decl)) {
-        llvm::for_each(tpl->specializations(), handle_decl);
+        bool has_explicit_object_parameter =
+            tpl->getTemplatedDecl()->hasCXXExplicitFunctionObjectParameter();
+        for (const clang::FunctionDecl *fun : tpl->specializations()) {
+          // Derived classes may pull in (via using decls or `inline_base`)
+          // template instantiations with explicit object parameters of
+          // unrelated types from base classes.  Skip those, even though it's
+          // not strictly necessary (as they're not viable candidates during
+          // overload resolution at run time).
+          if (has_explicit_object_parameter && record != nullptr) {
+            if (const auto *param = fun->getParamDecl(0)
+                                        ->getType()
+                                        .getNonReferenceType()
+                                        .getUnqualifiedType()
+                                        ->getAsCXXRecordDecl();
+                param != nullptr &&
+                param->getCanonicalDecl() != record->getCanonicalDecl() &&
+                !param->isDerivedFrom(record)) {
+              continue;
+            }
+          }
+          handle_decl(fun);
+        }
       } else {
         handle_decl(proposed_decl);
       }
@@ -1241,9 +1269,12 @@ void RecordExposer::emitOperator(llvm::raw_ostream &os,
   // TODO: implement this...
   (void)allow_rewritten_candidates;
 
+  // Determine the parameters a corresponding free function definition would
+  // have.  In particular, prepend an explicit “self” parameter for
+  // member-functions (unless they already have an explicit object parameter).
   llvm::SmallVector<clang::QualType, 2> parameter_types;
   clang::QualType record_type = ast_context.getTypeDeclType(record_decl);
-  if (method != nullptr) {
+  if (method != nullptr && !method->isExplicitObjectMemberFunction()) {
     // TODO: Consider ref qualifiers.
     if (method->isConst())
       record_type = record_type.withConst();

@@ -17,10 +17,18 @@ template int oops<123>();
 template int oops<321>();
 template int oops<42>();
 
-template <typename T> T Example::plus_one(T value) { return value + 1; }
+template <typename T> T Example::plus_one(T val) const { return val + 1; }
 
-template int Example::plus_one(int);
-template double Example::plus_one(double);
+template int Example::plus_one(int) const;
+template double Example::plus_one(double) const;
+
+template <typename T>
+T Example::explicit_object_parameter(this const auto &, T val) {
+  return val;
+}
+
+template int Example::explicit_object_parameter(this const Example &self,
+                                                int val);
 
 template <typename T>
 TemplatedConstructor::TemplatedConstructor(T value) : value(value) {}

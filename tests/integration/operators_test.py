@@ -126,7 +126,17 @@ def get_operator(name):
 
 
 @pytest.mark.parametrize("name", BINARY_OPERATORS + BINARY_INPLACE_OPERATORS)
-@pytest.mark.parametrize("kind", ["member", "nonconst_member", "friend", "associated"])
+@pytest.mark.parametrize(
+    "kind",
+    [
+        "member",
+        "explicit_object_param_member",
+        "tpl_explicit_object_param_member",
+        "nonconst_member",
+        "friend",
+        "associated",
+    ],
+)
 def test_exhaustive_has_binary_operator(name, kind):
     cls = getattr(m, f"has_{kind}_{name}")
     assert sorted(get_proper_members(cls, callable).keys()) == sorted(
@@ -160,7 +170,17 @@ def test_exhaustive_hidden_binary_operator(name, kind):
 
 
 @pytest.mark.parametrize("name", UNARY_OPERATORS)
-@pytest.mark.parametrize("kind", ["member", "nonconst_member", "friend", "associated"])
+@pytest.mark.parametrize(
+    "kind",
+    [
+        "member",
+        "explicit_object_param_member",
+        "tpl_explicit_object_param_member",
+        "nonconst_member",
+        "friend",
+        "associated",
+    ],
+)
 def test_exhaustive_has_unary_operator(name, kind):
     cls = getattr(m, f"has_{kind}_{name}")
     assert sorted(get_proper_members(cls, callable).keys()) == sorted(
@@ -189,3 +209,9 @@ def test_exhaustive_hidden_unary_operator(name, kind):
     inst = cls(123)
     with pytest.raises(TypeError, match="bad operand type for unary"):
         get_operator(name)(inst)
+
+
+def test_explicit_object_param_without_explicit_instantiation():
+    cls = m.explicit_object_param_without_explicit_instantiation
+    # Operator isn't exposed unless it's instantiated
+    assert "__eq__" not in get_proper_members(cls, callable).keys()
