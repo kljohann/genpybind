@@ -320,9 +320,8 @@ static void emitParameterTypes(llvm::raw_ostream &os,
 static llvm::StringRef getPybind11ArgsType(clang::QualType parameter_type) {
   static const clang::ast_matchers::internal::HasNameMatcher matcher(
       {"::pybind11::args", "::pybind11::kwargs"});
-  const clang::CXXRecordDecl *record = parameter_type->getAsCXXRecordDecl();
-  if (record == nullptr)
-    record = parameter_type->getPointeeCXXRecordDecl();
+  const clang::CXXRecordDecl *record =
+      parameter_type.getNonReferenceType()->getAsCXXRecordDecl();
   if (record == nullptr || !matcher.matchesNode(*record))
     return {};
   assert(record->getIdentifier());
@@ -444,9 +443,7 @@ collectOperatorDeclsViaArgumentDependentLookup(
   // At least one parameter has to accept the record type, without
   // implicit conversions.
   auto has_type_of_record = [&](const clang::ParmVarDecl *param) -> bool {
-    clang::QualType param_type = param->getType();
-    if (param_type->isReferenceType())
-      param_type = param_type->getPointeeType();
+    clang::QualType param_type = param->getType().getNonReferenceType();
     return ast_context.hasSameUnqualifiedType(param_type, record_type);
   };
   auto handle_decl = [&](clang::NamedDecl *decl) {
@@ -1269,9 +1266,8 @@ void RecordExposer::emitOperator(llvm::raw_ostream &os,
   // TODO: This might lead to confusion if the different underlying operators
   // are not compatible (e.g., due to a bug).  Reconsider the trade-off.
   bool reverse_parameters = [&] {
-    clang::QualType lhs_param_type = parameter_types.front();
-    if (lhs_param_type->isReferenceType())
-      lhs_param_type = lhs_param_type->getPointeeType();
+    clang::QualType lhs_param_type =
+        parameter_types.front().getNonReferenceType();
     return !ast_context.hasSameUnqualifiedType(lhs_param_type, record_type);
   }();
   os << "context.def(";
