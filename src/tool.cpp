@@ -345,8 +345,12 @@ std::string findResourceDir() {
   if (clang_path.empty())
     return {};
 
+#if LLVM_VERSION_MAJOR >= 20
+  return clang::driver::Driver::GetResourcesPath(clang_path);
+#else
   return clang::driver::Driver::GetResourcesPath(clang_path,
                                                  CLANG_RESOURCE_DIR);
+#endif
 }
 
 /// Add resource dir argument based on location of clang executable, if none has

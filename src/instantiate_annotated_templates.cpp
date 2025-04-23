@@ -82,8 +82,15 @@ void InstantiateAnnotatedTemplatesASTConsumer::instantiateSpecialization(
 
   if (prev_tsk == clang::TSK_Undeclared)
     sema->runWithSufficientStackSpace(loc, [&] {
+#if LLVM_VERSION_MAJOR >= 20
+      sema->InstantiateClassTemplateSpecialization(
+          loc, specialization, tsk,
+          /*Complain=*/true,
+          specialization->hasMatchedPackOnParmToNonPackOnArg());
+#else
       sema->InstantiateClassTemplateSpecialization(loc, specialization, tsk,
                                                    /*Complain=*/true);
+#endif
     });
 
   auto *definition = llvm::cast_or_null<clang::ClassTemplateSpecializationDecl>(
